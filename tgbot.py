@@ -4,6 +4,9 @@ from ai import *
 import logging
 from datetime import datetime
 
+logging.getLogger('telegram').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -17,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = "8350333926:AAEkf4If4LXh657SOTuGsAhEJx6EFSPKHbU"
 
+print("Bot started")
 class BusinessBot:
     def __init__(self):
         self.app = Application.builder().token(BOT_TOKEN).build()
@@ -219,13 +223,16 @@ class BusinessBot:
     
     async def handle_business_analysis(self, text: str, user_id: str) -> str:
         """Обработка бизнес-анализа с расчетом формул"""
+        
         business_data = await analyze_business(text, user_id)
+        print(f"📊 Данные от AI: {business_data}")  # ДЛЯ ОТЛАДКИ
         
         if "error" in business_data:
             return "❌ Ошибка анализа. Попробуйте описать бизнес более подробно."
         
         # Рассчитываем продвинутые метрики
         calculated_metrics = calculate_advanced_metrics(business_data)
+        print(f"📈 Рассчитанные метрики: {calculated_metrics}")  # ДЛЯ ОТЛАДКИ
         
         # Объединяем данные
         enhanced_data = {**business_data, **calculated_metrics}
@@ -301,18 +308,20 @@ class BusinessBot:
     
     def format_question_response(self, answer: str) -> str:
         """Форматирование ответа на вопрос"""
+        answer = answer.replace('*', '\\*').replace('_', '\\_').replace('`', '\\`')
         return f"💡 *ОТВЕТ НА ВОПРОС*\n\n{answer}"
     
     def format_general_response(self, response: str) -> str:
         """Форматирование общего ответа"""
         return f"💬 {response}"
     
-    async def run(self):
+    def run(self):
         """Запуск бота с инициализацией базы данных"""
         print("🤖 Умный бот запускается...")
         
         # Инициализация базы данных
-        await db.init_db()
+        import asyncio
+        asyncio.run(db.init_db())
         
         print("✅ База данных инициализирована")
         print("✅ Умное определение типов сообщений")
@@ -323,7 +332,5 @@ class BusinessBot:
         self.app.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
-    
     bot = BusinessBot()
-    asyncio.run(bot.run())
+    bot.run()

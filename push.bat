@@ -1,4 +1,4 @@
 @echo off
 git add .
-git commit -m "Big update"
+git commit -m "auto-commit"
 git push

@@ -15,7 +15,7 @@ class Database:
                 # Замените на ваши реальные данные подключения к PostgreSQL на Render.com
                 database='railway',
                 user='postgres',
-                password='LwEcMIIdBPcDCRncNPungmdPWbDdBRCc',
+                password='wMpYpLQssFkpdqxISRxfvCFBEnObVpIS',
                 host='postgres.railway.internal',
                 port=5432
             )

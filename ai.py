@@ -14,36 +14,64 @@ g4f.debug.logging = False
 conversation_memory = {}
 
 # Умный промпт для классификации сообщений
-MESSAGE_CLASSIFIER_PROMPT = """Проанализируй сообщение пользователя и определи его тип:
+MESSAGE_CLASSIFIER_PROMPT = """Ты - классификатор сообщений. Твоя задача - определить тип и вернуть ТОЛЬКО ОДНО СЛОВО: BUSINESS_ANALYSIS, BUSINESS_QUESTION или GENERAL_CHAT.
 
-1. BUSINESS_ANALYSIS - если пользователь описывает бизнес с цифрами (выручка, расходы, клиенты, прибыль и т.д.)
-2. BUSINESS_QUESTION - если пользователь задает вопрос о бизнесе, финансах, предпринимательстве
-3. GENERAL_CHAT - если это приветствие, общение или сообщение не связано с бизнесом
+ПРАВИЛА КЛАССИФИКАЦИИ:
+- BUSINESS_ANALYSIS: есть цифры + бизнес-контекст
+- BUSINESS_QUESTION: есть вопрос о бизнесе  
+- GENERAL_CHAT: все остальное
 
-Отвечай ТОЛЬКО одним словом: BUSINESS_ANALYSIS, BUSINESS_QUESTION или GENERAL_CHAT.
+ЗАПРЕЩЕНО:
+- Писать пояснения
+- Давать советы
+- Отвечать как чат-бот
 
-Примеры:
-- "Выручка 500к, расходы 200к" -> BUSINESS_ANALYSIS
-- "Как увеличить прибыль?" -> BUSINESS_QUESTION  
-- "Привет, как дела?" -> GENERAL_CHAT
-- "Спасибо за помощь" -> GENERAL_CHAT"""
+ОБЯЗАТЕЛЬНО:
+- Вернуть ТОЛЬКО ОДНО СЛОВО из трех вариантов
 
-BUSINESS_ANALYSIS_PROMPT = """Ты - профессиональный бизнес-аналитик. Твоя задача - ИЗВЛЕЧЬ ЦИФРЫ из текста и дать краткий анализ.
+ПРИМЕРЫ:
+"Выручка 500к" → BUSINESS_ANALYSIS
+"Как увеличить прибыль?" → BUSINESS_QUESTION
+"Привет" → GENERAL_CHAT
 
-Отвечай ТОЛЬКО в этом формате, БЕЗ ЛИШНИХ СЛОВ:
+НИКАКИХ ДРУГИХ СЛОВ КРОМЕ BUSINESS_ANALYSIS, BUSINESS_QUESTION, GENERAL_CHAT!"""
 
-ВЫРУЧКА: 45000000
-РАСХОДЫ: 38000000
-ПРИБЫЛЬ: 7000000
-КЛИЕНТЫ: 15
-СРЕДНИЙ_ЧЕК: 3000000
-ИНВЕСТИЦИИ: 10000000
-ОЦЕНКА: 8
-КОММЕНТАРИЙ: Ваш бизнес показывает хорошую рентабельность. Рекомендую оптимизировать расходы.
-СОВЕТЫ: 1. Снизить операционные расходы|2. Увеличить средний чек|3. Привлечь больше клиентов
+BUSINESS_ANALYSIS_PROMPT = """Ты - ИНСТРУМЕНТ для извлечения данных, а не чат-бот. Твоя задача - ТОЛЬКО извлечь числа из текста и вернуть их в СТРОГОМ ФОРМАТЕ.
 
-Если цифры не указаны - ставь 0.
-НИКАКИХ комментариев кроме указанных полей."""
+ЗАПРЕЩЕНО:
+- Писать пояснения, комментарии, советы
+- Отвечать как обычный чат-бот  
+- Использовать свободный текст
+- Игнорировать формат вывода
+
+ОБЯЗАТЕЛЬНО:
+- Вернуть данные ТОЛЬКО в указанном формате
+- Если поле не найдено - поставить 0
+- Все числа преобразовать в целые (15000 вместо 15к)
+
+ФОРМАТ ВЫВОДА (СОБЛЮДАТЬ ТОЧНО):
+ВЫРУЧКА: [число]
+РАСХОДЫ: [число]
+ПРИБЫЛЬ: [число] 
+КЛИЕНТЫ: [число]
+СРЕДНИЙ_ЧЕК: [число]
+ИНВЕСТИЦИИ: [число]
+ОЦЕНКА: [число]
+КОММЕНТАРИЙ: [текст]
+СОВЕТЫ: 1.[текст]|2.[текст]|3.[текст]
+
+СООБЩЕНИЕ: "4 детали в месяц по 15 тысяч каждая"
+ВЫРУЧКА: 60000
+РАСХОДЫ: 0
+ПРИБЫЛЬ: 0
+КЛИЕНТЫ: 4
+СРЕДНИЙ_ЧЕК: 15000
+ИНВЕСТИЦИИ: 0
+ОЦЕНКА: 6
+КОММЕНТАРИЙ: Стабильный доход с потенциалом роста
+СОВЕТЫ: 1.Увеличить объем производства|2.Расширить ассортимент|3.Оптимизировать затраты
+
+НИКАКИХ ДРУГИХ ТЕКСТОВ КРОМЕ УКАЗАННОГО ФОРМАТА!"""
 
 QUESTION_ANSWER_PROMPT = """Ты - опытный бизнес-консультант с 10-летним опытом. Отвечай на вопросы развернуто, профессионально, но понятным языком. Используй практические кейсы и конкретные примеры. Будь полезным и поддерживающим."""
 
@@ -53,27 +81,37 @@ async def classify_message_type(text: str) -> str:
     """Умное определение типа сообщения с помощью AI"""
     try:
         messages = [
-            {"role": "system", "content": MESSAGE_CLASSIFIER_PROMPT},
+            {"role": "user", "content": MESSAGE_CLASSIFIER_PROMPT},
             {"role": "user", "content": text}
         ]
         
+        logger.info(f"CLASSIFIER PROMPT LENGTH: {len(MESSAGE_CLASSIFIER_PROMPT)}")
+        logger.info(f"CLASSIFIER PROMPT FIRST 50 chars: {MESSAGE_CLASSIFIER_PROMPT[:50]}")
+        logger.info(f"CLASSIFIER USER MESSAGE: {text}")
+
         response = g4f.ChatCompletion.create(
             model=g4f.models.gpt_4,
             messages=messages,
             stream=False
         )
         
-        response = response.strip().upper()
+        print(f"🔍 КЛАССИФИКАТОР: '{text[:50]}...' -> AI ответил: '{response}'")
         
-        if "BUSINESS_ANALYSIS" in response:
+        response_upper = response.upper().strip()
+
+        if "BUSINESS_ANALYSIS" in response_upper:
             return "business_analysis"
-        elif "BUSINESS_QUESTION" in response:
+        elif "BUSINESS_QUESTION" in response_upper: 
             return "question"
-        else:
+        elif "GENERAL_CHAT" in response_upper:
             return "general"
+        else:
+            # Если AI проигнорировал формат - используем fallback
+            return simple_detect_message_type(text)
             
     except Exception as e:
         logger.error(f"Ошибка классификации сообщения: {e}")
+        print("пизда")
         # Fallback на простое определение
         return simple_detect_message_type(text)
 
@@ -106,11 +144,11 @@ def simple_detect_message_type(text: str) -> str:
 
 async def analyze_business(description: str, user_id: str = "default") -> Dict:
     """Расширенный анализ бизнеса с финансовыми метриками"""
-    
-    if user_id not in conversation_memory:
-        conversation_memory[user_id] = [
-            {"role": "system", "content": BUSINESS_ANALYSIS_PROMPT}
-        ]
+    print(f"🔥 CURRENT PROMPT: {BUSINESS_ANALYSIS_PROMPT[:50]}...")
+    # if user_id not in conversation_memory:
+    conversation_memory[user_id] = [
+        {"role": "user", "content": BUSINESS_ANALYSIS_PROMPT}
+    ]
     
     messages = conversation_memory[user_id]
     messages.append({"role": "user", "content": description})
@@ -121,7 +159,9 @@ async def analyze_business(description: str, user_id: str = "default") -> Dict:
             messages=messages,
             stream=False
         )
-        
+
+        logger.info(f"RAW AI RESPONSE: {response}")
+
         messages.append({"role": "assistant", "content": response})
         
         # Ограничиваем историю
@@ -144,7 +184,7 @@ async def answer_question(question: str, user_id: str = "default") -> str:
     
     if user_id not in conversation_memory:
         conversation_memory[user_id] = [
-            {"role": "system", "content": QUESTION_ANSWER_PROMPT}
+            {"role": "user", "content": QUESTION_ANSWER_PROMPT}
         ]
     
     messages = conversation_memory[user_id]
@@ -208,38 +248,60 @@ def parse_business_response(text: str) -> Dict:
         "type": "business_analysis"
     }
     
-    # Парсим базовые цифры
-    lines = text.split('\n')
-    for line in lines:
-        line = line.strip()
-        for key in data:
-            if line.startswith(key + ":"):
-                numbers = re.findall(r'\d+\.?\d*', line)
-                if numbers:
-                    data[key] = float(numbers[0])
+    # Упрощенный парсинг - ищем числа после ключевых слов
+    text_upper = text.upper()
     
-    # Парсим комментарий и советы
+    # Ищем выручку
+    revenue_match = re.search(r'ВЫРУЧКА:\s*(\d+\.?\d*)', text_upper)
+    if revenue_match:
+        data["ВЫРУЧКА"] = float(revenue_match.group(1))
+    
+    # Ищем расходы
+    expenses_match = re.search(r'РАСХОДЫ:\s*(\d+\.?\d*)', text_upper)
+    if expenses_match:
+        data["РАСХОДЫ"] = float(expenses_match.group(1))
+    
+    # Ищем прибыль
+    profit_match = re.search(r'ПРИБЫЛЬ:\s*(\d+\.?\d*)', text_upper)
+    if profit_match:
+        data["ПРИБЫЛЬ"] = float(profit_match.group(1))
+    
+    # Ищем клиентов
+    clients_match = re.search(r'КЛИЕНТЫ:\s*(\d+\.?\d*)', text_upper)
+    if clients_match:
+        data["КЛИЕНТЫ"] = float(clients_match.group(1))
+    
+    # Ищем средний чек
+    avg_check_match = re.search(r'СРЕДНИЙ_ЧЕК:\s*(\d+\.?\d*)', text_upper)
+    if avg_check_match:
+        data["СРЕДНИЙ_ЧЕК"] = float(avg_check_match.group(1))
+    
+    # Ищем инвестиции
+    investments_match = re.search(r'ИНВЕСТИЦИИ:\s*(\d+\.?\d*)', text_upper)
+    if investments_match:
+        data["ИНВЕСТИЦИИ"] = float(investments_match.group(1))
+    
+    # Ищем оценку
+    rating_match = re.search(r'ОЦЕНКА:\s*(\d+\.?\d*)', text_upper)
+    if rating_match:
+        data["ОЦЕНКА"] = float(rating_match.group(1))
+    
+    # Парсим комментарий
     if "КОММЕНТАРИЙ:" in text:
-        comment_part = text.split("КОММЕНТАРИЙ:")[1]
-        if "СОВЕТЫ:" in comment_part:
-            data["КОММЕНТАРИЙ"] = comment_part.split("СОВЕТЫ:")[0].strip()
-        else:
-            data["КОММЕНТАРИЙ"] = comment_part.strip()
+        parts = text.split("КОММЕНТАРИЙ:")
+        if len(parts) > 1:
+            comment_part = parts[1]
+            if "СОВЕТЫ:" in comment_part:
+                data["КОММЕНТАРИЙ"] = comment_part.split("СОВЕТЫ:")[0].strip()
+            else:
+                data["КОММЕНТАРИЙ"] = comment_part.strip()
     
+    # Парсим советы
     if "СОВЕТЫ:" in text:
         advice_part = text.split("СОВЕТЫ:")[1]
-        advice_lines = [line.strip() for line in advice_part.split('\n') if line.strip()]
-        for line in advice_lines:
-            # Убираем нумерацию (1., 2., и т.д.)
-            clean_advice = re.sub(r'^\d+\.\s*', '', line).strip()
-            if clean_advice and '|' in clean_advice:
-                # Разделяем советы по |
-                data["СОВЕТЫ"].extend([a.strip() for a in clean_advice.split('|') if a.strip()])
-            elif clean_advice:
-                data["СОВЕТЫ"].append(clean_advice)
-    
-    # Ограничиваем количество советов
-    data["СОВЕТЫ"] = data["СОВЕТЫ"][:3]
+        # Берем первые 3 строки после СОВЕТЫ:
+        lines = [line.strip() for line in advice_part.split('\n') if line.strip()]
+        data["СОВЕТЫ"] = lines[:3]
     
     return data
 
