@@ -405,14 +405,13 @@ class BusinessBot:
         return f"💬 {response}"
     
     def run(self):
-        """Запуск бота с инициализацией базы данных"""
+        """Запуск бота"""
         print("🤖 Умный бот запускается...")
         
         # Синхронная инициализация SQLite
         import sqlite3
         import os
         
-        # Инициализируем базу данных СИНХРОННО
         db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot.db')
         db.conn = sqlite3.connect(db_path, check_same_thread=False)
         db.create_sqlite_tables()
@@ -423,8 +422,13 @@ class BusinessBot:
         print("✅ Логирование всех действий")
         print("✅ Контекстная память пользователей")
         
-        # Запускаем бота
-        self.app.run_polling()
+        # ЗАПУСК ЧЕРЕЗ ASYNCIO
+        import asyncio
+        
+        async def main():
+            await self.app.run_polling()
+        
+        asyncio.run(main())
 
 if __name__ == "__main__":
     bot = BusinessBot()
