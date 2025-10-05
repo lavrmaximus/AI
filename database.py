@@ -3,16 +3,21 @@ import asyncio
 from datetime import datetime
 import json
 from typing import Dict, List, Optional
+import logging
+import os
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self):
         self.pool = None
+        self.conn = None
     
     async def init_db(self):
         """Инициализация подключения к базе данных"""
         try:
             self.pool = await asyncpg.create_pool(
-                # Замените на ваши реальные данные подключения к PostgreSQL на Render.com
                 database='railway',
                 user='postgres',
                 password='wMpYpLQssFkpdqxISRxfvCFBEnObVpIS',
@@ -20,19 +25,29 @@ class Database:
                 port=5432
             )
             await self.create_tables()
-            print("✅ База данных подключена и таблицы созданы")
+            print("✅ PostgreSQL база данных подключена")
+            
+            # ОЧИЩАЕМ SQLite соединение когда PostgreSQL активен
+            if hasattr(self, 'conn') and self.conn:
+                self.conn.close()
+            self.conn = None
+            
         except Exception as e:
-            print(f"❌ Ошибка подключения к базе данных: {e}")
+            print(f"❌ Ошибка PostgreSQL: {e}")
             # Для локальной разработки используем SQLite как fallback
             import sqlite3
-            self.conn = sqlite3.connect('business_bot.db', check_same_thread=False)
+            import os
+            
+            # Явно указываем путь в корневой папке проекта
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot.db')
+            self.conn = sqlite3.connect(db_path, check_same_thread=False)
             self.create_sqlite_tables()
+            print(f"✅ SQLite база данных подключена: {db_path}")
     
     def create_sqlite_tables(self):
-        """Создание таблиц в SQLite (для локальной разработки)"""
+        """Создание таблиц в SQLite"""
         cursor = self.conn.cursor()
         
-        # Таблица пользователей
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id TEXT PRIMARY KEY,
@@ -43,7 +58,6 @@ class Database:
             )
         ''')
         
-        # Таблица сообщений
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,12 +65,10 @@ class Database:
                 message_text TEXT,
                 message_type TEXT,
                 response_text TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
-        # Таблица бизнес-анализов
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS business_analyses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,18 +82,15 @@ class Database:
                 rating INTEGER DEFAULT 0,
                 commentary TEXT,
                 advice TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         
         self.conn.commit()
-        print("✅ SQLite таблицы созданы")
     
     async def create_tables(self):
         """Создание таблиц в PostgreSQL"""
         async with self.pool.acquire() as conn:
-            # Таблица пользователей
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS users (
                     user_id TEXT PRIMARY KEY,
@@ -92,7 +101,6 @@ class Database:
                 )
             ''')
             
-            # Таблица сообщений
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS messages (
                     id SERIAL PRIMARY KEY,
@@ -104,7 +112,6 @@ class Database:
                 )
             ''')
             
-            # Таблица бизнес-анализов
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS business_analyses (
                     id SERIAL PRIMARY KEY,
@@ -123,9 +130,10 @@ class Database:
             ''')
     
     async def save_user(self, user_id: str, username: str, first_name: str, last_name: str):
-        """Сохранение пользователя"""
+        logger.info(f"💾 СОХРАНЕНИЕ ПОЛЬЗОВАТЕЛЯ: user_id={user_id}")
         try:
             if self.pool:
+                logger.info("💾 Используем PostgreSQL")
                 async with self.pool.acquire() as conn:
                     await conn.execute('''
                         INSERT INTO users (user_id, username, first_name, last_name)
@@ -136,33 +144,58 @@ class Database:
                         last_name = EXCLUDED.last_name
                     ''', user_id, username, first_name, last_name)
             else:
-                cursor = self.conn.cursor()
-                cursor.execute('''
-                    INSERT OR REPLACE INTO users (user_id, username, first_name, last_name)
-                    VALUES (?, ?, ?, ?)
-                ''', (user_id, username, first_name, last_name))
-                self.conn.commit()
+                logger.info("💾 Используем SQLite")
+                await asyncio.get_event_loop().run_in_executor(
+                    None, 
+                    self._sqlite_save_user, 
+                    user_id, username, first_name, last_name
+                )
+            logger.info("✅ Пользователь успешно сохранен")
         except Exception as e:
-            print(f"❌ Ошибка сохранения пользователя: {e}")
+            logger.error(f"❌ Ошибка сохранения пользователя: {e}")
     
+    def _sqlite_save_user(self, user_id: str, username: str, first_name: str, last_name: str):
+        """Синхронная версия для SQLite"""
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT OR REPLACE INTO users (user_id, username, first_name, last_name)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id, username, first_name, last_name))
+        self.conn.commit()
+    
+    def _sqlite_save_message(self, user_id: str, message_text: str, message_type: str, response_text: str):
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO messages (user_id, message_text, message_type, response_text)
+            VALUES (?, ?, ?, ?)
+        ''', (user_id, message_text, message_type, response_text))
+        self.conn.commit()
+        cursor.execute("SELECT last_insert_rowid()")
+        new_id = cursor.fetchone()[0]
+        logger.info(f"🔍 СОЗДАНО СООБЩЕНИЕ С ID: {new_id}")
+        logger.info("✅ Коммит sqlite успешно сохранено")
+        print(f"🔍 Путь к БД: {os.path.abspath('business_bot.db')}")
+
     async def save_message(self, user_id: str, message_text: str, message_type: str, response_text: str):
-        """Сохранение сообщения и ответа"""
+        logger.info(f"💾 СОХРАНЕНИЕ СООБЩЕНИЯ: user_id={user_id}, type={message_type}")
         try:
             if self.pool:
+                logger.info("💾 Используем PostgreSQL")
                 async with self.pool.acquire() as conn:
                     await conn.execute('''
                         INSERT INTO messages (user_id, message_text, message_type, response_text)
                         VALUES ($1, $2, $3, $4)
                     ''', user_id, message_text, message_type, response_text)
             else:
-                cursor = self.conn.cursor()
-                cursor.execute('''
-                    INSERT INTO messages (user_id, message_text, message_type, response_text)
-                    VALUES (?, ?, ?, ?)
-                ''', (user_id, message_text, message_type, response_text))
-                self.conn.commit()
+                logger.info("💾 Используем SQLite")
+                await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    self._sqlite_save_message,
+                    user_id, message_text, message_type, response_text
+                )
+            logger.info("✅ Сообщение успешно сохранено")
         except Exception as e:
-            print(f"❌ Ошибка сохранения сообщения: {e}")
+            logger.error(f"❌ Ошибка сохранения сообщения: {e}")
     
     async def save_business_analysis(self, user_id: str, business_data: Dict):
         """Сохранение результатов бизнес-анализа"""
@@ -188,27 +221,34 @@ class Database:
                         advice_text
                     )
             else:
-                cursor = self.conn.cursor()
-                cursor.execute('''
-                    INSERT INTO business_analyses 
-                    (user_id, revenue, expenses, profit, clients, average_check, 
-                     investments, rating, commentary, advice)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    user_id,
-                    business_data.get("ВЫРУЧКА", 0),
-                    business_data.get("РАСХОДЫ", 0),
-                    business_data.get("ПРИБЫЛЬ", 0),
-                    business_data.get("КЛИЕНТЫ", 0),
-                    business_data.get("СРЕДНИЙ_ЧЕК", 0),
-                    business_data.get("ИНВЕСТИЦИИ", 0),
-                    business_data.get("ОЦЕНКА", 0),
-                    business_data.get("КОММЕНТАРИЙ", ""),
-                    advice_text
-                ))
-                self.conn.commit()
+                await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    self._sqlite_save_business_analysis,
+                    user_id, business_data, advice_text
+                )
         except Exception as e:
             print(f"❌ Ошибка сохранения бизнес-анализа: {e}")
+    
+    def _sqlite_save_business_analysis(self, user_id: str, business_data: Dict, advice_text: str):
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            INSERT INTO business_analyses 
+            (user_id, revenue, expenses, profit, clients, average_check, 
+             investments, rating, commentary, advice)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            user_id,
+            business_data.get("ВЫРУЧКА", 0),
+            business_data.get("РАСХОДЫ", 0),
+            business_data.get("ПРИБЫЛЬ", 0),
+            business_data.get("КЛИЕНТЫ", 0),
+            business_data.get("СРЕДНИЙ_ЧЕК", 0),
+            business_data.get("ИНВЕСТИЦИИ", 0),
+            business_data.get("ОЦЕНКА", 0),
+            business_data.get("КОММЕНТАРИЙ", ""),
+            advice_text
+        ))
+        self.conn.commit()
     
     async def get_user_history(self, user_id: str, limit: int = 10) -> List[Dict]:
         """Получение истории сообщений пользователя"""
@@ -224,27 +264,34 @@ class Database:
                     ''', user_id, limit)
                     return [dict(row) for row in rows]
             else:
-                cursor = self.conn.cursor()
-                cursor.execute('''
-                    SELECT message_text, message_type, response_text, created_at
-                    FROM messages 
-                    WHERE user_id = ? 
-                    ORDER BY created_at DESC 
-                    LIMIT ?
-                ''', (user_id, limit))
-                rows = cursor.fetchall()
-                return [
-                    {
-                        'message_text': row[0],
-                        'message_type': row[1],
-                        'response_text': row[2],
-                        'created_at': row[3]
-                    }
-                    for row in rows
-                ]
+                return await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    self._sqlite_get_user_history,
+                    user_id, limit
+                )
         except Exception as e:
             print(f"❌ Ошибка получения истории: {e}")
             return []
+    
+    def _sqlite_get_user_history(self, user_id: str, limit: int) -> List[Dict]:
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT message_text, message_type, response_text, created_at
+            FROM messages 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        ''', (user_id, limit))
+        rows = cursor.fetchall()
+        return [
+            {
+                'message_text': row[0],
+                'message_type': row[1],
+                'response_text': row[2],
+                'created_at': row[3]
+            }
+            for row in rows
+        ]
     
     async def get_user_business_data(self, user_id: str) -> List[Dict]:
         """Получение истории бизнес-анализов пользователя"""
@@ -260,32 +307,39 @@ class Database:
                     ''', user_id)
                     return [dict(row) for row in rows]
             else:
-                cursor = self.conn.cursor()
-                cursor.execute('''
-                    SELECT revenue, expenses, profit, clients, average_check, 
-                           investments, rating, commentary, created_at
-                    FROM business_analyses 
-                    WHERE user_id = ? 
-                    ORDER BY created_at DESC
-                ''', (user_id,))
-                rows = cursor.fetchall()
-                return [
-                    {
-                        'revenue': row[0],
-                        'expenses': row[1],
-                        'profit': row[2],
-                        'clients': row[3],
-                        'average_check': row[4],
-                        'investments': row[5],
-                        'rating': row[6],
-                        'commentary': row[7],
-                        'created_at': row[8]
-                    }
-                    for row in rows
-                ]
+                return await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    self._sqlite_get_user_business_data,
+                    user_id
+                )
         except Exception as e:
             print(f"❌ Ошибка получения бизнес-данных: {e}")
             return []
+    
+    def _sqlite_get_user_business_data(self, user_id: str) -> List[Dict]:
+        cursor = self.conn.cursor()
+        cursor.execute('''
+            SELECT revenue, expenses, profit, clients, average_check, 
+                   investments, rating, commentary, created_at
+            FROM business_analyses 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        ''', (user_id,))
+        rows = cursor.fetchall()
+        return [
+            {
+                'revenue': row[0],
+                'expenses': row[1],
+                'profit': row[2],
+                'clients': row[3],
+                'average_check': row[4],
+                'investments': row[5],
+                'rating': row[6],
+                'commentary': row[7],
+                'created_at': row[8]
+            }
+            for row in rows
+        ]
 
 # Глобальный экземпляр базы данных
 db = Database()

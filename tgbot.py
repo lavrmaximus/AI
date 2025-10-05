@@ -12,13 +12,16 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('bot.log', encoding='utf-8'),
+        logging.FileHandler('bot.log', encoding='utf-8', delay=True),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = "8350333926:AAEkf4If4LXh657SOTuGsAhEJx6EFSPKHbU"
+ADMINS = [
+    "1287604685",  # ← твой ID
+]
 
 print("Bot started")
 class BusinessBot:
@@ -32,6 +35,7 @@ class BusinessBot:
         self.app.add_handler(CommandHandler("about", self.about_command))
         self.app.add_handler(CommandHandler("analysis", self.analysis_command))
         self.app.add_handler(CommandHandler("history", self.history_command))
+        self.app.add_handler(CommandHandler("admin_clear", self.admin_clear))
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -163,6 +167,88 @@ class BusinessBot:
                 parse_mode='Markdown'
             )
     
+    async def admin_clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = str(update.effective_user.id)
+        
+        # Проверяем что пользователь в списке админов
+        if user_id not in ADMINS:
+            await update.message.reply_text("❌ Нет доступа")
+            return
+        
+        if not context.args:
+            await update.message.reply_text(
+                "ℹ️ *Использование:*\n"
+                "`/admin_clear USER_ID` - очистить по ID\n"
+                "`/admin_clear @username` - очистить по username\n\n"
+                f"👑 *Текущие админы:* {', '.join(ADMINS)}", 
+                parse_mode='Markdown'
+            )
+            return
+        
+        target = context.args[0]
+        deleted_count = 0
+        
+        try:
+            if db.pool:  # PostgreSQL
+                async with db.pool.acquire() as conn:
+                    # Если передан username (начинается с @)
+                    if target.startswith('@'):
+                        user_row = await conn.fetchrow(
+                            "SELECT user_id FROM users WHERE username = $1", 
+                            target[1:]  # убираем @
+                        )
+                        if not user_row:
+                            await update.message.reply_text("❌ Пользователь не найден")
+                            return
+                        target_user_id = user_row['user_id']
+                    else:
+                        target_user_id = target
+                    
+                    # Очищаем данные и получаем количество удаленных записей
+                    result1 = await conn.execute("DELETE FROM messages WHERE user_id = $1", target_user_id)
+                    result2 = await conn.execute("DELETE FROM business_analyses WHERE user_id = $1", target_user_id)
+                    result3 = await conn.execute("DELETE FROM users WHERE user_id = $1", target_user_id)
+                    
+                    deleted_count = sum(int(r.split()[-1]) for r in [result1, result2, result3])
+                    
+            else:  # SQLite
+                cursor = db.conn.cursor()
+                
+                if target.startswith('@'):
+                    cursor.execute(
+                        "SELECT user_id FROM users WHERE username = ?", 
+                        (target[1:],)
+                    )
+                    user_row = cursor.fetchone()
+                    if not user_row:
+                        await update.message.reply_text("❌ Пользователь не найден")
+                        return
+                    target_user_id = user_row[0]
+                else:
+                    target_user_id = target
+                
+                # Очищаем данные и считаем количество
+                cursor.execute("DELETE FROM messages WHERE user_id = ?", (target_user_id,))
+                deleted_count += cursor.rowcount
+                
+                cursor.execute("DELETE FROM business_analyses WHERE user_id = ?", (target_user_id,))
+                deleted_count += cursor.rowcount
+                
+                cursor.execute("DELETE FROM users WHERE user_id = ?", (target_user_id,))
+                deleted_count += cursor.rowcount
+                
+                db.conn.commit()
+            
+            await update.message.reply_text(
+                f"✅ Данные пользователя `{target}` очищены!\n"
+                f"🗑️ Удалено записей: {deleted_count}",
+                parse_mode='Markdown'
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка очистки: {e}")
+            await update.message.reply_text(f"❌ Ошибка: {e}")
+
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_text = update.message.text
         user = update.effective_user
@@ -249,13 +335,15 @@ class BusinessBot:
         response = await general_chat(text, user_id)
         return self.format_general_response(response)
     
+    def escape_markdown(self, text: str) -> str:
+        """Экранирует все спецсимволы Markdown"""
+        escape_chars = r'_*[]()~`>#+-=|{}.!'
+        for char in escape_chars:
+            text = text.replace(char, '\\' + char)
+        return text
+
     def format_business_response(self, data: dict) -> str:
         """Форматирование ответа с рассчитанными метриками"""
-        
-        def clean_text(text):
-            if not text:
-                return ""
-            return text.replace('###', '').replace('**', '').replace('__', '')
         
         rating_emoji = "🚀" if data["ОЦЕНКА"] >= 8 else "✅" if data["ОЦЕНКА"] >= 6 else "⚠️"
         
@@ -293,13 +381,13 @@ class BusinessBot:
         
         # Комментарий и советы
         if data.get("КОММЕНТАРИЙ"):
-            clean_comment = clean_text(data["КОММЕНТАРИЙ"])
+            clean_comment = self.escape_markdown(data["КОММЕНТАРИЙ"])
             response += f"\n💡 *Комментарий аналитика:*\n{clean_comment}\n\n"
         
         if data.get("СОВЕТЫ"):
             response += f"🎯 *Рекомендации:*\n"
             for i, advice in enumerate(data["СОВЕТЫ"][:3], 1):
-                clean_advice = clean_text(advice)
+                clean_advice = self.escape_markdown(advice)
                 response += f"{i}. {clean_advice}\n"
         
         response += f"\n⭐ *Общая оценка:* {data['ОЦЕНКА']}/10 {rating_emoji}"
@@ -308,11 +396,12 @@ class BusinessBot:
     
     def format_question_response(self, answer: str) -> str:
         """Форматирование ответа на вопрос"""
-        answer = answer.replace('*', '\\*').replace('_', '\\_').replace('`', '\\`')
+        answer = self.escape_markdown(answer)
         return f"💡 *ОТВЕТ НА ВОПРОС*\n\n{answer}"
     
     def format_general_response(self, response: str) -> str:
         """Форматирование общего ответа"""
+        # response = self.escape_markdown(response)
         return f"💬 {response}"
     
     def run(self):
@@ -321,7 +410,10 @@ class BusinessBot:
         
         # Инициализация базы данных
         import asyncio
-        asyncio.run(db.init_db())
+
+        async def init():
+            await db.init_db()
+        asyncio.run(init())
         
         print("✅ База данных инициализирована")
         print("✅ Умное определение типов сообщений")

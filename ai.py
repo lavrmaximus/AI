@@ -12,29 +12,16 @@ g4f.debug.logging = False
 
 # Глобальная память (теперь дублируется в базе данных)
 conversation_memory = {}
-
+SIMPLE_MODEL = g4f.models.gpt_4
 # Умный промпт для классификации сообщений
-MESSAGE_CLASSIFIER_PROMPT = """Ты - классификатор сообщений. Твоя задача - определить тип и вернуть ТОЛЬКО ОДНО СЛОВО: BUSINESS_ANALYSIS, BUSINESS_QUESTION или GENERAL_CHAT.
+MESSAGE_CLASSIFIER_PROMPT = """Ты - классификатор сообщений. Определи тип и верни ТОЛЬКО ОДНО СЛОВО: BUSINESS_ANALYSIS, BUSINESS_QUESTION или GENERAL_CHAT.
 
-ПРАВИЛА КЛАССИФИКАЦИИ:
-- BUSINESS_ANALYSIS: есть цифры + бизнес-контекст
-- BUSINESS_QUESTION: есть вопрос о бизнесе  
+ПРАВИЛА:
+- BUSINESS_ANALYSIS: есть цифры и бизнес-слова или нужен анализ бизнеса(выручка, прибыль, клиенты и т.д.)
+- BUSINESS_QUESTION: вопрос о бизнесе
 - GENERAL_CHAT: все остальное
 
-ЗАПРЕЩЕНО:
-- Писать пояснения
-- Давать советы
-- Отвечать как чат-бот
-
-ОБЯЗАТЕЛЬНО:
-- Вернуть ТОЛЬКО ОДНО СЛОВО из трех вариантов
-
-ПРИМЕРЫ:
-"Выручка 500к" → BUSINESS_ANALYSIS
-"Как увеличить прибыль?" → BUSINESS_QUESTION
-"Привет" → GENERAL_CHAT
-
-НИКАКИХ ДРУГИХ СЛОВ КРОМЕ BUSINESS_ANALYSIS, BUSINESS_QUESTION, GENERAL_CHAT!"""
+ВЕРНИ ТОЛЬКО ОДНО СЛОВО!"""
 
 BUSINESS_ANALYSIS_PROMPT = """Ты - ИНСТРУМЕНТ для извлечения данных, а не чат-бот. Твоя задача - ТОЛЬКО извлечь числа из текста и вернуть их в СТРОГОМ ФОРМАТЕ.
 
@@ -84,13 +71,9 @@ async def classify_message_type(text: str) -> str:
             {"role": "user", "content": MESSAGE_CLASSIFIER_PROMPT},
             {"role": "user", "content": text}
         ]
-        
-        logger.info(f"CLASSIFIER PROMPT LENGTH: {len(MESSAGE_CLASSIFIER_PROMPT)}")
-        logger.info(f"CLASSIFIER PROMPT FIRST 50 chars: {MESSAGE_CLASSIFIER_PROMPT[:50]}")
-        logger.info(f"CLASSIFIER USER MESSAGE: {text}")
 
         response = g4f.ChatCompletion.create(
-            model=g4f.models.gpt_4,
+            model=SIMPLE_MODEL,
             messages=messages,
             stream=False
         )
@@ -142,18 +125,23 @@ def simple_detect_message_type(text: str) -> str:
     # Общий чат
     return "general"
 
+def prepare_messages(user_id: str, prompt: str, user_message: str):
+    """Подготавливает сообщения с промптом предпоследним"""
+    if user_id not in conversation_memory:
+        conversation_memory[user_id] = []
+    
+    messages = conversation_memory[user_id].copy()  # История
+    if prompt:
+        messages.append({"role": "user", "content": prompt})  # Промпт предпоследним
+    messages.append({"role": "user", "content": user_message})  # Запрос последним
+    
+    return messages
+
 async def analyze_business(description: str, user_id: str = "default") -> Dict:
     """Расширенный анализ бизнеса с финансовыми метриками"""
-    print(f"🔥 CURRENT PROMPT: {BUSINESS_ANALYSIS_PROMPT[:50]}...")
-    # if user_id not in conversation_memory:
-    conversation_memory[user_id] = [
-        {"role": "user", "content": BUSINESS_ANALYSIS_PROMPT}
-    ]
-    
-    messages = conversation_memory[user_id]
-    messages.append({"role": "user", "content": description})
-    
     try:
+        messages = prepare_messages(user_id, BUSINESS_ANALYSIS_PROMPT, description)
+
         response = g4f.ChatCompletion.create(
             model=g4f.models.gpt_4,
             messages=messages,
@@ -162,11 +150,14 @@ async def analyze_business(description: str, user_id: str = "default") -> Dict:
 
         logger.info(f"RAW AI RESPONSE: {response}")
 
-        messages.append({"role": "assistant", "content": response})
-        
+        conversation_memory[user_id].extend([
+            {"role": "user", "content": description},
+            {"role": "assistant", "content": response}
+        ])
+
         # Ограничиваем историю
-        if len(messages) > 12:
-            conversation_memory[user_id] = [messages[0]] + messages[-10:]
+        if len(conversation_memory[user_id]) > 12:
+            conversation_memory[user_id] = conversation_memory[user_id][-12:]
         
         parsed_data = parse_business_response(response)
         
@@ -181,27 +172,23 @@ async def analyze_business(description: str, user_id: str = "default") -> Dict:
 
 async def answer_question(question: str, user_id: str = "default") -> str:
     """Ответ на вопрос о бизнесе"""
-    
-    if user_id not in conversation_memory:
-        conversation_memory[user_id] = [
-            {"role": "user", "content": QUESTION_ANSWER_PROMPT}
-        ]
-    
-    messages = conversation_memory[user_id]
-    messages.append({"role": "user", "content": question})
-    
     try:
+        messages = prepare_messages(user_id, QUESTION_ANSWER_PROMPT, question)
+
         response = g4f.ChatCompletion.create(
             model=g4f.models.gpt_4,
             messages=messages,
             stream=False
         )
         
-        messages.append({"role": "assistant", "content": response})
+        conversation_memory[user_id].extend([
+            {"role": "user", "content": question},
+            {"role": "assistant", "content": response}
+        ])
         
-        if len(messages) > 12:
-            conversation_memory[user_id] = [messages[0]] + messages[-10:]
-        
+        # Ограничиваем историю
+        if len(conversation_memory[user_id]) > 12:
+            conversation_memory[user_id] = conversation_memory[user_id][-12:]     
         return response
         
     except Exception as e:
@@ -210,27 +197,23 @@ async def answer_question(question: str, user_id: str = "default") -> str:
 
 async def general_chat(message: str, user_id: str = "default") -> str:
     """Общий разговор"""
-    
-    if user_id not in conversation_memory:
-        conversation_memory[user_id] = [
-            {"role": "system", "content": GENERAL_CHAT_PROMPT}
-        ]
-    
-    messages = conversation_memory[user_id]
-    messages.append({"role": "user", "content": message})
-    
     try:
+        messages = prepare_messages(user_id, GENERAL_CHAT_PROMPT, message)
+
         response = g4f.ChatCompletion.create(
-            model=g4f.models.gpt_4,
+            model=SIMPLE_MODEL,
             messages=messages,
             stream=False
         )
         
-        messages.append({"role": "assistant", "content": response})
+        conversation_memory[user_id].extend([
+            {"role": "user", "content": message},
+            {"role": "assistant", "content": response}
+        ])
         
-        if len(messages) > 10:
-            conversation_memory[user_id] = [messages[0]] + messages[-8:]
-        
+        # Ограничиваем историю
+        if len(conversation_memory[user_id]) > 12:
+            conversation_memory[user_id] = conversation_memory[user_id][-12:]   
         return response
         
     except Exception as e:
