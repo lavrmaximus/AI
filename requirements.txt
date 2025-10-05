@@ -2,5 +2,5 @@ python-telegram-bot==20.7
 flask==2.3.3
 g4f==0.6.3.4
 requests==2.31.0
-asyncpg
+asyncpg==0.29.0
 sqlite3
