@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд - BusinessAI{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Бизнес Дашборд</h1>
+    <div class="user-selector">
+        <label for="userSelect">Выберите пользователя:</label>
+        <select id="userSelect" onchange="loadUserData()">
+            <option value="">Загрузка...</option>
+        </select>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-section">
+    <h2>Ключевые метрики</h2>
+    <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card">
+            <h3>Выручка</h3>
+            <div class="value" id="revenue-value">0 ₽</div>
+            <div class="change" id="revenue-change">+0%</div>
+        </div>
+        <div class="kpi-card">
+            <h3>Расходы</h3>
+            <div class="value" id="expenses-value">0 ₽</div>
+            <div class="change" id="expenses-change">+0%</div>
+        </div>
+        <div class="kpi-card">
+            <h3>Прибыль</h3>
+            <div class="value" id="profit-value">0 ₽</div>
+            <div class="change" id="profit-change">+0%</div>
+        </div>
+        <div class="kpi-card">
+            <h3>Клиенты</h3>
+            <div class="value" id="clients-value">0</div>
+            <div class="change" id="clients-change">+0%</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="charts-section">
+    <div class="chart-container">
+        <h3>Финансовая динамика</h3>
+        <canvas id="financeChart" width="400" height="200"></canvas>
+    </div>
+    
+    <div class="metrics-container">
+        <h3>Дополнительные метрики</h3>
+        <div class="metrics-grid">
+            <div class="metric-item">
+                <span class="metric-label">Средний чек</span>
+                <span class="metric-value" id="avg-check-value">0 ₽</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Рейтинг бизнеса</span>
+                <span class="metric-value" id="rating-value">0/10</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Рентабельность</span>
+                <span class="metric-value" id="profitability-value">0%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Analysis Section -->
+<div class="analysis-section">
+    <h2>Анализ от ИИ</h2>
+    <div id="aiAnalysis">
+        <div class="loading">Загрузка анализа...</div>
+    </div>
+</div>
+
+<script>
+    // Глобальная переменная для хранения экземпляра графика
+    let financeChart = null;
+
+    // Загрузка списка пользователей при открытии страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        loadUsers();
+    });
+
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/users');
+            const data = await response.json();
+            
+            if (data.success) {
+                const userSelect = document.getElementById('userSelect');
+                userSelect.innerHTML = '<option value="">Выберите пользователя</option>';
+                
+                data.users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.name;
+                    userSelect.appendChild(option);
+                });
+                
+                // Автоматически выбираем первого пользователя для демонстрации
+                if (data.users.length > 0) {
+                    userSelect.value = data.users[0].id;
+                    loadUserData();
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки пользователей:', error);
+        }
+    }
+
+    async function loadUserData() {
+        const userId = document.getElementById('userSelect').value;
+        if (!userId) return;
+
+        await loadKPIMetrics(userId);
+        await loadFinanceData(userId);
+        await loadAIAnalysis(userId);
+    }
+
+    async function loadKPIMetrics(userId) {
+        try {
+            const response = await fetch(`/api/user-kpi-metrics/${userId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                updateKPICards(data.kpi);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки KPI:', error);
+        }
+    }
+
+    async function loadFinanceData(userId) {
+        try {
+            const response = await fetch(`/api/user-finance-data/${userId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                renderFinanceChart(data.data);
+                updateAdditionalMetrics(data.latest, data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки финансовых данных:', error);
+        }
+    }
+
+    async function loadAIAnalysis(userId) {
+        try {
+            const response = await fetch(`/api/user-ai-analysis/${userId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                renderAIAnalysis(data.analysis);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки AI анализа:', error);
+        }
+    }
+
+    function updateKPICards(kpi) {
+        updateKPICard('revenue', kpi.revenue, '₽');
+        updateKPICard('expenses', kpi.expenses, '₽');
+        updateKPICard('profit', kpi.profit, '₽');
+        updateKPICard('clients', kpi.clients, '');
+    }
+
+    function updateKPICard(type, data, suffix) {
+        const valueElement = document.getElementById(`${type}-value`);
+        const changeElement = document.getElementById(`${type}-change`);
+        
+        valueElement.textContent = formatNumber(data.current) + (suffix ? ' ' + suffix : '');
+        
+        const change = data.change || 0;
+        changeElement.textContent = (change > 0 ? '+' : '') + change + '%';
+        changeElement.className = `change ${change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral'}`;
+    }
+
+    function updateAdditionalMetrics(latest, financeData) {
+        if (latest) {
+            document.getElementById('avg-check-value').textContent = 
+                formatNumber(latest.average_check) + ' ₽';
+            document.getElementById('rating-value').textContent = 
+                (latest.rating || 0) + '/10';
+            
+            // Рассчитываем рентабельность
+            if (financeData && financeData.revenue.length > 0) {
+                const currentRevenue = financeData.revenue[0];
+                const currentProfit = financeData.profit[0];
+                const profitability = currentRevenue > 0 ? (currentProfit / currentRevenue * 100) : 0;
+                document.getElementById('profitability-value').textContent = 
+                    profitability.toFixed(1) + '%';
+            }
+        }
+    }
+
+    function renderFinanceChart(data) {
+        const ctx = document.getElementById('financeChart').getContext('2d');
+        
+        // Уничтожаем предыдущий график, если он существует
+        if (financeChart) {
+            financeChart.destroy();
+        }
+        
+        // Создаем новый график
+        financeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.dates,
+                datasets: [
+                    {
+                        label: 'Выручка',
+                        data: data.revenue,
+                        borderColor: '#48bb78',
+                        backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Расходы',
+                        data: data.expenses,
+                        borderColor: '#f56565',
+                        backgroundColor: 'rgba(245, 101, 101, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'Прибыль',
+                        data: data.profit,
+                        borderColor: '#4299e1',
+                        backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Динамика за период'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString('ru-RU') + ' ₽';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderAIAnalysis(analysis) {
+        const container = document.getElementById('aiAnalysis');
+        
+        container.innerHTML = `
+            <div class="ai-summary">
+                <h4>📈 Общий анализ</h4>
+                <p>${analysis.summary}</p>
+            </div>
+            
+            <div class="ai-metrics">
+                <h4>📊 Ключевые показатели</h4>
+                <div class="metrics-grid">
+                    <div class="metric-badge">
+                        <span class="metric-label">Рентабельность</span>
+                        <span class="metric-value">${analysis.metrics.profitability}%</span>
+                    </div>
+                    <div class="metric-badge">
+                        <span class="metric-label">Оценка эффективности</span>
+                        <span class="metric-value">${analysis.metrics.efficiency_score}/100</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ai-trends">
+                <h4>🔍 Тренды и наблюдения</h4>
+                <ul>
+                    ${analysis.trends.map(trend => `<li>${trend}</li>`).join('')}
+                </ul>
+            </div>
+            
+            <div class="ai-recommendations">
+                <h4>💡 Рекомендации</h4>
+                <ul>
+                    ${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                </ul>
+            </div>
+            
+            ${analysis.commentary ? `
+            <div class="ai-commentary">
+                <h4>💬 Комментарий</h4>
+                <p>${analysis.commentary}</p>
+            </div>
+            ` : ''}
+        `;
+    }
+
+    function formatNumber(num) {
+        return new Intl.NumberFormat('ru-RU').format(Math.round(num));
+    }
+</script>
+{% endblock %}

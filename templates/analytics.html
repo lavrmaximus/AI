@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Аналитика - BusinessAI{% endblock %}
+
+{% block content %}
+<div class="analytics-header">
+    <h1>Глубокая Аналитика</h1>
+    <div class="user-selector">
+        <label for="userSelect">Выберите пользователя:</label>
+        <select id="userSelect" onchange="loadAnalyticsData()">
+            <option value="">Загрузка...</option>
+        </select>
+    </div>
+</div>
+
+<div class="analytics-content">
+    <div class="analytics-section">
+        <h2>Детальный финансовый анализ</h2>
+        <div id="financialAnalysis">
+            <div class="loading">Загрузка финансового анализа...</div>
+        </div>
+    </div>
+    
+    <div class="analytics-section">
+        <h2>Тренды и прогнозы</h2>
+        <div id="trendsAnalysis">
+            <div class="loading">Загрузка анализа трендов...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadUsers();
+    });
+
+    async function loadUsers() {
+        try {
+            const response = await fetch('/api/users');
+            const data = await response.json();
+            
+            if (data.success) {
+                const userSelect = document.getElementById('userSelect');
+                userSelect.innerHTML = '<option value="">Выберите пользователя</option>';
+                
+                data.users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = user.name;
+                    userSelect.appendChild(option);
+                });
+                
+                if (data.users.length > 0) {
+                    userSelect.value = data.users[0].id;
+                    loadAnalyticsData();
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки пользователей:', error);
+        }
+    }
+
+    async function loadAnalyticsData() {
+        const userId = document.getElementById('userSelect').value;
+        if (!userId) return;
+
+        await loadFinancialAnalysis(userId);
+        await loadTrendsAnalysis(userId);
+    }
+
+    async function loadFinancialAnalysis(userId) {
+        try {
+            const response = await fetch(`/api/user-ai-analysis/${userId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                renderFinancialAnalysis(data.analysis);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки финансового анализа:', error);
+        }
+    }
+
+    async function loadTrendsAnalysis(userId) {
+        try {
+            const financeResponse = await fetch(`/api/user-finance-data/${userId}`);
+            const financeData = await financeResponse.json();
+            
+            if (financeData.success) {
+                renderTrendsAnalysis(financeData.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки анализа трендов:', error);
+        }
+    }
+
+    function renderFinancialAnalysis(analysis) {
+        const container = document.getElementById('financialAnalysis');
+        
+        container.innerHTML = `
+            <div class="analysis-card">
+                <h4>Рентабельность бизнеса</h4>
+                <div class="profitability-gauge">
+                    <div class="gauge-value">${analysis.metrics.profitability}%</div>
+                    <div class="gauge-bar">
+                        <div class="gauge-fill" style="width: ${Math.min(analysis.metrics.profitability, 100)}%"></div>
+                    </div>
+                </div>
+                <p>${analysis.summary}</p>
+            </div>
+            
+            <div class="analysis-card">
+                <h4>Оценка эффективности</h4>
+                <div class="efficiency-score">${analysis.metrics.efficiency_score}/100</div>
+                <p>Общая оценка эффективности бизнес-процессов</p>
+            </div>
+        `;
+    }
+
+    function renderTrendsAnalysis(data) {
+        const container = document.getElementById('trendsAnalysis');
+        
+        if (data.revenue.length >= 2) {
+            const revenueGrowth = ((data.revenue[0] - data.revenue[1]) / data.revenue[1] * 100).toFixed(1);
+            const profitGrowth = ((data.profit[0] - data.profit[1]) / data.profit[1] * 100).toFixed(1);
+            
+            container.innerHTML = `
+                <div class="trends-grid">
+                    <div class="trend-card ${revenueGrowth >= 0 ? 'positive' : 'negative'}">
+                        <h4>Рост выручки</h4>
+                        <div class="trend-value">${revenueGrowth}%</div>
+                    </div>
+                    <div class="trend-card ${profitGrowth >= 0 ? 'positive' : 'negative'}">
+                        <h4>Рост прибыли</h4>
+                        <div class="trend-value">${profitGrowth}%</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = '<p>Недостаточно данных для анализа трендов</p>';
+        }
+    }
+</script>
+{% endblock %}

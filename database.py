@@ -8,40 +8,75 @@ class Database:
     def __init__(self):
         self.pool = None
     
-    async def init_db(self):
-        """Инициализация подключения к базе данных"""
+    def init_db(self):
+        """Инициализация подключения к SQLite базе данных"""
         try:
-            self.pool = await asyncpg.create_pool(
-                # Замените на ваши реальные данные подключения к PostgreSQL на Render.com
-                database='railway',
-                user='postgres',
-                password='LwEcMIIdBPcDCRncNPungmdPWbDdBRCc',
-                host='postgres.railway.internal',
-                port=5432
-            )
-            await self.create_tables()
-            print("✅ База данных подключена и таблицы созданы")
-        except Exception as e:
-            print(f"❌ Ошибка подключения к базе данных: {e}")
-            # Для локальной разработки используем SQLite как fallback
             import sqlite3
             self.conn = sqlite3.connect('business_bot.db', check_same_thread=False)
-            self.create_sqlite_tables()
-    
+            self.conn.row_factory = sqlite3.Row
+            self.create_tables()
+            self.add_sample_goals()  # ← ДОБАВЬ ЭТУ СТРОКУ
+            print("✅ SQLite база данных подключена и таблицы созданы")
+        except Exception as e:
+            print(f"❌ Ошибка подключения к базе данных: {e}")
+
+    def add_sample_goals(self):
+    #Добавление тестовых целей
+        try:
+            cursor = self.conn.cursor()
+            
+            # Проверяем, есть ли уже цели
+            cursor.execute("SELECT COUNT(*) FROM goals")
+            if cursor.fetchone()[0] == 0:
+                sample_goals = [
+                    # user_id, title, description, target_value, current_value, status, category, deadline
+                    ('123', 'Запуск интернет-магазина', 'Запустить полнофункциональный интернет-магазин', 10, 7, 'active', 'development', '2025-10-05'),
+                    ('123', 'Привлечение первых клиентов', 'Привлечь первых 100 клиентов', 100, 45, 'active', 'marketing', '2025-10-01'),
+                    ('123', 'Оптимизация расходов', 'Снизить операционные расходы на 15%', 15, 8, 'active', 'operations', '2025-09-25'),
+                    ('123', 'Заказ первой партии товара', 'Заказать первую партию товара из 4 единиц', 4, 4, 'completed', 'purchasing', '2025-09-30'),
+                    ('123', 'Найм сотрудников', 'Нанять 3 новых сотрудника в команду', 3, 1, 'active', 'hr', '2024-11-15'),
+                    ('123', 'Разработка мобильного приложения', 'Запустить мобильное приложение для iOS и Android', 2, 0, 'active', 'development', '2025-01-31')
+                ]
+                
+                for goal in sample_goals:
+                    progress = int((goal[4] / goal[3]) * 100) if goal[3] > 0 else 0
+                    status = 'completed' if progress >= 100 else goal[5]
+                    
+                    cursor.execute('''
+                        INSERT INTO goals (user_id, title, description, target_value, current_value, 
+                                        progress_percentage, status, category, deadline)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (goal[0], goal[1], goal[2], goal[3], goal[4], progress, status, goal[6], goal[7]))
+                
+                self.conn.commit()
+                print("✅ Тестовые цели добавлены")
+        except Exception as e:
+            print(f"❌ Ошибка добавления тестовых целей: {e}")     
+
+
     def create_sqlite_tables(self):
         """Создание таблиц в SQLite (для локальной разработки)"""
         cursor = self.conn.cursor()
         
         # Таблица пользователей
+        # В метод create_sqlite_tables добавить:
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                user_id TEXT PRIMARY KEY,
-                username TEXT,
-                first_name TEXT,
-                last_name TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+            CREATE TABLE IF NOT EXISTS goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                title TEXT NOT NULL,
+                description TEXT,
+                target_value INTEGER DEFAULT 1,
+                current_value INTEGER DEFAULT 0,
+                progress_percentage INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'active',  -- active, completed, cancelled
+                category TEXT,  -- sales, marketing, operations, etc.
+                deadline DATE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (user_id)
+                )
+            ''')
         
         # Таблица сообщений
         cursor.execute('''

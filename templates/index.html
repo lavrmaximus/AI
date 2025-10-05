@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}BusinessAI - Главная{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1>Добро пожаловать в BusinessAI</h1>
+    <p>Ваш персональный бизнес-аналитик</p>
+    
+    <div class="features-grid">
+        <div class="feature-card">
+            <h3>Дашборд</h3>
+            <p>Интерактивные графики и ключевые метрики вашего бизнеса</p>
+            <a href="{{ url_for('dashboard') }}" class="btn">Перейти к дашборду</a>
+        </div>
+        
+        <div class="feature-card">
+            <h3>Аналитика</h3>
+            <p>Глубокий анализ данных и рекомендации от ИИ</p>
+            <a href="{{ url_for('analytics') }}" class="btn">Смотреть аналитику</a>
+        </div>
+        
+        <div class="feature-card">
+            <h3>Таск-менеджер</h3>
+            <p>Мониторинг и оптимизация целей вашего бизнеса</p>
+            <a href="{{ url_for('goals') }}" class="btn">Просмотреть текущие задачи</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

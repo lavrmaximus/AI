@@ -1,0 +1,871 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    min-height: 100vh;
+    line-height: 1.6;
+}
+
+/* Навигация */
+.navbar {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 1rem 0;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo {
+    color: #4a5568;
+    font-size: 1.8em;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-link {
+    text-decoration: none;
+    color: #4a5568;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* Основной контейнер */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 20px;
+}
+
+/* Hero секция */
+.hero-section {
+    text-align: center;
+    color: white;
+    margin-bottom: 3rem;
+}
+
+.hero-section h1 {
+    font-size: 3em;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.hero-section p {
+    font-size: 1.3em;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+}
+
+/* Сетка фич */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.feature-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+}
+
+.feature-card h3 {
+    color: #4a5568;
+    margin-bottom: 1rem;
+    font-size: 1.5em;
+}
+
+.feature-card p {
+    color: #718096;
+    margin-bottom: 1.5rem;
+}
+
+/* Кнопки */
+.btn {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    padding: 12px 30px;
+    text-decoration: none;
+    border-radius: 25px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    background: #5a6fd8;
+    transform: scale(1.05);
+}
+
+/* KPI карточки */
+.kpi-section {
+    margin-bottom: 3rem;
+}
+
+.kpi-section h2 {
+    color: white;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.kpi-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-5px);
+}
+
+.kpi-card h3 {
+    color: #666;
+    margin-bottom: 0.5rem;
+    font-size: 1em;
+}
+
+.kpi-card .value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+}
+
+.kpi-card .change {
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+.kpi-card .change.positive {
+    color: #48bb78;
+}
+
+.kpi-card .change.negative {
+    color: #f56565;
+}
+
+.kpi-card .change.neutral {
+    color: #a0aec0;
+}
+
+/* Заголовки дашборда */
+.dashboard-header, .analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    color: white;
+}
+
+.dashboard-header h1, .analytics-header h1 {
+    font-size: 2.5em;
+}
+
+/* Секции с графиками */
+.charts-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.chart-container, .metrics-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.chart-container h3, .metrics-container h3 {
+    color: #4a5568;
+    margin-bottom: 1rem;
+}
+
+/* Анализ от ИИ */
+.analysis-section {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.analysis-section h2 {
+    color: #4a5568;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0.5rem;
+}
+
+.ai-summary, .ai-metrics, .ai-trends, .ai-recommendations, .ai-commentary {
+    background: #f7fafc;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    border-left: 4px solid #4299e1;
+}
+
+.ai-metrics h4, .ai-trends h4, .ai-recommendations h4, .ai-commentary h4 {
+    margin-bottom: 0.5rem;
+    color: #4a5568;
+}
+
+/* Селектор пользователя */
+.user-selector {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-selector label {
+    font-weight: bold;
+    color: #4a5568;
+}
+
+.user-selector select {
+    padding: 0.5rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    background: white;
+}
+
+/* Футер */
+.footer {
+    text-align: center;
+    color: white;
+    padding: 2rem 0;
+    margin-top: 3rem;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .nav-links {
+        gap: 1rem;
+    }
+    
+    .hero-section h1 {
+        font-size: 2em;
+    }
+    
+    .charts-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-header, .analytics-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .container {
+        padding: 1rem 15px;
+    }
+}
+/* Стили для бейджей метрик */
+.metric-badge {
+    display: inline-block;
+    background: white;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 5px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+}
+
+.metric-badge .metric-label {
+    display: block;
+    color: #718096;
+    font-size: 0.8em;
+    margin-bottom: 5px;
+}
+
+.metric-badge .metric-value {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #4a5568;
+}
+
+/* Стили для списков в анализе */
+.ai-trends ul, .ai-recommendations ul {
+    list-style: none;
+    padding: 0;
+}
+
+.ai-trends li, .ai-recommendations li {
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+    padding-left: 20px;
+}
+
+.ai-trends li:before {
+    content: "📈";
+    position: absolute;
+    left: 0;
+}
+
+.ai-recommendations li:before {
+    content: "💡";
+    position: absolute;
+    left: 0;
+}
+
+.ai-trends li:last-child, .ai-recommendations li:last-child {
+    border-bottom: none;
+}
+
+/* Улучшаем отображение графиков */
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+
+#financeChart {
+    width: 100% !important;
+    height: 100% !important;
+}
+/* Стили для страницы целей */
+.goals-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    color: #718096;
+    font-size: 0.9em;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #4a5568;
+}
+
+.goals-filter {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    background: white;
+    border: 2px solid #e2e8f0;
+    padding: 0.5rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.filter-btn.active,
+.filter-btn:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.goals-container {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.goal-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-left: 4px solid #4299e1;
+}
+
+.goal-card.completed {
+    border-left-color: #48bb78;
+    opacity: 0.8;
+}
+
+.goal-card.cancelled {
+    border-left-color: #f56565;
+    opacity: 0.6;
+}
+
+.goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.goal-header h3 {
+    color: #4a5568;
+    margin: 0;
+    flex: 1;
+}
+
+.goal-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.goal-status.active {
+    background: #ebf8ff;
+    color: #4299e1;
+}
+
+.goal-status.completed {
+    background: #f0fff4;
+    color: #48bb78;
+}
+
+.goal-status.cancelled {
+    background: #fff5f5;
+    color: #f56565;
+}
+
+.goal-description {
+    color: #718096;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.goal-progress {
+    margin-bottom: 1rem;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9em;
+    color: #718096;
+}
+
+.progress-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.goal-card.completed .progress-fill {
+    background: #48bb78;
+}
+
+.goal-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.goal-category, .goal-deadline {
+    background: #f7fafc;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8em;
+    color: #718096;
+}
+
+.goal-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-update, .btn-complete {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+}
+
+.btn-update {
+    background: #4299e1;
+    color: white;
+}
+
+.btn-update:hover {
+    background: #3182ce;
+}
+
+.btn-complete {
+    background: #48bb78;
+    color: white;
+}
+
+.btn-complete:hover {
+    background: #38a169;
+}
+
+.no-goals {
+    text-align: center;
+    padding: 3rem;
+    color: #718096;
+    font-size: 1.1em;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #718096;
+}
+/* Увеличение размера текста для целей на мобильных устройствах */
+@media (max-width: 768px) {
+    /* Заголовок цели */
+    .goal-header h3 {
+        font-size: 1.3em;
+        line-height: 1.3;
+    }
+    
+    /* Описание цели */
+    .goal-description {
+        font-size: 1.1em;
+        line-height: 1.4;
+    }
+    
+    /* Статус цели */
+    .goal-status {
+        font-size: 1em;
+        padding: 0.4rem 1rem;
+    }
+    
+    /* Карточка цели */
+    .goal-card {
+        padding: 1.8rem;
+    }
+    
+    /* Мета-информация (категория, дедлайн) */
+    .goal-category, .goal-deadline {
+        font-size: 1em;
+        padding: 0.4rem 1rem;
+    }
+    
+    /* Кнопки действий */
+    .btn-update, .btn-complete {
+        font-size: 1em;
+        padding: 0.7rem 1.2rem;
+    }
+    
+    /* Прогресс бар */
+    .progress-info {
+        font-size: 1em;
+    }
+    
+    /* Статистические карточки */
+    .stat-card h3 {
+        font-size: 1em;
+    }
+    
+    .stat-value {
+        font-size: 2.2em;
+    }
+    
+    /* Кнопки фильтра */
+    .filter-btn {
+        font-size: 1em;
+        padding: 0.7rem 1.5rem;
+    }
+}
+
+/* Дополнительные улучшения для очень маленьких экранов */
+@media (max-width: 480px) {
+    .goal-header {
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    
+    .goal-header h3 {
+        font-size: 1.4em;
+        text-align: center;
+    }
+    
+    .goal-card {
+        padding: 1.5rem;
+    }
+    
+    .goal-meta {
+        justify-content: center;
+    }
+    
+    .goal-actions {
+        justify-content: center;
+    }
+    
+    .goals-filter {
+        justify-content: center;
+    }
+}
+
+/* Улучшение читаемости для всех устройств */
+.goal-card {
+    font-size: 1.40em; /* Небольшое увеличение базового размера */
+}
+
+.goal-description {
+    font-size: 1.25em;
+    line-height: 1.5;
+}
+
+/* Увеличение отступов между элементами на странице целей */
+.user-selector {
+    margin-bottom: 2rem; /* Увеличиваем отступ после выбора пользователя */
+}
+
+.goals-stats {
+    margin-bottom: 2.5rem; /* Увеличиваем отступ после статистики */
+}
+
+.goals-filter {
+    margin-bottom: 2rem; /* Увеличиваем отступ после фильтров */
+}
+
+.goals-container {
+    gap: 2rem; /* Увеличиваем расстояние между карточками целей */
+}
+
+/* Дополнительные отступы для мобильных устройств */
+@media (max-width: 768px) {
+    .user-selector {
+        margin-bottom: 2.5rem;
+    }
+    
+    .goals-stats {
+        margin-bottom: 3rem;
+    }
+    
+    .goals-filter {
+        margin-bottom: 2.5rem;
+    }
+    
+    .goals-container {
+        gap: 2.5rem;
+    }
+}
+
+/* Увеличиваем отступы внутри карточек целей */
+.goal-card {
+    margin-bottom: 1rem;
+}
+
+.goal-header {
+    margin-bottom: 1.2rem;
+}
+
+.goal-description {
+    margin-bottom: 1.2rem;
+}
+
+.goal-progress {
+    margin-bottom: 1.2rem;
+}
+
+.goal-meta {
+    margin-bottom: 1.2rem;
+}
+/* Увеличение селектора пользователя */
+.user-selector {
+    font-size: 1.2em; /* Увеличиваем шрифт */
+    padding: 1.5rem; /* Увеличиваем отступы внутри */
+    min-height: 80px; /* Минимальная высота */
+    align-items: center;
+}
+
+.user-selector label {
+    font-size: 1.3em; /* Увеличиваем label */
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.user-selector select {
+    font-size: 1.2em; /* Увеличиваем шрифт в select */
+    padding: 0.8rem 1.2rem;
+    min-width: 200px; /* Минимальная ширина */
+    height: 50px; /* Фиксированная высота */
+    border: 2px solid #e2e8f0;
+}
+
+/* Увеличение фильтров */
+.goals-filter {
+    gap: 1.5rem; /* Больше расстояния между кнопками */
+    margin-bottom: 2.5rem;
+}
+
+.filter-btn {
+    font-size: 1.3em; /* Увеличиваем шрифт */
+    padding: 1rem 2rem; /* Увеличиваем кнопки */
+    min-height: 55px; /* Минимальная высота */
+    min-width: 120px; /* Минимальная ширина */
+    text-align: center;
+    border: 2px solid #e2e8f0;
+    font-weight: bold;
+}
+
+/* Увеличение статистических карточек */
+.goals-stats {
+    gap: 2rem;
+}
+
+.stat-card {
+    padding: 2rem 1.5rem;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.stat-card h3 {
+    font-size: 1.3em; /* Увеличиваем заголовок */
+    margin-bottom: 1rem;
+    color: #4a5568;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 2.8em; /* Увеличиваем значение */
+    font-weight: bold;
+    color: #2d3748;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .user-selector {
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: center;
+        padding: 1.5rem;
+        min-height: auto;
+    }
+    
+    .user-selector select {
+        min-width: 100%;
+        height: 55px;
+    }
+    
+    .goals-filter {
+        justify-content: center;
+        gap: 1rem;
+    }
+    
+    .filter-btn {
+        font-size: 1.2em;
+        padding: 0.8rem 1.5rem;
+        min-width: 100px;
+        flex: 1;
+        max-width: 150px;
+    }
+    
+    .stat-card {
+        min-height: 120px;
+        padding: 1.5rem 1rem;
+    }
+    
+    .stat-card h3 {
+        font-size: 1.2em;
+    }
+    
+    .stat-value {
+        font-size: 2.2em;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .user-selector {
+        font-size: 1.1em;
+        padding: 1.2rem;
+    }
+    
+    .user-selector label {
+        font-size: 1.2em;
+    }
+    
+    .user-selector select {
+        font-size: 1.1em;
+        height: 50px;
+    }
+    
+    .filter-btn {
+        font-size: 1.1em;
+        padding: 0.7rem 1rem;
+    }
+    
+    .stat-card h3 {
+        font-size: 1.1em;
+    }
+    
+    .stat-value {
+        font-size: 2em;
+    }
+}

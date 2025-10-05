@@ -1,4 +1,4 @@
 @echo off
 git add .
-git commit -m "Big update"
-git push
+git commit -m "Website update"
+git push AI site
