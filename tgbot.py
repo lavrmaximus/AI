@@ -415,7 +415,7 @@ class BusinessBot:
         
         db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot.db')
         db.conn = sqlite3.connect(db_path, check_same_thread=False)
-        db.create_sqlite_tables()
+        await db.init_db()
         print(f"✅ SQLite база данных подключена: {db_path}")
         
         print("✅ Умное определение типов сообщений")
