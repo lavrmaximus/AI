@@ -1,10 +1,18 @@
-import asyncpg
 import asyncio
 from datetime import datetime
 import json
 from typing import Dict, List, Optional
 import logging
 import os
+
+# ПРОВЕРЯЕМ ДОСТУПНОСТЬ ASYNCPG
+try:
+    import asyncpg
+    HAS_ASYNCGP = True
+    print("✅ asyncpg доступен")
+except ImportError:
+    HAS_ASYNCGP = False
+    print("❌ asyncpg НЕ доступен, используем SQLite")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -16,34 +24,37 @@ class Database:
     
     async def init_db(self):
         """Инициализация подключения к базе данных"""
-        try:
-            self.pool = await asyncpg.create_pool(
-                database='railway',
-                user='postgres',
-                password='wMpYpLQssFkpdqxISRxfvCFBEnObVpIS',
-                host='postgres.railway.internal',
-                port=5432
-            )
-            await self.create_tables()
-            print("✅ PostgreSQL база данных подключена")
-            
-            # ОЧИЩАЕМ SQLite соединение когда PostgreSQL активен
-            if hasattr(self, 'conn') and self.conn:
-                self.conn.close()
-            self.conn = None
-            
-        except Exception as e:
-            print(f"❌ Ошибка PostgreSQL: {e}")
-            # Для локальной разработки используем SQLite как fallback
-            import sqlite3
-            import os
-            
-            # Явно указываем путь в корневой папке проекта
-            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot.db')
-            self.conn = sqlite3.connect(db_path, check_same_thread=False)
-            self.create_sqlite_tables()
-            print(f"✅ SQLite база данных подключена: {db_path}")
-    
+        
+        # ЕСЛИ ASYNCPG ДОСТУПЕН - ПРОБУЕМ POSTGRESQL
+        if HAS_ASYNCGP:
+            try:
+                self.pool = await asyncpg.create_pool(
+                    database='railway',
+                    user='postgres',
+                    password='wMpYpLQssFkpdqxISRxfvCFBEnObVpIS',
+                    host='postgres.railway.internal',
+                    port=5432
+                )
+                await self.create_tables()
+                print("✅ PostgreSQL база данных подключена")
+                
+                # ОЧИЩАЕМ SQLite соединение когда PostgreSQL активен
+                if hasattr(self, 'conn') and self.conn:
+                    self.conn.close()
+                self.conn = None
+                return  # УСПЕШНО ПОДКЛЮЧИЛИСЬ К POSTGRESQL
+                
+            except Exception as e:
+                print(f"❌ Ошибка PostgreSQL: {e}")
+                # ПРОДОЛЖАЕМ НА SQLite ЕСЛИ POSTGRESQL НЕ РАБОТАЕТ
+        
+        # ИСПОЛЬЗУЕМ SQLite (ЕСЛИ ASYNCPG НЕ ДОСТУПЕН ИЛИ POSTGRESQL УПАЛ)
+        import sqlite3
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot.db')
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.create_sqlite_tables()
+        print(f"✅ SQLite база данных подключена: {db_path}")
+        
     def create_sqlite_tables(self):
         """Создание таблиц в SQLite"""
         cursor = self.conn.cursor()

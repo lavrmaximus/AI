@@ -404,13 +404,14 @@ class BusinessBot:
         # response = self.escape_markdown(response)
         return f"💬 {response}"
     
-    def run(self):
-        """Запуск бота"""
+    async def run_async(self):
+        """Асинхронный запуск бота"""
         print("🤖 Умный бот запускается...")
         
         # Инициализация БД
         import sqlite3
         import os
+        import asyncio
         
         db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot.db')
         db.conn = sqlite3.connect(db_path, check_same_thread=False)
@@ -422,9 +423,10 @@ class BusinessBot:
         print("✅ Логирование всех действий")
         print("✅ Контекстная память пользователей")
         
-        # ПРОСТОЙ ЗАПУСК - работает в версии 20.7
-        self.app.run_polling()
-
-if __name__ == "__main__":
-    bot = BusinessBot()
-    bot.run()
+        # ПРАВИЛЬНЫЙ ЗАПУСК для версии 20.7
+        await self.app.initialize()
+        await self.app.start()
+        await self.app.updater.start_polling()
+            
+        # Бесконечный цикл
+        await asyncio.Event().wait()
