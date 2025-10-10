@@ -4,23 +4,149 @@
     box-sizing: border-box;
 }
 
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #333;
-    min-height: 100vh;
-    line-height: 1.6;
+:root {
+    --primary-color: #667eea;
+    --primary-dark: #5a67d8;
+    --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --bg-card: rgba(45, 55, 72, 0.8);
+    --bg-card-hover: rgba(74, 85, 104, 0.9);
+    --text-light: #f7fafc;
+    --text-muted: #a0aec0;
+    --border-color: rgba(74, 85, 104, 0.5);
+    --success-color: #48bb78;
+    --warning-color: #ed8936;
+    --error-color: #f56565;
+    --info-color: #4299e1;
 }
 
-/* Навигация */
+/* Анимированный фон с размытыми цветными сферами */
+.animated-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    overflow: hidden;
+}
+
+.gradient-sphere {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.4;
+    animation: float 15s infinite ease-in-out;
+}
+
+.sphere-1 {
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    top: 10%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.sphere-2 {
+    width: 300px;
+    height: 300px;
+    background: linear-gradient(45deg, #f093fb, #f5576c);
+    top: 60%;
+    left: 70%;
+    animation-delay: -5s;
+}
+
+.sphere-3 {
+    width: 350px;
+    height: 350px;
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+    top: 30%;
+    left: 50%;
+    animation-delay: -10s;
+}
+
+.sphere-4 {
+    width: 250px;
+    height: 250px;
+    background: linear-gradient(45deg, #43e97b, #38f9d7);
+    top: 70%;
+    left: 20%;
+    animation-delay: -7s;
+}
+
+.sphere-5 {
+    width: 320px;
+    height: 320px;
+    background: linear-gradient(45deg, #fa709a, #fee140);
+    top: 20%;
+    left: 80%;
+    animation-delay: -12s;
+}
+
+/* Анимация плавающего движения */
+/* Более активная анимация плавающего движения */
+@keyframes float {
+    0%, 100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 0.4;
+    }
+    20% {
+        transform: translate(40px, -25px) scale(1.15) rotate(5deg);
+        opacity: 0.6;
+    }
+    40% {
+        transform: translate(-30px, 20px) scale(0.95) rotate(-3deg);
+        opacity: 0.5;
+    }
+    60% {
+        transform: translate(25px, 35px) scale(1.1) rotate(2deg);
+        opacity: 0.7;
+    }
+    80% {
+        transform: translate(-35px, -20px) scale(0.98) rotate(-4deg);
+        opacity: 0.55;
+    }
+}
+@keyframes pulse {
+    0%, 100% {
+        filter: blur(60px) brightness(1);
+    }
+    50% {
+        filter: blur(70px) brightness(1.2);
+    }
+}
+
+/* Дополнительный слой размытия */
+.background-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 32, 44, 0.7);
+    backdrop-filter: blur(20px);
+    z-index: -1;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text-light);
+    min-height: 100vh;
+    line-height: 1.6;
+    position: relative;
+}
+
+/* Улучшаем навигацию для нового фона */
 .navbar {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: rgba(26, 32, 44, 0.8);
+    backdrop-filter: blur(15px);
     padding: 1rem 0;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 30px rgba(0,0,0,0.4);
     position: sticky;
     top: 0;
     z-index: 1000;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .nav-container {
@@ -33,8 +159,10 @@ body {
 }
 
 .nav-logo {
-    color: #4a5568;
+    color: var(--text-light);
     font-size: 1.8em;
+    font-weight: bold;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .nav-links {
@@ -44,16 +172,20 @@ body {
 
 .nav-link {
     text-decoration: none;
-    color: #4a5568;
+    color: var(--text-light);
     font-weight: 500;
     padding: 0.5rem 1rem;
-    border-radius: 5px;
+    border-radius: 8px;
     transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
 }
 
 .nav-link:hover {
-    background: #667eea;
+    background: linear-gradient(135deg, #d400ff, #9400b3);
     color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(212, 0, 255, 0.4);
 }
 
 /* Основной контейнер */
@@ -61,28 +193,36 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem 20px;
+    position: relative;
+    z-index: 1;
 }
 
-/* Hero секция */
+/* Hero секция с улучшенным контрастом */
 .hero-section {
     text-align: center;
-    color: white;
+    color: var(--text-light);
     margin-bottom: 3rem;
+    position: relative;
 }
 
 .hero-section h1 {
     font-size: 3em;
     margin-bottom: 1rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, #fff 0%, #a0aec0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .hero-section p {
     font-size: 1.3em;
     opacity: 0.9;
     margin-bottom: 2rem;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-/* Сетка фич */
+/* Карточки с стеклянным эффектом */
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -91,44 +231,80 @@ body {
 }
 
 .feature-card {
-    background: white;
+    background: var(--bg-card);
     padding: 2rem;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     text-align: center;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
 }
 
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #d400ff, transparent);
+}
 .feature-card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-10px) scale(1.02);
+    background: var(--bg-card-hover);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
 }
 
 .feature-card h3 {
-    color: #4a5568;
+    color: var(--text-light);
     margin-bottom: 1rem;
     font-size: 1.5em;
 }
 
 .feature-card p {
-    color: #718096;
+    color: var(--text-muted);
     margin-bottom: 1.5rem;
 }
 
-/* Кнопки */
+/* Кнопки с фиолетовым градиентом */
 .btn {
     display: inline-block;
-    background: #667eea;
+    background: linear-gradient(135deg, #d400ff, #9400b3);
     color: white;
     padding: 12px 30px;
     text-decoration: none;
     border-radius: 25px;
     font-weight: bold;
     transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(212, 0, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
 }
 
 .btn:hover {
-    background: #5a6fd8;
     transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(212, 0, 255, 0.5);
+    background: linear-gradient(135deg, #e000ff, #a800cc);
 }
 
 /* KPI карточки */
@@ -137,9 +313,10 @@ body {
 }
 
 .kpi-section h2 {
-    color: white;
+    color: var(--text-light);
     margin-bottom: 1.5rem;
     text-align: center;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .kpi-grid {
@@ -149,20 +326,24 @@ body {
 }
 
 .kpi-card {
-    background: white;
+    background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     text-align: center;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
 }
 
 .kpi-card:hover {
     transform: translateY(-5px);
+    background: var(--bg-card-hover);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
 }
 
 .kpi-card h3 {
-    color: #666;
+    color: var(--text-muted);
     margin-bottom: 0.5rem;
     font-size: 1em;
 }
@@ -170,8 +351,9 @@ body {
 .kpi-card .value {
     font-size: 2em;
     font-weight: bold;
-    color: #4a5568;
+    color: var(--text-light);
     margin-bottom: 0.5rem;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .kpi-card .change {
@@ -180,31 +362,21 @@ body {
 }
 
 .kpi-card .change.positive {
-    color: #48bb78;
+    color: var(--success-color);
+    text-shadow: 0 2px 10px rgba(72, 187, 120, 0.3);
 }
 
 .kpi-card .change.negative {
-    color: #f56565;
+    color: var(--error-color);
+    text-shadow: 0 2px 10px rgba(245, 101, 101, 0.3);
 }
 
 .kpi-card .change.neutral {
-    color: #a0aec0;
+    color: var(--text-muted);
 }
 
-/* Заголовки дашборда */
-.dashboard-header, .analytics-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    color: white;
-}
+/* Остальные стили остаются похожими, но с улучшенным контрастом */
 
-.dashboard-header h1, .analytics-header h1 {
-    font-size: 2.5em;
-}
-
-/* Секции с графиками */
 .charts-section {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -213,75 +385,38 @@ body {
 }
 
 .chart-container, .metrics-container {
-    background: white;
+    background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
 }
 
 .chart-container h3, .metrics-container h3 {
-    color: #4a5568;
+    color: var(--text-light);
     margin-bottom: 1rem;
 }
 
-/* Анализ от ИИ */
 .analysis-section {
-    background: white;
+    background: var(--bg-card);
     padding: 2rem;
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
 }
 
-.analysis-section h2 {
-    color: #4a5568;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 0.5rem;
-}
-
-.ai-summary, .ai-metrics, .ai-trends, .ai-recommendations, .ai-commentary {
-    background: #f7fafc;
-    padding: 1.5rem;
-    border-radius: 10px;
-    margin-bottom: 1rem;
-    border-left: 4px solid #4299e1;
-}
-
-.ai-metrics h4, .ai-trends h4, .ai-recommendations h4, .ai-commentary h4 {
-    margin-bottom: 0.5rem;
-    color: #4a5568;
-}
-
-/* Селектор пользователя */
 .user-selector {
-    background: white;
+    background: var(--bg-card);
     padding: 1rem;
     border-radius: 10px;
     display: flex;
     align-items: center;
     gap: 1rem;
-}
-
-.user-selector label {
-    font-weight: bold;
-    color: #4a5568;
-}
-
-.user-selector select {
-    padding: 0.5rem 1rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 5px;
-    background: white;
-}
-
-/* Футер */
-.footer {
-    text-align: center;
-    color: white;
-    padding: 2rem 0;
-    margin-top: 3rem;
-    border-top: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
 }
 
 /* Адаптивность */
@@ -291,6 +426,11 @@ body {
         gap: 1rem;
     }
     
+    .gradient-sphere {
+        filter: blur(40px);
+        animation: float 8s infinite ease-in-out; /* Быстрее на мобильных */
+    }
+
     .nav-links {
         gap: 1rem;
     }
@@ -312,560 +452,77 @@ body {
     .container {
         padding: 1rem 15px;
     }
-}
-/* Стили для бейджей метрик */
-.metric-badge {
-    display: inline-block;
-    background: white;
-    padding: 10px 15px;
-    border-radius: 8px;
-    margin: 5px;
-    border: 1px solid #e2e8f0;
-    text-align: center;
-}
-
-.metric-badge .metric-label {
-    display: block;
-    color: #718096;
-    font-size: 0.8em;
-    margin-bottom: 5px;
-}
-
-.metric-badge .metric-value {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #4a5568;
+    
+    /* Уменьшаем сферы на мобильных */
+    .gradient-sphere {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(60px);
+        opacity: 0.4;
+        animation: float 5s infinite ease-in-out, /* Было 15s, стало 12s */
+                    pulse 8s infinite ease-in-out; /* Добавляем вторую анимацию */
+    }
+    
+.sphere-1 {
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    top: 10%;
+    left: 10%;
+    animation-delay: 0s;
+    animation-duration: 13s; /* Разная длительность для каждой сферы */
 }
 
-/* Стили для списков в анализе */
-.ai-trends ul, .ai-recommendations ul {
-    list-style: none;
-    padding: 0;
-}
-
-.ai-trends li, .ai-recommendations li {
-    padding: 8px 0;
-    border-bottom: 1px solid #e2e8f0;
-    position: relative;
-    padding-left: 20px;
-}
-
-.ai-trends li:before {
-    content: "📈";
-    position: absolute;
-    left: 0;
-}
-
-.ai-recommendations li:before {
-    content: "💡";
-    position: absolute;
-    left: 0;
-}
-
-.ai-trends li:last-child, .ai-recommendations li:last-child {
-    border-bottom: none;
-}
-
-/* Улучшаем отображение графиков */
-.chart-container {
-    position: relative;
+.sphere-2 {
+    width: 300px;
     height: 300px;
+    background: linear-gradient(45deg, #f093fb, #f5576c);
+    top: 60%;
+    left: 70%;
+    animation-delay: -2s;
+    animation-duration: 11s;
 }
 
-#financeChart {
-    width: 100% !important;
-    height: 100% !important;
-}
-/* Стили для страницы целей */
-.goals-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+.sphere-3 {
+    width: 350px;
+    height: 350px;
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+    top: 30%;
+    left: 50%;
+    animation-delay: -4s;
+    animation-duration: 14s;
 }
 
-.stat-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 10px;
-    text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+.sphere-4 {
+    width: 250px;
+    height: 250px;
+    background: linear-gradient(45deg, #43e97b, #38f9d7);
+    top: 70%;
+    left: 20%;
+    animation-delay: -1s;
+    animation-duration: 10s;
 }
 
-.stat-card h3 {
-    color: #718096;
-    font-size: 0.9em;
-    margin-bottom: 0.5rem;
+.sphere-5 {
+    width: 320px;
+    height: 320px;
+    background: linear-gradient(45deg, #fa709a, #fee140);
+    top: 20%;
+    left: 80%;
+    animation-delay: -3s;
+    animation-duration: 12s;
 }
-
-.stat-value {
-    font-size: 2em;
-    font-weight: bold;
-    color: #4a5568;
-}
-
-.goals-filter {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-}
-
-.filter-btn {
-    background: white;
-    border: 2px solid #e2e8f0;
-    padding: 0.5rem 1.5rem;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.filter-btn.active,
-.filter-btn:hover {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
-.goals-container {
-    display: grid;
-    gap: 1.5rem;
-}
-
-.goal-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border-left: 4px solid #4299e1;
-}
-
-.goal-card.completed {
-    border-left-color: #48bb78;
-    opacity: 0.8;
-}
-
-.goal-card.cancelled {
-    border-left-color: #f56565;
-    opacity: 0.6;
-}
-
-.goal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.goal-header h3 {
-    color: #4a5568;
-    margin: 0;
-    flex: 1;
-}
-
-.goal-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.8em;
-    font-weight: bold;
-}
-
-.goal-status.active {
-    background: #ebf8ff;
-    color: #4299e1;
-}
-
-.goal-status.completed {
-    background: #f0fff4;
-    color: #48bb78;
-}
-
-.goal-status.cancelled {
-    background: #fff5f5;
-    color: #f56565;
-}
-
-.goal-description {
-    color: #718096;
-    margin-bottom: 1rem;
-    line-height: 1.5;
-}
-
-.goal-progress {
-    margin-bottom: 1rem;
-}
-
-.progress-info {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    font-size: 0.9em;
-    color: #718096;
-}
-
-.progress-bar {
-    height: 8px;
-    background: #e2e8f0;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
-.goal-card.completed .progress-fill {
-    background: #48bb78;
-}
-
-.goal-meta {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-}
-
-.goal-category, .goal-deadline {
-    background: #f7fafc;
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.8em;
-    color: #718096;
-}
-
-.goal-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.btn-update, .btn-complete {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.3s ease;
-}
-
-.btn-update {
-    background: #4299e1;
-    color: white;
-}
-
-.btn-update:hover {
-    background: #3182ce;
-}
-
-.btn-complete {
-    background: #48bb78;
-    color: white;
-}
-
-.btn-complete:hover {
-    background: #38a169;
-}
-
-.no-goals {
-    text-align: center;
-    padding: 3rem;
-    color: #718096;
-    font-size: 1.1em;
-}
-
-.loading {
-    text-align: center;
-    padding: 2rem;
-    color: #718096;
-}
-/* Увеличение размера текста для целей на мобильных устройствах */
-@media (max-width: 768px) {
-    /* Заголовок цели */
-    .goal-header h3 {
-        font-size: 1.3em;
-        line-height: 1.3;
-    }
-    
-    /* Описание цели */
-    .goal-description {
-        font-size: 1.1em;
-        line-height: 1.4;
-    }
-    
-    /* Статус цели */
-    .goal-status {
-        font-size: 1em;
-        padding: 0.4rem 1rem;
-    }
-    
-    /* Карточка цели */
-    .goal-card {
-        padding: 1.8rem;
-    }
-    
-    /* Мета-информация (категория, дедлайн) */
-    .goal-category, .goal-deadline {
-        font-size: 1em;
-        padding: 0.4rem 1rem;
-    }
-    
-    /* Кнопки действий */
-    .btn-update, .btn-complete {
-        font-size: 1em;
-        padding: 0.7rem 1.2rem;
-    }
-    
-    /* Прогресс бар */
-    .progress-info {
-        font-size: 1em;
-    }
-    
-    /* Статистические карточки */
-    .stat-card h3 {
-        font-size: 1em;
-    }
-    
-    .stat-value {
-        font-size: 2.2em;
-    }
-    
-    /* Кнопки фильтра */
-    .filter-btn {
-        font-size: 1em;
-        padding: 0.7rem 1.5rem;
-    }
-}
-
-/* Дополнительные улучшения для очень маленьких экранов */
-@media (max-width: 480px) {
-    .goal-header {
-        flex-direction: column;
-        gap: 0.8rem;
-    }
-    
-    .goal-header h3 {
-        font-size: 1.4em;
-        text-align: center;
-    }
-    
-    .goal-card {
-        padding: 1.5rem;
-    }
-    
-    .goal-meta {
-        justify-content: center;
-    }
-    
-    .goal-actions {
-        justify-content: center;
-    }
-    
-    .goals-filter {
-        justify-content: center;
-    }
-}
-
-/* Улучшение читаемости для всех устройств */
-.goal-card {
-    font-size: 1.40em; /* Небольшое увеличение базового размера */
-}
-
-.goal-description {
-    font-size: 1.25em;
-    line-height: 1.5;
-}
-
-/* Увеличение отступов между элементами на странице целей */
-.user-selector {
-    margin-bottom: 2rem; /* Увеличиваем отступ после выбора пользователя */
-}
-
-.goals-stats {
-    margin-bottom: 2.5rem; /* Увеличиваем отступ после статистики */
-}
-
-.goals-filter {
-    margin-bottom: 2rem; /* Увеличиваем отступ после фильтров */
-}
-
-.goals-container {
-    gap: 2rem; /* Увеличиваем расстояние между карточками целей */
-}
-
-/* Дополнительные отступы для мобильных устройств */
-@media (max-width: 768px) {
-    .user-selector {
-        margin-bottom: 2.5rem;
-    }
-    
-    .goals-stats {
-        margin-bottom: 3rem;
-    }
-    
-    .goals-filter {
-        margin-bottom: 2.5rem;
-    }
-    
-    .goals-container {
-        gap: 2.5rem;
-    }
-}
-
-/* Увеличиваем отступы внутри карточек целей */
-.goal-card {
-    margin-bottom: 1rem;
-}
-
-.goal-header {
-    margin-bottom: 1.2rem;
-}
-
-.goal-description {
-    margin-bottom: 1.2rem;
-}
-
-.goal-progress {
-    margin-bottom: 1.2rem;
-}
-
-.goal-meta {
-    margin-bottom: 1.2rem;
-}
-/* Увеличение селектора пользователя */
-.user-selector {
-    font-size: 1.2em; /* Увеличиваем шрифт */
-    padding: 1.5rem; /* Увеличиваем отступы внутри */
-    min-height: 80px; /* Минимальная высота */
-    align-items: center;
-}
-
-.user-selector label {
-    font-size: 1.3em; /* Увеличиваем label */
-    font-weight: bold;
-    white-space: nowrap;
-}
-
-.user-selector select {
-    font-size: 1.2em; /* Увеличиваем шрифт в select */
-    padding: 0.8rem 1.2rem;
-    min-width: 200px; /* Минимальная ширина */
-    height: 50px; /* Фиксированная высота */
-    border: 2px solid #e2e8f0;
-}
-
-/* Увеличение фильтров */
-.goals-filter {
-    gap: 1.5rem; /* Больше расстояния между кнопками */
-    margin-bottom: 2.5rem;
-}
-
-.filter-btn {
-    font-size: 1.3em; /* Увеличиваем шрифт */
-    padding: 1rem 2rem; /* Увеличиваем кнопки */
-    min-height: 55px; /* Минимальная высота */
-    min-width: 120px; /* Минимальная ширина */
-    text-align: center;
-    border: 2px solid #e2e8f0;
-    font-weight: bold;
-}
-
-/* Увеличение статистических карточек */
-.goals-stats {
-    gap: 2rem;
-}
-
-.stat-card {
-    padding: 2rem 1.5rem;
-    min-height: 140px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.stat-card h3 {
-    font-size: 1.3em; /* Увеличиваем заголовок */
-    margin-bottom: 1rem;
-    color: #4a5568;
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 2.8em; /* Увеличиваем значение */
-    font-weight: bold;
-    color: #2d3748;
-}
-
-/* Адаптивность для мобильных */
-@media (max-width: 768px) {
-    .user-selector {
-        flex-direction: column;
-        gap: 1.5rem;
-        text-align: center;
-        padding: 1.5rem;
-        min-height: auto;
-    }
-    
-    .user-selector select {
-        min-width: 100%;
-        height: 55px;
-    }
-    
-    .goals-filter {
-        justify-content: center;
-        gap: 1rem;
-    }
-    
-    .filter-btn {
-        font-size: 1.2em;
-        padding: 0.8rem 1.5rem;
-        min-width: 100px;
-        flex: 1;
-        max-width: 150px;
-    }
-    
-    .stat-card {
-        min-height: 120px;
-        padding: 1.5rem 1rem;
-    }
-    
-    .stat-card h3 {
-        font-size: 1.2em;
-    }
-    
-    .stat-value {
-        font-size: 2.2em;
-    }
 }
 
 /* Для очень маленьких экранов */
 @media (max-width: 480px) {
-    .user-selector {
-        font-size: 1.1em;
-        padding: 1.2rem;
+    .gradient-sphere {
+        filter: blur(30px);
     }
     
-    .user-selector label {
-        font-size: 1.2em;
-    }
-    
-    .user-selector select {
-        font-size: 1.1em;
-        height: 50px;
-    }
-    
-    .filter-btn {
-        font-size: 1.1em;
-        padding: 0.7rem 1rem;
-    }
-    
-    .stat-card h3 {
-        font-size: 1.1em;
-    }
-    
-    .stat-value {
-        font-size: 2em;
-    }
+    .sphere-1 { width: 150px; height: 150px; }
+    .sphere-2 { width: 120px; height: 120px; }
+    .sphere-3 { width: 140px; height: 140px; }
+    .sphere-4 { width: 100px; height: 100px; }
+    .sphere-5 { width: 130px; height: 130px; }
 }
