@@ -26,8 +26,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -2;
-    overflow: hidden;
+    z-index: -3; /* Ниже всего */
 }
 
 .gradient-sphere {
@@ -123,8 +122,8 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(26, 32, 44, 0.7);
-    backdrop-filter: blur(20px);
+    background: rgba(26, 32, 44, 0.4); /* Уменьшил прозрачность с 0.7 */
+    backdrop-filter: blur(5px); /* Уменьшил размытие с 20px */
     z-index: -1;
 }
 
@@ -160,7 +159,7 @@ body {
 
 .nav-logo {
     color: var(--text-light);
-    font-size: 1.8em;
+    font-size: 1.0em;
     font-weight: bold;
     text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
@@ -408,17 +407,102 @@ body {
     backdrop-filter: blur(10px);
 }
 
+/* Мобильный-first стили для выбора пользователя */
 .user-selector {
     background: var(--bg-card);
-    padding: 1rem;
-    border-radius: 10px;
+    padding: 1.2rem;
+    border-radius: 12px;
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.8rem;
     border: 1px solid var(--border-color);
     backdrop-filter: blur(10px);
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    text-align: center;
 }
 
+.user-selector label {
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-align: center;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.enhanced-select {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.enhanced-select select {
+    width: 100%;
+    padding: 16px 50px 16px 20px;
+    background: rgba(26, 32, 44, 0.9);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-light);
+    font-size: 16px;
+    cursor: pointer;
+    appearance: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    font-weight: 500;
+    min-height: 54px;
+}
+
+/* Остальные стили остаются такими же */
+.enhanced-select select:active,
+.enhanced-select select:focus {
+    border-color: #d400ff;
+    box-shadow: 0 0 0 3px rgba(212, 0, 255, 0.3);
+    outline: none;
+    transform: scale(1.02);
+}
+
+.enhanced-select select:hover {
+    border-color: #d400ff;
+}
+
+.enhanced-select::after {
+    content: "▼";
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.enhanced-select:active::after {
+    transform: translateY(-50%) scale(1.1);
+    color: #d400ff;
+}
+
+/* Для планшетов и десктопов */
+@media (min-width: 768px) {
+    .user-selector {
+        flex-direction: column; /* Оставляем вертикальное расположение */
+        text-align: center;
+        padding: 1.5rem;
+    }
+    
+    .user-selector label {
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .enhanced-select {
+        min-width: 280px;
+        max-width: 350px;
+    }
+}
 /* Адаптивность */
 @media (max-width: 768px) {
     .nav-container {
@@ -525,4 +609,316 @@ body {
     .sphere-3 { width: 140px; height: 140px; }
     .sphere-4 { width: 100px; height: 100px; }
     .sphere-5 { width: 130px; height: 130px; }
+}
+/* Стили для улучшенного выбора пользователя */
+.user-selector {
+    background: var(--bg-card);
+    padding: 1rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    margin-bottom: 2rem;
+}
+
+.user-selector label {
+    color: var(--text-light);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.enhanced-select {
+    position: relative;
+    min-width: 250px;
+}
+
+.enhanced-select select {
+    width: 100%;
+    padding: 12px 45px 12px 15px;
+    background: rgba(26, 32, 44, 0.8);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 14px;
+    cursor: pointer;
+    appearance: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.enhanced-select select:hover {
+    border-color: #d400ff;
+    box-shadow: 0 4px 20px rgba(212, 0, 255, 0.3);
+}
+
+.enhanced-select select:focus {
+    outline: none;
+    border-color: #d400ff;
+    box-shadow: 0 0 0 2px rgba(212, 0, 255, 0.2);
+}
+
+.enhanced-select::after {
+    content: "▼";
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 12px;
+    pointer-events: none;
+    transition: transform 0.3s ease;
+}
+
+.enhanced-select:hover::after {
+    color: #d400ff;
+}
+
+.enhanced-select select:focus + ::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* Стили для опций */
+.enhanced-select select option {
+    background: #2d3748;
+    color: var(--text-light);
+    padding: 10px;
+    border: none;
+}
+
+/* Для современных браузеров - кастомизация скролла */
+.enhanced-select select::-webkit-scrollbar {
+    width: 8px;
+}
+
+.enhanced-select select::-webkit-scrollbar-track {
+    background: rgba(26, 32, 44, 0.8);
+    border-radius: 4px;
+}
+
+.enhanced-select select::-webkit-scrollbar-thumb {
+    background: #d400ff;
+    border-radius: 4px;
+}
+
+.enhanced-select select::-webkit-scrollbar-thumb:hover {
+    background: #e000ff;
+}
+
+/* Wireframe сетка на фон */
+.wireframe-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(204, 0, 255, 0.8) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(204, 0, 255, 0.8) 2px, transparent 2px);
+    background-size: 100px 100px;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.9 !important;
+    border: 3px solid rgba(0, 0, 255, 0) !important; /* Синяя рамка для видимости */
+}
+
+/* Анимация медленного движения сетки */
+@keyframes gridMove {
+    0% {
+        transform: translate(0, 0);
+    }
+    100% {
+        transform: translate(40px, 40px);
+    }
+}
+
+/* Стили для страницы аналитики */
+.analytics-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.analytics-header h1 {
+    font-size: 2.2em;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #fff 0%, #a0aec0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.analytics-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.analytics-section {
+    background: var(--bg-card);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+}
+
+.analytics-section h2 {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    font-size: 1.5em;
+    text-align: center;
+}
+
+/* Карточки анализа */
+.analysis-card {
+    background: rgba(26, 32, 44, 0.6);
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.analysis-card h4 {
+    color: var(--text-light);
+    margin-bottom: 1rem;
+    font-size: 1.2em;
+}
+
+/* Шкала рентабельности */
+.profitability-gauge {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.gauge-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.gauge-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(74, 85, 104, 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #48bb78, #d400ff);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+/* Оценка эффективности */
+.efficiency-score {
+    font-size: 2.5em;
+    font-weight: bold;
+    text-align: center;
+    color: #d400ff;
+    margin: 1rem 0;
+    text-shadow: 0 2px 10px rgba(212, 0, 255, 0.3);
+}
+
+/* Сетка трендов */
+.trends-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.trend-card {
+    background: rgba(26, 32, 44, 0.6);
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.trend-card.positive {
+    border-left: 4px solid var(--success-color);
+}
+
+.trend-card.negative {
+    border-left: 4px solid var(--error-color);
+}
+
+.trend-card h4 {
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    font-size: 1em;
+}
+
+.trend-value {
+    font-size: 1.8em;
+    font-weight: bold;
+}
+
+.trend-card.positive .trend-value {
+    color: var(--success-color);
+}
+
+.trend-card.negative .trend-value {
+    color: var(--error-color);
+}
+
+/* Состояние загрузки */
+.loading {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem;
+    font-style: italic;
+}
+
+/* Адаптивность для аналитики */
+@media (max-width: 768px) {
+    .analytics-section {
+        padding: 1.5rem;
+    }
+    
+    .analytics-header h1 {
+        font-size: 1.8em;
+    }
+    
+    .trends-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .analysis-card {
+        padding: 1rem;
+    }
+    
+    .gauge-value,
+    .efficiency-score {
+        font-size: 1.8em;
+    }
+}
+/* Стили для списков в аналитике */
+.analytics-section ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.analytics-section li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(74, 85, 104, 0.3);
+    color: var(--text-light);
+}
+
+.analytics-section li:last-child {
+    border-bottom: none;
+}
+
+.analytics-section li:before {
+    content: "•";
+    color: #d400ff;
+    font-weight: bold;
+    display: inline-block;
+    width: 1em;
+    margin-left: -1em;
 }

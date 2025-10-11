@@ -34,3 +34,10 @@ function showNotification(message, type = 'info') {
         notification.remove();
     }, 3000);
 }
+async function loadAnalyticsData() {
+    const userId = document.getElementById('userSelect').value;
+    if (!userId) return;
+
+    await loadFinancialAnalysis(userId);
+    await loadTrendsAnalysis(userId);
+}

@@ -3,10 +3,9 @@
 {% block title %}Дашборд - BusinessAI{% endblock %}
 
 {% block content %}
-<div class="dashboard-header">
-    <h1>Бизнес Дашборд</h1>
-    <div class="user-selector">
-        <label for="userSelect">Выберите пользователя:</label>
+<div class="user-selector">
+    <label for="userSelect">Выберите пользователя:</label>
+    <div class="enhanced-select">
         <select id="userSelect" onchange="loadUserData()">
             <option value="">Загрузка...</option>
         </select>
