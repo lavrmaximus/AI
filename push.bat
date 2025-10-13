@@ -1,4 +1,4 @@
 @echo off
 git add .
-git commit -m "Website update"
+git commit -m "dashboard fix"
 git push AI site

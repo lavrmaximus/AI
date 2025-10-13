@@ -3,30 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}BusinessAI{% endblock %}</title>
+    <title>{% block title %}Бизнес Аналитик{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Подключение Chart.js для графиков -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+    <!-- Навигация -->
     <nav class="navbar">
         <div class="nav-container">
-            <h1 class="nav-logo">📊 BusinessAI</h1>
-            <!-- В навигации меняем ссылку: -->
+            <div class="nav-logo">Здесь вы можете посмотреть статистику и данные своего бизнеса в удобном формате</div>
             <div class="nav-links">
-                <a href="{{ url_for('index') }}" class="nav-link">Главная</a>
-                <a href="{{ url_for('dashboard') }}" class="nav-link">Дашборд</a>
-                <a href="{{ url_for('goals') }}" class="nav-link">Цели и задачи</a>
-                <a href="{{ url_for('analytics') }}" class="nav-link">Аналитика</a>
+                <a href="/" class="nav-link">Главная</a>
+                <a href="/dashboard" class="nav-link">Дашборд</a>
+                <a href="/analytics" class="nav-link">Аналитика</a>
             </div>
         </div>
     </nav>
 
+    <!-- Основной контент -->
     <div class="container">
         {% block content %}{% endblock %}
     </div>
 
-    <footer class="footer">
-        <p>&copy; 2025 BusinessAI Analytics</p>
-    </footer>
+    <!-- Подключение основного скрипта -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+<!-- Анимированный фон -->
+<div class="animated-background">
+    <div class="gradient-sphere sphere-1"></div>
+    <div class="gradient-sphere sphere-2"></div>
+    <div class="gradient-sphere sphere-3"></div>
+    <div class="gradient-sphere sphere-4"></div>
+    <div class="gradient-sphere sphere-5"></div>
+    
+    <!-- Сетка ПЕРЕД оверлеем -->
+    <div class="wireframe-grid"></div>
+</div>
+
+<!-- Оверлей ПОСЛЕ сетки -->
+<div class="background-overlay"></div>
+
 </body>
 </html>

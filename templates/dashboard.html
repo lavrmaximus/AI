@@ -3,10 +3,9 @@
 {% block title %}Дашборд - BusinessAI{% endblock %}
 
 {% block content %}
-<div class="dashboard-header">
-    <h1>Бизнес Дашборд</h1>
-    <div class="user-selector">
-        <label for="userSelect">Выберите пользователя:</label>
+<div class="user-selector">
+    <label for="userSelect">Выберите профиль:</label>
+    <div class="enhanced-select">
         <select id="userSelect" onchange="loadUserData()">
             <option value="">Загрузка...</option>
         </select>
@@ -44,7 +43,9 @@
 <div class="charts-section">
     <div class="chart-container">
         <h3>Финансовая динамика</h3>
-        <canvas id="financeChart" width="400" height="200"></canvas>
+        <div class="chart-wrapper">
+            <canvas id="financeChart"></canvas>
+        </div>
     </div>
     
     <div class="metrics-container">
@@ -195,74 +196,91 @@
         }
     }
 
-    function renderFinanceChart(data) {
-        const ctx = document.getElementById('financeChart').getContext('2d');
-        
-        // Уничтожаем предыдущий график, если он существует
-        if (financeChart) {
-            financeChart.destroy();
-        }
-        
-        // Создаем новый график
-        financeChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.dates,
-                datasets: [
-                    {
-                        label: 'Выручка',
-                        data: data.revenue,
-                        borderColor: '#48bb78',
-                        backgroundColor: 'rgba(72, 187, 120, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Расходы',
-                        data: data.expenses,
-                        borderColor: '#f56565',
-                        backgroundColor: 'rgba(245, 101, 101, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Прибыль',
-                        data: data.profit,
-                        borderColor: '#4299e1',
-                        backgroundColor: 'rgba(66, 153, 225, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Динамика за период'
-                    }
+function renderFinanceChart(data) {
+    const canvas = document.getElementById('financeChart');
+    const ctx = canvas.getContext('2d');
+    
+    // Проверяем данные
+    if (!data || !data.dates || data.dates.length === 0) {
+        console.log('Нет данных для графика');
+        return;
+    }
+    
+    // Уничтожаем предыдущий график, если он существует
+    if (financeChart) {
+        console.log('Уничтожаем предыдущий график');
+        financeChart.destroy();
+        financeChart = null;
+    }
+    
+    // Ждем следующего tick для гарантии очистки
+    setTimeout(() => {
+        try {
+            // Создаем новый график
+            financeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.dates,
+                    datasets: [
+                        {
+                            label: 'Выручка',
+                            data: data.revenue,
+                            borderColor: '#48bb78',
+                            backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Расходы',
+                            data: data.expenses,
+                            borderColor: '#f56565',
+                            backgroundColor: 'rgba(245, 101, 101, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Прибыль',
+                            data: data.profit,
+                            borderColor: '#4299e1',
+                            backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString('ru-RU') + ' ₽';
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true, // Изменили на true
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Динамика за период'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('ru-RU') + ' ₽';
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
-    }
+            });
+            console.log('График создан');
+        } catch (error) {
+            console.error('Ошибка создания графика:', error);
+        }
+    }, 10);
+}
 
     function renderAIAnalysis(analysis) {
         const container = document.getElementById('aiAnalysis');

@@ -4,23 +4,148 @@
     box-sizing: border-box;
 }
 
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #333;
-    min-height: 100vh;
-    line-height: 1.6;
+:root {
+    --primary-color: #667eea;
+    --primary-dark: #5a67d8;
+    --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --bg-card: rgba(45, 55, 72, 0.8);
+    --bg-card-hover: rgba(74, 85, 104, 0.9);
+    --text-light: #f7fafc;
+    --text-muted: #a0aec0;
+    --border-color: rgba(74, 85, 104, 0.5);
+    --success-color: #48bb78;
+    --warning-color: #ed8936;
+    --error-color: #f56565;
+    --info-color: #4299e1;
 }
 
-/* Навигация */
+/* Анимированный фон с размытыми цветными сферами */
+.animated-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -3; /* Ниже всего */
+}
+
+.gradient-sphere {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.4;
+    animation: float 15s infinite ease-in-out;
+}
+
+.sphere-1 {
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    top: 10%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.sphere-2 {
+    width: 300px;
+    height: 300px;
+    background: linear-gradient(45deg, #f093fb, #f5576c);
+    top: 60%;
+    left: 70%;
+    animation-delay: -5s;
+}
+
+.sphere-3 {
+    width: 350px;
+    height: 350px;
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+    top: 30%;
+    left: 50%;
+    animation-delay: -10s;
+}
+
+.sphere-4 {
+    width: 250px;
+    height: 250px;
+    background: linear-gradient(45deg, #43e97b, #38f9d7);
+    top: 70%;
+    left: 20%;
+    animation-delay: -7s;
+}
+
+.sphere-5 {
+    width: 320px;
+    height: 320px;
+    background: linear-gradient(45deg, #fa709a, #fee140);
+    top: 20%;
+    left: 80%;
+    animation-delay: -12s;
+}
+
+/* Анимация плавающего движения */
+/* Более активная анимация плавающего движения */
+@keyframes float {
+    0%, 100% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+        opacity: 0.4;
+    }
+    20% {
+        transform: translate(40px, -25px) scale(1.15) rotate(5deg);
+        opacity: 0.6;
+    }
+    40% {
+        transform: translate(-30px, 20px) scale(0.95) rotate(-3deg);
+        opacity: 0.5;
+    }
+    60% {
+        transform: translate(25px, 35px) scale(1.1) rotate(2deg);
+        opacity: 0.7;
+    }
+    80% {
+        transform: translate(-35px, -20px) scale(0.98) rotate(-4deg);
+        opacity: 0.55;
+    }
+}
+@keyframes pulse {
+    0%, 100% {
+        filter: blur(60px) brightness(1);
+    }
+    50% {
+        filter: blur(70px) brightness(1.2);
+    }
+}
+
+/* Дополнительный слой размытия */
+.background-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 32, 44, 0.4); /* Уменьшил прозрачность с 0.7 */
+    backdrop-filter: blur(5px); /* Уменьшил размытие с 20px */
+    z-index: -1;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text-light);
+    min-height: 100vh;
+    line-height: 1.6;
+    position: relative;
+}
+
+/* Улучшаем навигацию для нового фона */
 .navbar {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: rgba(26, 32, 44, 0.8);
+    backdrop-filter: blur(15px);
     padding: 1rem 0;
-    box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 30px rgba(0,0,0,0.4);
     position: sticky;
     top: 0;
     z-index: 1000;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .nav-container {
@@ -33,8 +158,10 @@ body {
 }
 
 .nav-logo {
-    color: #4a5568;
-    font-size: 1.8em;
+    color: var(--text-light);
+    font-size: 1.0em;
+    font-weight: bold;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .nav-links {
@@ -44,16 +171,20 @@ body {
 
 .nav-link {
     text-decoration: none;
-    color: #4a5568;
+    color: var(--text-light);
     font-weight: 500;
     padding: 0.5rem 1rem;
-    border-radius: 5px;
+    border-radius: 8px;
     transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
 }
 
 .nav-link:hover {
-    background: #667eea;
+    background: linear-gradient(135deg, #d400ff, #9400b3);
     color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(212, 0, 255, 0.4);
 }
 
 /* Основной контейнер */
@@ -61,28 +192,36 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 2rem 20px;
+    position: relative;
+    z-index: 1;
 }
 
-/* Hero секция */
+/* Hero секция с улучшенным контрастом */
 .hero-section {
     text-align: center;
-    color: white;
+    color: var(--text-light);
     margin-bottom: 3rem;
+    position: relative;
 }
 
 .hero-section h1 {
     font-size: 3em;
     margin-bottom: 1rem;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, #fff 0%, #a0aec0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .hero-section p {
     font-size: 1.3em;
     opacity: 0.9;
     margin-bottom: 2rem;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
-/* Сетка фич */
+/* Карточки с стеклянным эффектом */
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -91,44 +230,80 @@ body {
 }
 
 .feature-card {
-    background: white;
+    background: var(--bg-card);
     padding: 2rem;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     text-align: center;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
 }
 
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #d400ff, transparent);
+}
 .feature-card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-10px) scale(1.02);
+    background: var(--bg-card-hover);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
 }
 
 .feature-card h3 {
-    color: #4a5568;
+    color: var(--text-light);
     margin-bottom: 1rem;
     font-size: 1.5em;
 }
 
 .feature-card p {
-    color: #718096;
+    color: var(--text-muted);
     margin-bottom: 1.5rem;
 }
 
-/* Кнопки */
+/* Кнопки с фиолетовым градиентом */
 .btn {
     display: inline-block;
-    background: #667eea;
+    background: linear-gradient(135deg, #d400ff, #9400b3);
     color: white;
     padding: 12px 30px;
     text-decoration: none;
     border-radius: 25px;
     font-weight: bold;
     transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(212, 0, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
 }
 
 .btn:hover {
-    background: #5a6fd8;
     transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(212, 0, 255, 0.5);
+    background: linear-gradient(135deg, #e000ff, #a800cc);
 }
 
 /* KPI карточки */
@@ -137,9 +312,10 @@ body {
 }
 
 .kpi-section h2 {
-    color: white;
+    color: var(--text-light);
     margin-bottom: 1.5rem;
     text-align: center;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .kpi-grid {
@@ -149,20 +325,24 @@ body {
 }
 
 .kpi-card {
-    background: white;
+    background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     text-align: center;
-    transition: transform 0.3s ease;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
 }
 
 .kpi-card:hover {
     transform: translateY(-5px);
+    background: var(--bg-card-hover);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
 }
 
 .kpi-card h3 {
-    color: #666;
+    color: var(--text-muted);
     margin-bottom: 0.5rem;
     font-size: 1em;
 }
@@ -170,8 +350,9 @@ body {
 .kpi-card .value {
     font-size: 2em;
     font-weight: bold;
-    color: #4a5568;
+    color: var(--text-light);
     margin-bottom: 0.5rem;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.3);
 }
 
 .kpi-card .change {
@@ -180,31 +361,21 @@ body {
 }
 
 .kpi-card .change.positive {
-    color: #48bb78;
+    color: var(--success-color);
+    text-shadow: 0 2px 10px rgba(72, 187, 120, 0.3);
 }
 
 .kpi-card .change.negative {
-    color: #f56565;
+    color: var(--error-color);
+    text-shadow: 0 2px 10px rgba(245, 101, 101, 0.3);
 }
 
 .kpi-card .change.neutral {
-    color: #a0aec0;
+    color: var(--text-muted);
 }
 
-/* Заголовки дашборда */
-.dashboard-header, .analytics-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    color: white;
-}
+/* Остальные стили остаются похожими, но с улучшенным контрастом */
 
-.dashboard-header h1, .analytics-header h1 {
-    font-size: 2.5em;
-}
-
-/* Секции с графиками */
 .charts-section {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -213,77 +384,125 @@ body {
 }
 
 .chart-container, .metrics-container {
-    background: white;
+    background: var(--bg-card);
     padding: 1.5rem;
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
 }
 
 .chart-container h3, .metrics-container h3 {
-    color: #4a5568;
+    color: var(--text-light);
     margin-bottom: 1rem;
 }
 
-/* Анализ от ИИ */
 .analysis-section {
-    background: white;
+    background: var(--bg-card);
     padding: 2rem;
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
 }
 
-.analysis-section h2 {
-    color: #4a5568;
-    margin-bottom: 1.5rem;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 0.5rem;
-}
-
-.ai-summary, .ai-metrics, .ai-trends, .ai-recommendations, .ai-commentary {
-    background: #f7fafc;
-    padding: 1.5rem;
-    border-radius: 10px;
-    margin-bottom: 1rem;
-    border-left: 4px solid #4299e1;
-}
-
-.ai-metrics h4, .ai-trends h4, .ai-recommendations h4, .ai-commentary h4 {
-    margin-bottom: 0.5rem;
-    color: #4a5568;
-}
-
-/* Селектор пользователя */
+/* Мобильный-first стили для выбора пользователя */
 .user-selector {
-    background: white;
-    padding: 1rem;
-    border-radius: 10px;
+    background: var(--bg-card);
+    padding: 1.2rem;
+    border-radius: 12px;
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    flex-direction: column;
+    gap: 0.8rem;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    text-align: center;
 }
 
 .user-selector label {
-    font-weight: bold;
-    color: #4a5568;
-}
-
-.user-selector select {
-    padding: 0.5rem 1rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 5px;
-    background: white;
-}
-
-/* Футер */
-.footer {
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 1.1rem;
     text-align: center;
-    color: white;
-    padding: 2rem 0;
-    margin-top: 3rem;
-    border-top: 1px solid rgba(255,255,255,0.2);
+    display: block;
+    margin-bottom: 0.5rem;
 }
 
+.enhanced-select {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.enhanced-select select {
+    width: 100%;
+    padding: 16px 50px 16px 20px;
+    background: rgba(26, 32, 44, 0.9);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-light);
+    font-size: 16px;
+    cursor: pointer;
+    appearance: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    font-weight: 500;
+    min-height: 54px;
+}
+
+/* Остальные стили остаются такими же */
+.enhanced-select select:active,
+.enhanced-select select:focus {
+    border-color: #d400ff;
+    box-shadow: 0 0 0 3px rgba(212, 0, 255, 0.3);
+    outline: none;
+    transform: scale(1.02);
+}
+
+.enhanced-select select:hover {
+    border-color: #d400ff;
+}
+
+.enhanced-select::after {
+    content: "▼";
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.enhanced-select:active::after {
+    transform: translateY(-50%) scale(1.1);
+    color: #d400ff;
+}
+
+/* Для планшетов и десктопов */
+@media (min-width: 768px) {
+    .user-selector {
+        flex-direction: column; /* Оставляем вертикальное расположение */
+        text-align: center;
+        padding: 1.5rem;
+    }
+    
+    .user-selector label {
+        margin-bottom: 1rem;
+        font-size: 1.2rem;
+    }
+    
+    .enhanced-select {
+        min-width: 280px;
+        max-width: 350px;
+    }
+}
 /* Адаптивность */
 @media (max-width: 768px) {
     .nav-container {
@@ -291,6 +510,11 @@ body {
         gap: 1rem;
     }
     
+    .gradient-sphere {
+        filter: blur(40px);
+        animation: float 8s infinite ease-in-out; /* Быстрее на мобильных */
+    }
+
     .nav-links {
         gap: 1rem;
     }
@@ -312,560 +536,490 @@ body {
     .container {
         padding: 1rem 15px;
     }
-}
-/* Стили для бейджей метрик */
-.metric-badge {
-    display: inline-block;
-    background: white;
-    padding: 10px 15px;
-    border-radius: 8px;
-    margin: 5px;
-    border: 1px solid #e2e8f0;
-    text-align: center;
-}
-
-.metric-badge .metric-label {
-    display: block;
-    color: #718096;
-    font-size: 0.8em;
-    margin-bottom: 5px;
-}
-
-.metric-badge .metric-value {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #4a5568;
+    
+    /* Уменьшаем сферы на мобильных */
+    .gradient-sphere {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(60px);
+        opacity: 0.4;
+        animation: float 5s infinite ease-in-out, /* Было 15s, стало 12s */
+                    pulse 8s infinite ease-in-out; /* Добавляем вторую анимацию */
+    }
+    
+.sphere-1 {
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    top: 10%;
+    left: 10%;
+    animation-delay: 0s;
+    animation-duration: 13s; /* Разная длительность для каждой сферы */
 }
 
-/* Стили для списков в анализе */
-.ai-trends ul, .ai-recommendations ul {
-    list-style: none;
-    padding: 0;
-}
-
-.ai-trends li, .ai-recommendations li {
-    padding: 8px 0;
-    border-bottom: 1px solid #e2e8f0;
-    position: relative;
-    padding-left: 20px;
-}
-
-.ai-trends li:before {
-    content: "📈";
-    position: absolute;
-    left: 0;
-}
-
-.ai-recommendations li:before {
-    content: "💡";
-    position: absolute;
-    left: 0;
-}
-
-.ai-trends li:last-child, .ai-recommendations li:last-child {
-    border-bottom: none;
-}
-
-/* Улучшаем отображение графиков */
-.chart-container {
-    position: relative;
+.sphere-2 {
+    width: 300px;
     height: 300px;
+    background: linear-gradient(45deg, #f093fb, #f5576c);
+    top: 60%;
+    left: 70%;
+    animation-delay: -2s;
+    animation-duration: 11s;
 }
 
-#financeChart {
-    width: 100% !important;
-    height: 100% !important;
+.sphere-3 {
+    width: 350px;
+    height: 350px;
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+    top: 30%;
+    left: 50%;
+    animation-delay: -4s;
+    animation-duration: 14s;
 }
-/* Стили для страницы целей */
-.goals-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
+
+.sphere-4 {
+    width: 250px;
+    height: 250px;
+    background: linear-gradient(45deg, #43e97b, #38f9d7);
+    top: 70%;
+    left: 20%;
+    animation-delay: -1s;
+    animation-duration: 10s;
+}
+
+.sphere-5 {
+    width: 320px;
+    height: 320px;
+    background: linear-gradient(45deg, #fa709a, #fee140);
+    top: 20%;
+    left: 80%;
+    animation-delay: -3s;
+    animation-duration: 12s;
+}
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .gradient-sphere {
+        filter: blur(30px);
+    }
+    
+    .sphere-1 { width: 150px; height: 150px; }
+    .sphere-2 { width: 120px; height: 120px; }
+    .sphere-3 { width: 140px; height: 140px; }
+    .sphere-4 { width: 100px; height: 100px; }
+    .sphere-5 { width: 130px; height: 130px; }
+}
+/* Стили для улучшенного выбора пользователя */
+.user-selector {
+    background: var(--bg-card);
+    padding: 1rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
     margin-bottom: 2rem;
 }
 
-.stat-card {
-    background: white;
+.user-selector label {
+    color: var(--text-light);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.enhanced-select {
+    position: relative;
+    min-width: 250px;
+}
+
+.enhanced-select select {
+    width: 100%;
+    padding: 12px 45px 12px 15px;
+    background: rgba(26, 32, 44, 0.8);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 14px;
+    cursor: pointer;
+    appearance: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.enhanced-select select:hover {
+    border-color: #d400ff;
+    box-shadow: 0 4px 20px rgba(212, 0, 255, 0.3);
+}
+
+.enhanced-select select:focus {
+    outline: none;
+    border-color: #d400ff;
+    box-shadow: 0 0 0 2px rgba(212, 0, 255, 0.2);
+}
+
+.enhanced-select::after {
+    content: "▼";
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 12px;
+    pointer-events: none;
+    transition: transform 0.3s ease;
+}
+
+.enhanced-select:hover::after {
+    color: #d400ff;
+}
+
+.enhanced-select select:focus + ::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+/* Стили для опций */
+.enhanced-select select option {
+    background: #2d3748;
+    color: var(--text-light);
+    padding: 10px;
+    border: none;
+}
+
+/* Для современных браузеров - кастомизация скролла */
+.enhanced-select select::-webkit-scrollbar {
+    width: 8px;
+}
+
+.enhanced-select select::-webkit-scrollbar-track {
+    background: rgba(26, 32, 44, 0.8);
+    border-radius: 4px;
+}
+
+.enhanced-select select::-webkit-scrollbar-thumb {
+    background: #d400ff;
+    border-radius: 4px;
+}
+
+.enhanced-select select::-webkit-scrollbar-thumb:hover {
+    background: #e000ff;
+}
+
+/* Wireframe сетка на фон */
+.wireframe-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(204, 0, 255, 0.8) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(204, 0, 255, 0.8) 2px, transparent 2px);
+    background-size: 100px 100px;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 0.9 !important;
+    border: 3px solid rgba(0, 0, 255, 0) !important; /* Синяя рамка для видимости */
+}
+
+/* Анимация медленного движения сетки */
+@keyframes gridMove {
+    0% {
+        transform: translate(0, 0);
+    }
+    100% {
+        transform: translate(40px, 40px);
+    }
+}
+
+/* Стили для страницы аналитики */
+.analytics-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.analytics-header h1 {
+    font-size: 2.2em;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #fff 0%, #a0aec0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.analytics-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.analytics-section {
+    background: var(--bg-card);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+}
+
+.analytics-section h2 {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    font-size: 1.5em;
+    text-align: center;
+}
+
+/* Карточки анализа */
+.analysis-card {
+    background: rgba(26, 32, 44, 0.6);
     padding: 1.5rem;
     border-radius: 10px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.analysis-card h4 {
+    color: var(--text-light);
+    margin-bottom: 1rem;
+    font-size: 1.2em;
+}
+
+/* Шкала рентабельности */
+.profitability-gauge {
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 1rem;
 }
 
-.stat-card h3 {
-    color: #718096;
-    font-size: 0.9em;
-    margin-bottom: 0.5rem;
-}
-
-.stat-value {
+.gauge-value {
     font-size: 2em;
     font-weight: bold;
-    color: #4a5568;
-}
-
-.goals-filter {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-}
-
-.filter-btn {
-    background: white;
-    border: 2px solid #e2e8f0;
-    padding: 0.5rem 1.5rem;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.filter-btn.active,
-.filter-btn:hover {
-    background: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
-.goals-container {
-    display: grid;
-    gap: 1.5rem;
-}
-
-.goal-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    border-left: 4px solid #4299e1;
-}
-
-.goal-card.completed {
-    border-left-color: #48bb78;
-    opacity: 0.8;
-}
-
-.goal-card.cancelled {
-    border-left-color: #f56565;
-    opacity: 0.6;
-}
-
-.goal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.goal-header h3 {
-    color: #4a5568;
-    margin: 0;
-    flex: 1;
-}
-
-.goal-status {
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.8em;
-    font-weight: bold;
-}
-
-.goal-status.active {
-    background: #ebf8ff;
-    color: #4299e1;
-}
-
-.goal-status.completed {
-    background: #f0fff4;
-    color: #48bb78;
-}
-
-.goal-status.cancelled {
-    background: #fff5f5;
-    color: #f56565;
-}
-
-.goal-description {
-    color: #718096;
-    margin-bottom: 1rem;
-    line-height: 1.5;
-}
-
-.goal-progress {
-    margin-bottom: 1rem;
-}
-
-.progress-info {
-    display: flex;
-    justify-content: space-between;
+    color: var(--text-light);
     margin-bottom: 0.5rem;
-    font-size: 0.9em;
-    color: #718096;
 }
 
-.progress-bar {
+.gauge-bar {
+    width: 100%;
     height: 8px;
-    background: #e2e8f0;
+    background: rgba(74, 85, 104, 0.5);
     border-radius: 4px;
     overflow: hidden;
 }
 
-.progress-fill {
+.gauge-fill {
     height: 100%;
-    background: linear-gradient(90deg, #667eea, #764ba2);
+    background: linear-gradient(90deg, #48bb78, #d400ff);
     border-radius: 4px;
-    transition: width 0.3s ease;
+    transition: width 0.5s ease;
 }
 
-.goal-card.completed .progress-fill {
-    background: #48bb78;
-}
-
-.goal-meta {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    flex-wrap: wrap;
-}
-
-.goal-category, .goal-deadline {
-    background: #f7fafc;
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.8em;
-    color: #718096;
-}
-
-.goal-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.btn-update, .btn-complete {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: all 0.3s ease;
-}
-
-.btn-update {
-    background: #4299e1;
-    color: white;
-}
-
-.btn-update:hover {
-    background: #3182ce;
-}
-
-.btn-complete {
-    background: #48bb78;
-    color: white;
-}
-
-.btn-complete:hover {
-    background: #38a169;
-}
-
-.no-goals {
+/* Оценка эффективности */
+.efficiency-score {
+    font-size: 2.5em;
+    font-weight: bold;
     text-align: center;
-    padding: 3rem;
-    color: #718096;
-    font-size: 1.1em;
+    color: #d400ff;
+    margin: 1rem 0;
+    text-shadow: 0 2px 10px rgba(212, 0, 255, 0.3);
 }
 
+/* Сетка трендов */
+.trends-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.trend-card {
+    background: rgba(26, 32, 44, 0.6);
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.trend-card.positive {
+    border-left: 4px solid var(--success-color);
+}
+
+.trend-card.negative {
+    border-left: 4px solid var(--error-color);
+}
+
+.trend-card h4 {
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    font-size: 1em;
+}
+
+.trend-value {
+    font-size: 1.8em;
+    font-weight: bold;
+}
+
+.trend-card.positive .trend-value {
+    color: var(--success-color);
+}
+
+.trend-card.negative .trend-value {
+    color: var(--error-color);
+}
+
+/* Состояние загрузки */
 .loading {
     text-align: center;
+    color: var(--text-muted);
     padding: 2rem;
-    color: #718096;
-}
-/* Увеличение размера текста для целей на мобильных устройствах */
-@media (max-width: 768px) {
-    /* Заголовок цели */
-    .goal-header h3 {
-        font-size: 1.3em;
-        line-height: 1.3;
-    }
-    
-    /* Описание цели */
-    .goal-description {
-        font-size: 1.1em;
-        line-height: 1.4;
-    }
-    
-    /* Статус цели */
-    .goal-status {
-        font-size: 1em;
-        padding: 0.4rem 1rem;
-    }
-    
-    /* Карточка цели */
-    .goal-card {
-        padding: 1.8rem;
-    }
-    
-    /* Мета-информация (категория, дедлайн) */
-    .goal-category, .goal-deadline {
-        font-size: 1em;
-        padding: 0.4rem 1rem;
-    }
-    
-    /* Кнопки действий */
-    .btn-update, .btn-complete {
-        font-size: 1em;
-        padding: 0.7rem 1.2rem;
-    }
-    
-    /* Прогресс бар */
-    .progress-info {
-        font-size: 1em;
-    }
-    
-    /* Статистические карточки */
-    .stat-card h3 {
-        font-size: 1em;
-    }
-    
-    .stat-value {
-        font-size: 2.2em;
-    }
-    
-    /* Кнопки фильтра */
-    .filter-btn {
-        font-size: 1em;
-        padding: 0.7rem 1.5rem;
-    }
+    font-style: italic;
 }
 
-/* Дополнительные улучшения для очень маленьких экранов */
-@media (max-width: 480px) {
-    .goal-header {
-        flex-direction: column;
-        gap: 0.8rem;
-    }
-    
-    .goal-header h3 {
-        font-size: 1.4em;
-        text-align: center;
-    }
-    
-    .goal-card {
+/* Адаптивность для аналитики */
+@media (max-width: 768px) {
+    .analytics-section {
         padding: 1.5rem;
     }
     
-    .goal-meta {
-        justify-content: center;
+    .analytics-header h1 {
+        font-size: 1.8em;
     }
     
-    .goal-actions {
-        justify-content: center;
+    .trends-grid {
+        grid-template-columns: 1fr;
     }
     
-    .goals-filter {
-        justify-content: center;
+    .analysis-card {
+        padding: 1rem;
+    }
+    
+    .gauge-value,
+    .efficiency-score {
+        font-size: 1.8em;
     }
 }
-
-/* Улучшение читаемости для всех устройств */
-.goal-card {
-    font-size: 1.40em; /* Небольшое увеличение базового размера */
+/* Стили для списков в аналитике */
+.analytics-section ul {
+    list-style: none;
+    padding-left: 0;
 }
 
-.goal-description {
-    font-size: 1.25em;
-    line-height: 1.5;
+.analytics-section li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(74, 85, 104, 0.3);
+    color: var(--text-light);
 }
 
-/* Увеличение отступов между элементами на странице целей */
-.user-selector {
-    margin-bottom: 2rem; /* Увеличиваем отступ после выбора пользователя */
+.analytics-section li:last-child {
+    border-bottom: none;
 }
 
-.goals-stats {
-    margin-bottom: 2.5rem; /* Увеличиваем отступ после статистики */
+.analytics-section li:before {
+    content: "•";
+    color: #d400ff;
+    font-weight: bold;
+    display: inline-block;
+    width: 1em;
+    margin-left: -1em;
 }
 
-.goals-filter {
-    margin-bottom: 2rem; /* Увеличиваем отступ после фильтров */
+/* Стили для графика */
+.chart-container {
+    position: relative;
+    height: 300px; /* Для десктопов */
+    min-height: 250px;
+    background: var(--bg-card);
+    padding: 1rem;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
 }
 
-.goals-container {
-    gap: 2rem; /* Увеличиваем расстояние между карточками целей */
-}
-
-/* Дополнительные отступы для мобильных устройств */
+/* Мобильная версия графика */
 @media (max-width: 768px) {
-    .user-selector {
-        margin-bottom: 2.5rem;
+    .chart-container {
+        height: 250px !important; /* Уменьшаем высоту на мобильных */
+        min-height: 200px;
+        padding: 0.8rem;
+        margin-bottom: 1rem;
     }
     
-    .goals-stats {
-        margin-bottom: 3rem;
-    }
-    
-    .goals-filter {
-        margin-bottom: 2.5rem;
-    }
-    
-    .goals-container {
-        gap: 2.5rem;
-    }
-}
-
-/* Увеличиваем отступы внутри карточек целей */
-.goal-card {
-    margin-bottom: 1rem;
-}
-
-.goal-header {
-    margin-bottom: 1.2rem;
-}
-
-.goal-description {
-    margin-bottom: 1.2rem;
-}
-
-.goal-progress {
-    margin-bottom: 1.2rem;
-}
-
-.goal-meta {
-    margin-bottom: 1.2rem;
-}
-/* Увеличение селектора пользователя */
-.user-selector {
-    font-size: 1.2em; /* Увеличиваем шрифт */
-    padding: 1.5rem; /* Увеличиваем отступы внутри */
-    min-height: 80px; /* Минимальная высота */
-    align-items: center;
-}
-
-.user-selector label {
-    font-size: 1.3em; /* Увеличиваем label */
-    font-weight: bold;
-    white-space: nowrap;
-}
-
-.user-selector select {
-    font-size: 1.2em; /* Увеличиваем шрифт в select */
-    padding: 0.8rem 1.2rem;
-    min-width: 200px; /* Минимальная ширина */
-    height: 50px; /* Фиксированная высота */
-    border: 2px solid #e2e8f0;
-}
-
-/* Увеличение фильтров */
-.goals-filter {
-    gap: 1.5rem; /* Больше расстояния между кнопками */
-    margin-bottom: 2.5rem;
-}
-
-.filter-btn {
-    font-size: 1.3em; /* Увеличиваем шрифт */
-    padding: 1rem 2rem; /* Увеличиваем кнопки */
-    min-height: 55px; /* Минимальная высота */
-    min-width: 120px; /* Минимальная ширина */
-    text-align: center;
-    border: 2px solid #e2e8f0;
-    font-weight: bold;
-}
-
-/* Увеличение статистических карточек */
-.goals-stats {
-    gap: 2rem;
-}
-
-.stat-card {
-    padding: 2rem 1.5rem;
-    min-height: 140px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.stat-card h3 {
-    font-size: 1.3em; /* Увеличиваем заголовок */
-    margin-bottom: 1rem;
-    color: #4a5568;
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 2.8em; /* Увеличиваем значение */
-    font-weight: bold;
-    color: #2d3748;
-}
-
-/* Адаптивность для мобильных */
-@media (max-width: 768px) {
-    .user-selector {
-        flex-direction: column;
-        gap: 1.5rem;
-        text-align: center;
-        padding: 1.5rem;
-        min-height: auto;
-    }
-    
-    .user-selector select {
-        min-width: 100%;
-        height: 55px;
-    }
-    
-    .goals-filter {
-        justify-content: center;
-        gap: 1rem;
-    }
-    
-    .filter-btn {
-        font-size: 1.2em;
-        padding: 0.8rem 1.5rem;
-        min-width: 100px;
-        flex: 1;
-        max-width: 150px;
-    }
-    
-    .stat-card {
-        min-height: 120px;
-        padding: 1.5rem 1rem;
-    }
-    
-    .stat-card h3 {
-        font-size: 1.2em;
-    }
-    
-    .stat-value {
-        font-size: 2.2em;
+    /* Уменьшаем шрифты в легенде на мобильных */
+    .chart-container canvas {
+        max-height: 220px !important;
     }
 }
 
 /* Для очень маленьких экранов */
 @media (max-width: 480px) {
-    .user-selector {
-        font-size: 1.1em;
-        padding: 1.2rem;
+    .chart-container {
+        height: 220px !important;
+        min-height: 180px;
+        padding: 0.6rem;
     }
     
-    .user-selector label {
-        font-size: 1.2em;
+    .chart-container canvas {
+        max-height: 190px !important;
+    }
+}
+
+/* Убедимся что график responsive */
+#financeChart {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100%;
+}
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: calc(100% - 40px); /* Минус высота заголовка */
+    min-height: 200px;
+}
+
+/* На мобильных меняем layout */
+@media (max-width: 768px) {
+    .charts-section {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
     
-    .user-selector select {
-        font-size: 1.1em;
-        height: 50px;
+    .chart-wrapper {
+        height: calc(100% - 30px);
+        min-height: 180px;
     }
     
-    .filter-btn {
-        font-size: 1.1em;
-        padding: 0.7rem 1rem;
+    .metrics-container {
+        order: 2; /* Метрики после графика на мобильных */
     }
     
-    .stat-card h3 {
-        font-size: 1.1em;
+    .chart-container {
+        order: 1;
+    }
+}
+/* Мобильная версия метрик */
+@media (max-width: 768px) {
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.8rem;
     }
     
-    .stat-value {
-        font-size: 2em;
+    .metric-item {
+        text-align: center;
+        padding: 0.8rem 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.8rem;
+        display: block;
+        margin-bottom: 0.3rem;
+        color: var(--text-muted);
+    }
+    
+    .metric-value {
+        font-size: 1rem;
+        font-weight: bold;
+        color: var(--text-light);
     }
 }
