@@ -5,40 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Бизнес Аналитик{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- Навигация -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">Здесь вы можете посмотреть статистику и данные своего бизнеса в удобном формате</div>
-            <div class="nav-links">
-                <a href="/" class="nav-link">Главная</a>
-                <a href="/dashboard" class="nav-link">Дашборд</a>
-                <a href="/analytics" class="nav-link">Аналитика</a>
-            </div>
-        </div>
-    </nav>
-
     <!-- Основной контент -->
     <div class="container">
         {% block content %}{% endblock %}
     </div>
 
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <a href="/" class="nav-btn {% if request.path == '/' %}active{% endif %}">
+            <div class="nav-icon">🏠</div>
+            <span class="nav-label">Главная</span>
+        </a>
+        <a href="/dashboard" class="nav-btn {% if request.path == '/dashboard' %}active{% endif %}">
+            <div class="nav-icon">📊</div>
+            <span class="nav-label">Дашборд</span>
+        </a>
+        <a href="/analytics" class="nav-btn {% if request.path == '/analytics' %}active{% endif %}">
+            <div class="nav-icon">📈</div>
+            <span class="nav-label">Аналитика</span>
+        </a>
+    </nav>
 
-<!-- Анимированный фон -->
-<div class="animated-background">
-    <div class="gradient-sphere sphere-1"></div>
-    <div class="gradient-sphere sphere-2"></div>
-    <div class="gradient-sphere sphere-3"></div>
-    <div class="gradient-sphere sphere-4"></div>
-    <div class="gradient-sphere sphere-5"></div>
-    
-    <!-- Сетка ПЕРЕД оверлеем -->
-    <div class="wireframe-grid"></div>
-</div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 
-<!-- Оверлей ПОСЛЕ сетки -->
-<div class="background-overlay"></div>
-
+    <!-- Анимированный фон -->
+    <div class="animated-background">
+        <div class="gradient-sphere sphere-1"></div>
+        <div class="gradient-sphere sphere-2"></div>
+        <div class="gradient-sphere sphere-3"></div>
+        <div class="gradient-sphere sphere-4"></div>
+        <div class="gradient-sphere sphere-5"></div>
+        <div class="wireframe-grid"></div>
+    </div>
+    <div class="background-overlay"></div>
 </body>
 </html>

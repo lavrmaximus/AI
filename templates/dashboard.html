@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="user-selector">
-    <label for="userSelect">Выберите пользователя:</label>
+    <label for="userSelect">Выберите профиль:</label>
     <div class="enhanced-select">
         <select id="userSelect" onchange="loadUserData()">
             <option value="">Загрузка...</option>
@@ -42,8 +42,26 @@
 <!-- Charts Section -->
 <div class="charts-section">
     <div class="chart-container">
-        <h3>Финансовая динамика</h3>
-        <canvas id="financeChart" width="400" height="200"></canvas>
+        <div class="chart-header">
+            <h3>Финансовая динамика</h3>
+            <div class="chart-actions">
+                <div class="time-range">
+                    <button class="range-btn" data-range="day" onclick="setTimeRange('day')">День</button>
+                    <button class="range-btn" data-range="week" onclick="setTimeRange('week')">Неделя</button>
+                    <button class="range-btn" data-range="month" onclick="setTimeRange('month')">Месяц</button>
+                    <button class="range-btn" data-range="quarter" onclick="setTimeRange('quarter')">Квартал</button>
+                    <button class="range-btn active" data-range="all" onclick="setTimeRange('all')">Все</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="scrollable-chart-container chart-no-scroll">
+            <div class="chart-wrapper">
+                <canvas id="financeChart"></canvas>
+                <div id="cursorLine" class="cursor-line" style="display:none;"></div>
+            </div>
+            <div id="chartReadout" class="chart-readout" aria-hidden="true"></div>
+        </div>
     </div>
     
     <div class="metrics-container">
@@ -65,13 +83,9 @@
     </div>
 </div>
 
-<!-- AI Analysis Section -->
-<div class="analysis-section">
-    <h2>Анализ от ИИ</h2>
-    <div id="aiAnalysis">
-        <div class="loading">Загрузка анализа...</div>
-    </div>
-</div>
+
+
+
 
 <script>
     // Глобальная переменная для хранения экземпляра графика
@@ -89,7 +103,7 @@
             
             if (data.success) {
                 const userSelect = document.getElementById('userSelect');
-                userSelect.innerHTML = '<option value="">Выберите пользователя</option>';
+                userSelect.innerHTML = '<option value="">Выберите профиль</option>';
                 
                 data.users.forEach(user => {
                     const option = document.createElement('option');
@@ -98,7 +112,7 @@
                     userSelect.appendChild(option);
                 });
                 
-                // Автоматически выбираем первого пользователя для демонстрации
+                // Автоматически выбираем первого профиля для демонстрации
                 if (data.users.length > 0) {
                     userSelect.value = data.users[0].id;
                     loadUserData();
@@ -115,7 +129,6 @@
 
         await loadKPIMetrics(userId);
         await loadFinanceData(userId);
-        await loadAIAnalysis(userId);
     }
 
     async function loadKPIMetrics(userId) {
@@ -145,18 +158,6 @@
         }
     }
 
-    async function loadAIAnalysis(userId) {
-        try {
-            const response = await fetch(`/api/user-ai-analysis/${userId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                renderAIAnalysis(data.analysis);
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки AI анализа:', error);
-        }
-    }
 
     function updateKPICards(kpi) {
         updateKPICard('revenue', kpi.revenue, '₽');
@@ -194,120 +195,8 @@
         }
     }
 
-    function renderFinanceChart(data) {
-        const ctx = document.getElementById('financeChart').getContext('2d');
-        
-        // Уничтожаем предыдущий график, если он существует
-        if (financeChart) {
-            financeChart.destroy();
-        }
-        
-        // Создаем новый график
-        financeChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.dates,
-                datasets: [
-                    {
-                        label: 'Выручка',
-                        data: data.revenue,
-                        borderColor: '#48bb78',
-                        backgroundColor: 'rgba(72, 187, 120, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Расходы',
-                        data: data.expenses,
-                        borderColor: '#f56565',
-                        backgroundColor: 'rgba(245, 101, 101, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Прибыль',
-                        data: data.profit,
-                        borderColor: '#4299e1',
-                        backgroundColor: 'rgba(66, 153, 225, 0.1)',
-                        borderWidth: 2,
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
-                    title: {
-                        display: true,
-                        text: 'Динамика за период'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return value.toLocaleString('ru-RU') + ' ₽';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    function renderAIAnalysis(analysis) {
-        const container = document.getElementById('aiAnalysis');
-        
-        container.innerHTML = `
-            <div class="ai-summary">
-                <h4>📈 Общий анализ</h4>
-                <p>${analysis.summary}</p>
-            </div>
-            
-            <div class="ai-metrics">
-                <h4>📊 Ключевые показатели</h4>
-                <div class="metrics-grid">
-                    <div class="metric-badge">
-                        <span class="metric-label">Рентабельность</span>
-                        <span class="metric-value">${analysis.metrics.profitability}%</span>
-                    </div>
-                    <div class="metric-badge">
-                        <span class="metric-label">Оценка эффективности</span>
-                        <span class="metric-value">${analysis.metrics.efficiency_score}/100</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="ai-trends">
-                <h4>🔍 Тренды и наблюдения</h4>
-                <ul>
-                    ${analysis.trends.map(trend => `<li>${trend}</li>`).join('')}
-                </ul>
-            </div>
-            
-            <div class="ai-recommendations">
-                <h4>💡 Рекомендации</h4>
-                <ul>
-                    ${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                </ul>
-            </div>
-            
-            ${analysis.commentary ? `
-            <div class="ai-commentary">
-                <h4>💬 Комментарий</h4>
-                <p>${analysis.commentary}</p>
-            </div>
-            ` : ''}
-        `;
-    }
+    // renderFinanceChart используется из static/script.js
+    // AI анализ перенесён на вкладку Аналитика
 
     function formatNumber(num) {
         return new Intl.NumberFormat('ru-RU').format(Math.round(num));

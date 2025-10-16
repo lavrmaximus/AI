@@ -6,7 +6,7 @@
 <div class="analytics-header">
     <h1>Глубокая Аналитика</h1>
     <div class="user-selector">
-        <label for="userSelect">🔍 Выберите пользователя:</label>
+        <label for="userSelect">🔍 Выберите профиль:</label>
         <div class="enhanced-select">
             <select id="userSelect" onchange="loadAnalyticsData()">
                 <option value="">Загрузка...</option>
@@ -43,7 +43,7 @@
             
             if (data.success) {
                 const userSelect = document.getElementById('userSelect');
-                userSelect.innerHTML = '<option value="">Выберите пользователя</option>';
+                userSelect.innerHTML = '<option value="">Выберите профиль</option>';
                 
                 data.users.forEach(user => {
                     const option = document.createElement('option');
@@ -58,7 +58,7 @@
                 }
             }
         } catch (error) {
-            console.error('Ошибка загрузки пользователей:', error);
+            console.error('Ошибка загрузки профилей:', error);
         }
     }
 
@@ -72,11 +72,11 @@
 
     async function loadFinancialAnalysis(userId) {
         try {
-            const response = await fetch(`/api/user-ai-analysis/${userId}`);
-            const data = await response.json();
+            const aiResponse = await fetch(`/api/user-ai-analysis/${userId}`);
+            const aiData = await aiResponse.json();
             
-            if (data.success) {
-                renderFinancialAnalysis(data.analysis);
+            if (aiData.success) {
+                renderFinancialAnalysis(aiData.analysis);
             }
         } catch (error) {
             console.error('Ошибка загрузки финансового анализа:', error);
@@ -116,6 +116,22 @@
                 <div class="efficiency-score">${analysis.metrics.efficiency_score}/100</div>
                 <p>Общая оценка эффективности бизнес-процессов</p>
             </div>
+            ${analysis.trends?.length || analysis.recommendations?.length || analysis.commentary ? `
+            <div class="analysis-card">
+                ${analysis.trends?.length ? `
+                <h4>🔍 Тренды и наблюдения</h4>
+                <ul>${analysis.trends.map(trend => `<li>${trend}</li>`).join('')}</ul>
+                ` : ''}
+                ${analysis.recommendations?.length ? `
+                <h4>💡 Рекомендации</h4>
+                <ul>${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}</ul>
+                ` : ''}
+                ${analysis.commentary ? `
+                <h4>💬 Комментарий</h4>
+                <p>${analysis.commentary}</p>
+                ` : ''}
+            </div>
+            ` : ''}
         `;
     }
 
