@@ -39,7 +39,7 @@ class DailyFileHandler(logging.Handler):
             self.current_date = date_str
             path = os.path.join(self.log_dir, f'{date_str}.log')
             self.file_handler = logging.FileHandler(path, encoding='utf-8')
-            self.file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+            self.file_handler.setFormatter(logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S'))
 
     def emit(self, record: logging.LogRecord):
         try:
@@ -50,11 +50,11 @@ class DailyFileHandler(logging.Handler):
             pass
 
 file_handler = DailyFileHandler(LOG_DIR)
-
 stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[file_handler, stream_handler],
     force=True
 )
@@ -425,7 +425,8 @@ class BusinessBot:
             
             response = f"✏️ *РЕДАКТИРОВАНИЕ: {business_name}*\n\n" \
                       f"Текущие данные:\n{conversation._get_data_summary()}\n\n" \
-                      f"Отправьте новые данные в свободной форме или напишите 'да' для завершения."
+                      f"Отправьте новые данные в свободной форме или напишите 'да' для завершения.\n\n" \
+                      f"Чтобы отменить без изменений — напишите 'выйти'"
             
             await query.edit_message_text(safe_markdown_text(response), parse_mode='MarkdownV2')
             
@@ -550,22 +551,15 @@ class BusinessBot:
             logger.info(f"🎯 Определен тип сообщения: {message_type}")
 
             if message_type == "business_data":
-                await thinking_msg.delete()
+                # Ненавязчивая подсказка и продолжаем отвечать по сути сообщения
                 try:
                     await update.message.reply_text(
-                        safe_markdown_text(
-                            "💡 *Обнаружены бизнес-данные!*\n\n"
-                            "Для создания и анализа бизнеса используйте команду:\n"
-                            "/new_business\n\n"
-                            "Там я проведу полный диалог и рассчитаю все 22 метрики!"
-                        ),
-                        parse_mode='MarkdownV2'
+                        "ℹ️ Чтобы создать бизнес используйте команду: /new_business"
                     )
                 except Exception:
-                    await update.message.reply_text(
-                        "Обнаружены бизнес-данные. Для создания используйте команду: /new_business"
-                    )
-                return
+                    pass
+                # Продолжаем как свободный диалог
+                message_type = "general"
 
             try:
                 await thinking_msg.edit_text(
