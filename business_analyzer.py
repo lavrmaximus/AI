@@ -85,6 +85,7 @@ class BusinessAnalyzer:
             СОВЕТ1: [совет]
             СОВЕТ2: [совет] 
             СОВЕТ3: [совет]
+            СОВЕТ4: [совет]
             """
             
             response = await general_chat(prompt, user_id)
@@ -103,7 +104,7 @@ class BusinessAnalyzer:
             # Ищем метки вида "СОВЕТ1:", "СОВЕТ 2 -", и т.п.
             advice_pattern = r"СОВЕТ\s*\d*\s*[:\-]\s*(.+?)(?=\n\s*СОВЕТ|\Z)"
             matches = re.findall(advice_pattern, response, re.IGNORECASE | re.DOTALL)
-            result['СОВЕТЫ'] = [match.strip() for match in matches[:3]]
+            result['СОВЕТЫ'] = [match.strip() for match in matches[:4]]
             
             # Если не найдено стандартных советов, ищем просто нумерованные списки
             if not result['СОВЕТЫ']:
@@ -111,7 +112,7 @@ class BusinessAnalyzer:
                 for line in lines:
                     if line.strip().startswith(('1.', '2.', '3.', '•', '-')):
                         result['СОВЕТЫ'].append(line.strip().lstrip('123.- ').strip())
-                    if len(result['СОВЕТЫ']) >= 3:
+                    if len(result['СОВЕТЫ']) >= 4:
                         break
             
             return result

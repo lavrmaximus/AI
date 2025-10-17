@@ -60,7 +60,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8350333926:AAEkf4If4LXh657SOTuGsAhEJx6EFSPKHbU")
+# BOT_TOKEN будет читаться в __init__
 ADMINS = [
     "1287604685",  # Вставьте сюда ID админа
 ]
@@ -75,11 +75,50 @@ def safe_markdown_text(text: str) -> str:
     safe_text = safe_text.replace(r'\*', '*')
     return safe_text
 
+def clean_ai_text(text: str) -> str:
+    """
+    Очистка AI-текста от Markdown форматирования для безопасной отправки
+    """
+    import re
+    
+    # Убираем заголовки ###
+    text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)
+    
+    # Убираем жирный текст **текст**
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    
+    # Убираем курсив __текст__
+    text = re.sub(r'__([^_]+)__', r'\1', text)
+    
+    # Убираем курсив _текст_ (одиночные подчёркивания)
+    text = re.sub(r'(?<!_)_([^_]+)_(?!_)', r'\1', text)
+    
+    # Убираем курсив *текст* (одиночные звёздочки)
+    text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'\1', text)
+    
+    # Убираем код `текст`
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+    
+    # Убираем квадратные скобки с экранированием
+    text = re.sub(r'\\\[', '[', text)
+    text = re.sub(r'\\\]', ']', text)
+    
+    return text
+
 print("Запуск бота....")
 
 class BusinessBot:
     def __init__(self):
-        self.app = Application.builder().token(BOT_TOKEN).build()
+        # Читаем токен при инициализации (не при импорте модуля)
+        token = (
+            os.getenv("BOT_TOKEN")
+            or os.getenv("TELEGRAM_BOT_TOKEN")
+            or os.getenv("TOKEN")
+        )
+        if not token:
+            raise ValueError("BOT_TOKEN environment variable is required (try BOT_TOKEN or TELEGRAM_BOT_TOKEN)")
+        
+        self.app = Application.builder().token(token).build()
         self.setup_handlers()
 
     def setup_handlers(self):
@@ -563,7 +602,7 @@ class BusinessBot:
 
             try:
                 await thinking_msg.edit_text(
-                    safe_markdown_text(self.get_thinking_message(message_type)),
+                    self.get_thinking_message(message_type),
                     parse_mode='MarkdownV2'
                 )
             except Exception:
@@ -578,7 +617,7 @@ class BusinessBot:
                 #     bot_response=response,
                 #     message_type='question'
                 # )
-                await self.send_long_message(update, response, 'MarkdownV2')
+                await self.send_long_message(update, response)
             else:  # general
                 response = await self.handle_general_chat(user_text, user_id)
                 # await db.log_message(
@@ -601,10 +640,10 @@ class BusinessBot:
     def get_thinking_message(self, message_type: str) -> str:
         """Сообщение о процессе обработки"""
         messages = {
-            "question": "💭 *Обдумываю ответ...*\n_Ищу лучшие решения для вашего бизнеса_",
-            "general": "💬 *Общаюсь...*\n_Всегда рад поболтать_"
+            "question": "💭 *Обдумываю ответ\\.\\.\\.*\n_Ищу лучшие решения для вашего бизнеса_",
+            "general": "💬 *Общаюсь\\.\\.\\.*\n_Всегда рад поболтать_"
         }
-        return messages.get(message_type, "🤔 *Думаю...*")
+        return messages.get(message_type, "🤔 *Думаю\\.\\.\\.*")
 
 
     async def _handle_conversation_message(self, update: Update, user_id: str, user_text: str):
@@ -622,7 +661,7 @@ class BusinessBot:
             except Exception:
                 pass
 
-            await self.send_long_message(update, response_data['response'], 'MarkdownV2')
+            await self.send_long_message(update, response_data['response'])
             # try:
             #     await db.log_message(
             #         session_id=conversation.session_id,
@@ -654,12 +693,12 @@ class BusinessBot:
     async def handle_question(self, text: str, user_id: str) -> str:
         """Обработка вопросов. Возвращает ответ."""
         answer = await answer_question(text, user_id)
-        return answer
+        return clean_ai_text(answer)
 
     async def handle_general_chat(self, text: str, user_id: str) -> str:
         """Обработка общего чата. Возвращает ответ."""
         response = await general_chat(text, user_id)
-        return response
+        return clean_ai_text(response)
 
     # Отправляем ответ с возможным разделением
     async def send_long_message(self, update_or_query_object, text: str, parse_mode: str = None):
