@@ -1,5 +1,10 @@
 import asyncio
+import os
+from dotenv import load_dotenv
 from tgbot import BusinessBot
+
+# Загружаем переменные окружения
+load_dotenv()
 
 async def main():
     bot = BusinessBot()
