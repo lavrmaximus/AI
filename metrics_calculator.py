@@ -75,7 +75,10 @@ class MetricsCalculator:
             profit = data.get('profit', 0) or (revenue - expenses)
             investments = data.get('investments', 0)
             marketing_costs = data.get('marketing_costs', 0)
-            average_check = data.get('average_check', 0)
+            clients = data.get('clients', 0)
+            
+            # Рассчитываем средний чек автоматически
+            average_check = revenue / clients if clients > 0 else 0
             
             # 1. Рентабельность продаж
             if revenue > 0:
@@ -122,6 +125,9 @@ class MetricsCalculator:
                 metrics['months_to_bankruptcy'] = investments / monthly_loss
             else:
                 metrics['months_to_bankruptcy'] = 999  # неограниченно
+            
+            # Добавляем рассчитанный средний чек в метрики
+            metrics['average_check'] = average_check
             
             return metrics
             

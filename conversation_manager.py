@@ -21,7 +21,7 @@ class BusinessConversation:
     }
     
     # Минимально необходимые поля для анализа
-    REQUIRED_FIELDS = ['revenue', 'expenses', 'clients', 'average_check']
+    REQUIRED_FIELDS = ['revenue', 'expenses', 'clients']
     OPTIONAL_FIELDS = ['investments', 'marketing_costs']
     
     def __init__(self, session_id: int = None):

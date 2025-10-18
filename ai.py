@@ -46,7 +46,6 @@ BUSINESS_DATA_EXTRACTION_PROMPT = """Ты - инструмент для извл
   "expenses": число или null,
   "profit": число или null,
   "clients": число или null,
-  "average_check": число или null,
   "investments": число или null,
   "marketing_costs": число или null,
   "employees": число или null,
@@ -66,7 +65,6 @@ BUSINESS_DATA_EXTRACTION_PROMPT = """Ты - инструмент для извл
   "expenses": 300000,
   "profit": 200000,
   "clients": 1000,
-  "average_check": 500,
   "investments": null,
   "marketing_costs": null,
   "employees": null,
@@ -98,7 +96,6 @@ MISSING_DATA_ANALYSIS_PROMPT = """Ты - бизнес-аналитик, кото
 - expenses (расходы)
 - profit (прибыль)
 - clients (количество клиентов)
-- average_check (средний чек)
 - investments (инвестиции)
 - marketing_costs (затраты на маркетинг)
 - employees (количество сотрудников)
@@ -111,7 +108,6 @@ MISSING_DATA_ANALYSIS_PROMPT = """Ты - бизнес-аналитик, кото
 - revenue
 - expenses
 - clients
-- average_check
 
 ДОПОЛНИТЕЛЬНЫЕ ДАННЫЕ (для расширенного анализа, спрашивай о них, только если основные уже есть):
 - investments
