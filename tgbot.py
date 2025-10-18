@@ -233,8 +233,8 @@ class BusinessBot:
 
             if not businesses:
                 await update.message.reply_text(
-                    "📝 *У вас нет бизнесов для редактирования*\n\n"
-                    "Создайте первый бизнес с помощью /new_business!",
+                    safe_markdown_text("📝 *У вас нет бизнесов для редактирования*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!"),
                     parse_mode='MarkdownV2'
                 )
                 return
@@ -252,8 +252,8 @@ class BusinessBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await update.message.reply_text(
-                "✏️ *РЕДАКТИРОВАНИЕ БИЗНЕСА*\n\n"
-                "Выберите бизнес для обновления данных:",
+                safe_markdown_text("✏️ *РЕДАКТИРОВАНИЕ БИЗНЕСА*\n\n"
+                "Выберите бизнес для обновления данных:"),
                 reply_markup=reply_markup,
                 parse_mode='MarkdownV2'
             )
@@ -261,7 +261,7 @@ class BusinessBot:
         except Exception as e:
             logger.error(f"Ошибка получения списка бизнесов: {e}")
             await update.message.reply_text(
-                "❌ Произошла ошибка при получении списка бизнесов. Попробуйте позже.",
+                safe_markdown_text("❌ Произошла ошибка при получении списка бизнесов\\. Попробуйте позже\\."),
                 parse_mode='MarkdownV2'
             )
 
@@ -277,8 +277,8 @@ class BusinessBot:
 
             if not businesses:
                 await update.message.reply_text(
-                    "📝 *У вас нет бизнесов для удаления*\n\n"
-                    "Создайте первый бизнес с помощью /new_business!",
+                    safe_markdown_text("📝 *У вас нет бизнесов для удаления*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!"),
                     parse_mode='MarkdownV2'
                 )
                 return
@@ -290,7 +290,7 @@ class BusinessBot:
                 keyboard.append([InlineKeyboardButton(f"🗑 Удалить {business_name}", callback_data=f'delete_{business_id}')])
 
             await update.message.reply_text(
-                "🗑 *УДАЛЕНИЕ БИЗНЕСА*\n\nВыберите бизнес для удаления:",
+                safe_markdown_text("🗑 *УДАЛЕНИЕ БИЗНЕСА*\n\nВыберите бизнес для удаления:"),
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='MarkdownV2'
             )
@@ -298,7 +298,7 @@ class BusinessBot:
         except Exception as e:
             logger.error(f"Ошибка получения списка бизнесов для удаления: {e}")
             await update.message.reply_text(
-                "❌ Произошла ошибка. Попробуйте позже.",
+                safe_markdown_text("❌ Произошла ошибка\\. Попробуйте позже\\."),
                 parse_mode='MarkdownV2'
             )
 
@@ -313,8 +313,8 @@ class BusinessBot:
 
             if not businesses:
                 await update.message.reply_text(
-                    "📝 *История анализов пуста*\n\n"
-                    "Создайте первый бизнес с помощью /new_business!",
+                    safe_markdown_text("📝 *История анализов пуста*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!"),
                     parse_mode='MarkdownV2'
                 )
                 return
@@ -343,8 +343,8 @@ class BusinessBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await update.message.reply_text(
-                "📊 *ВАШИ БИЗНЕСЫ*\n\n"
-                "Выберите бизнес для подробного анализа:",
+                safe_markdown_text("📊 *ВАШИ БИЗНЕСЫ*\n\n"
+                "Выберите бизнес для подробного анализа:"),
                 reply_markup=reply_markup,
                 parse_mode='MarkdownV2'
             )
@@ -352,7 +352,7 @@ class BusinessBot:
         except Exception as e:
             logger.error(f"Ошибка получения истории: {e}")
             await update.message.reply_text(
-                "❌ Произошла ошибка при получении истории. Попробуйте позже.",
+                safe_markdown_text("❌ Произошла ошибка при получении истории\\. Попробуйте позже\\."),
                 parse_mode='MarkdownV2'
             )
 
@@ -739,15 +739,16 @@ class BusinessBot:
             current_part_to_send = prefix + part
 
             try:
-                # Здесь parse_mode применяется к каждой части
+                # Безопасная отправка с MarkdownV2
+                safe_text = safe_markdown_text(current_part_to_send)
                 if hasattr(update_or_query_object, 'message'):
-                    await update_or_query_object.message.reply_text(current_part_to_send, parse_mode='MarkdownV2') # Всегда MarkdownV2
+                    await update_or_query_object.message.reply_text(safe_text, parse_mode='MarkdownV2')
                 else:
                     if i == 0:
-                        await update_or_query_object.edit_message_text(current_part_to_send, parse_mode='MarkdownV2') # Всегда MarkdownV2
+                        await update_or_query_object.edit_message_text(safe_text, parse_mode='MarkdownV2')
                     else:
                         user_id = update_or_query_object.from_user.id
-                        await self.app.bot.send_message(chat_id=user_id, text=current_part_to_send, parse_mode='MarkdownV2') # Всегда MarkdownV2
+                        await self.app.bot.send_message(chat_id=user_id, text=safe_text, parse_mode='MarkdownV2')
 
                 if i < len(parts) - 1:
                     await asyncio.sleep(0.7)

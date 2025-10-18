@@ -138,25 +138,18 @@ class Database:
         ''')
         
         # Миграция: добавляем колонки advice1-4 если их нет
-        try:
-            cursor.execute("ALTER TABLE business_snapshots ADD COLUMN advice1 TEXT DEFAULT ''")
-        except sqlite3.OperationalError:
-            pass  # Колонка уже существует
+        # Проверяем существование колонок
+        cursor.execute("PRAGMA table_info(business_snapshots)")
+        existing_columns = [row[1] for row in cursor.fetchall()]
         
-        try:
-            cursor.execute("ALTER TABLE business_snapshots ADD COLUMN advice2 TEXT DEFAULT ''")
-        except sqlite3.OperationalError:
-            pass  # Колонка уже существует
-            
-        try:
-            cursor.execute("ALTER TABLE business_snapshots ADD COLUMN advice3 TEXT DEFAULT ''")
-        except sqlite3.OperationalError:
-            pass  # Колонка уже существует
-            
-        try:
-            cursor.execute("ALTER TABLE business_snapshots ADD COLUMN advice4 TEXT DEFAULT ''")
-        except sqlite3.OperationalError:
-            pass  # Колонка уже существует
+        advice_columns = ['advice1', 'advice2', 'advice3', 'advice4']
+        for col in advice_columns:
+            if col not in existing_columns:
+                try:
+                    cursor.execute(f"ALTER TABLE business_snapshots ADD COLUMN {col} TEXT DEFAULT ''")
+                    print(f"✅ Добавлена колонка {col}")
+                except sqlite3.OperationalError as e:
+                    print(f"❌ Ошибка добавления колонки {col}: {e}")
         
         self.conn.commit()
     
@@ -204,14 +197,18 @@ class Database:
         """Добавление снимка бизнеса со всеми метриками"""
         def _add():
             cursor = self.conn.cursor()
-            # ФИКС: используем московское время (UTC+3)
-            moscow_tz = timezone(timedelta(hours=3))
-            actual_period_date = period_date or datetime.now(moscow_tz).strftime("%Y-%m-%d")
+            # ФИКС: используем московское время (UTC+3) - строго +3 часа
+            utc_now = datetime.utcnow()
+            moscow_time = utc_now + timedelta(hours=3)
+            actual_period_date = period_date or moscow_time.strftime("%Y-%m-%d")
             
             # Подготавливаем советы (до 4 штук)
             advice_list_local = (advice_list or [])[:4]
             while len(advice_list_local) < 4:
                 advice_list_local.append('')
+            
+            # Используем московское время для created_at
+            moscow_time_str = moscow_time.strftime("%Y-%m-%d %H:%M:%S")
             
             cursor.execute('''
                 INSERT INTO business_snapshots (
@@ -221,8 +218,8 @@ class Database:
                     ltv, cac, ltv_cac_ratio, customer_profit_margin, sgr, revenue_growth_rate,
                     asset_turnover, roe, months_to_bankruptcy,
                     financial_health_score, growth_health_score, efficiency_health_score, overall_health_score,
-                    advice1, advice2, advice3, advice4
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    advice1, advice2, advice3, advice4, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 business_id, 'monthly', actual_period_date,
                 raw_data.get('revenue', 0), raw_data.get('expenses', 0), raw_data.get('profit', 0),
@@ -235,7 +232,8 @@ class Database:
                 metrics.get('asset_turnover', 0), metrics.get('roe', 0), metrics.get('months_to_bankruptcy', 0),
                 metrics.get('financial_health_score', 0), metrics.get('growth_health_score', 0),
                 metrics.get('efficiency_health_score', 0), metrics.get('overall_health_score', 0),
-                advice_list_local[0], advice_list_local[1], advice_list_local[2], advice_list_local[3]
+                advice_list_local[0], advice_list_local[1], advice_list_local[2], advice_list_local[3],
+                moscow_time_str
             ))
             self.conn.commit()
             return cursor.lastrowid
@@ -249,7 +247,7 @@ class Database:
             cursor.execute('''
                 SELECT * FROM business_snapshots 
                 WHERE business_id = ? 
-                ORDER BY period_date DESC 
+                ORDER BY created_at DESC, snapshot_id DESC 
                 LIMIT ?
             ''', (business_id, limit))
             rows = cursor.fetchall()

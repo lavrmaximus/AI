@@ -373,7 +373,7 @@ class BusinessConversation:
         
         if analysis_result.get('ai_advice'):
             response += "🎯 *РЕКОМЕНДАЦИИ:*\n"
-            for i, advice in enumerate(analysis_result['ai_advice'][:3], 1):
+            for i, advice in enumerate(analysis_result['ai_advice'][:4], 1):
                 response += f"{i}. {advice}\n"
             response += "\n"
         
