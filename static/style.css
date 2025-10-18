@@ -497,6 +497,32 @@ body {
     width: 100%;
     max-width: 300px;
     margin: 0 auto;
+    z-index: 1000;
+}
+
+.enhanced-select:nth-child(1) {
+    z-index: 1001;
+}
+
+.enhanced-select:nth-child(2) {
+    z-index: 1002;
+}
+
+.enhanced-select:nth-child(3) {
+    z-index: 1003;
+}
+
+/* Специальные правила для analytics страницы */
+.analytics-header .enhanced-select {
+    z-index: 99999 !important;
+}
+
+.analytics-header .enhanced-select:nth-child(1) {
+    z-index: 100000 !important;
+}
+
+.analytics-header .enhanced-select:nth-child(2) {
+    z-index: 100001 !important;
 }
 
 .enhanced-select select {
@@ -552,10 +578,145 @@ body {
     border: none;
 }
 
+/* Кастомный выпадающий список для красивого оформления options */
+.custom-select {
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.custom-select.is-open .custom-options {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.custom-select-trigger {
+    width: 100%;
+    padding: 16px 50px 16px 20px;
+    background: rgba(26, 32, 44, 0.9);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-light);
+    font-size: 16px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    font-weight: 500;
+    min-height: 54px;
+    text-align: left;
+    position: relative;
+}
+
+.custom-select-trigger:hover {
+    border-color: #d400ff;
+}
+
+.custom-select-trigger:focus {
+    outline: none;
+    border-color: #d400ff;
+    box-shadow: 0 0 0 3px rgba(212, 0, 255, 0.3);
+}
+
+.custom-select-trigger::after {
+    content: "▼";
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 14px;
+    transition: transform 0.2s ease;
+}
+
+.custom-select.is-open .custom-select-trigger::after {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.custom-options {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: rgba(26, 32, 44, 0.98);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-6px);
+    transition: all 0.2s ease;
+    z-index: inherit;
+}
+
+/* Специальные правила для analytics страницы */
+.analytics-header .custom-options {
+    z-index: 100002 !important;
+}
+
+.custom-option {
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: var(--text-light);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.custom-option:hover {
+    background: rgba(212, 0, 255, 0.12);
+}
+
+.custom-option.is-selected {
+    background: rgba(212, 0, 255, 0.18);
+    border: 1px solid rgba(212, 0, 255, 0.3);
+}
+
+.custom-option .option-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-option .option-check {
+    color: #d400ff;
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+/* Сузим на мобильных */
+@media (max-width: 420px) {
+    .custom-select,
+    .custom-select-trigger { max-width: 350px; }
+    .custom-select-trigger { padding: 12px 44px 12px 14px; min-height: 48px; }
+}
+
+/* Вариант компактного селекта для узких экранов */
+@media (max-width: 420px) {
+    .enhanced-select select {
+        padding: 12px 44px 12px 14px;
+        font-size: 15px;
+        min-height: 48px;
+    }
+    .enhanced-select::after {
+        right: 14px;
+        font-size: 12px;
+    }
+}
+
 /* Стили для страницы аналитики */
 .analytics-header {
     text-align: center;
     margin-bottom: 2rem;
+    position: relative;
+    z-index: 1;
 }
 
 .analytics-header h1 {
@@ -572,6 +733,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 2rem;
+    position: relative;
+    z-index: 0;
 }
 
 .analytics-section {
@@ -581,6 +744,8 @@ body {
     box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     border: 1px solid var(--border-color);
     backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 0;
 }
 
 .analytics-section h2 {

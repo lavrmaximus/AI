@@ -55,110 +55,130 @@ function setTimeRange(range) {
 }
 
 function sliceDataByRange(data) {
-    const total = data.dates.length;
+    // data: { dates: [], series: {key: [..]} } или старый формат
+    const dates = data.dates || [];
+    const total = dates.length;
     const map = { day: 1, week: 7, month: 30, quarter: 90, all: total };
     const count = map[currentRange] || total;
-    const end = 0; // последние значения в начале массива согласно prepare_chart_data
-    const start = Math.min(total, count);
-    // берем последние N точек (с 0 по N-1) исходя из формата данных (последняя запись первая)
-    return {
-        dates: data.dates.slice(0, start).slice().reverse(),
-        revenue: data.revenue.slice(0, start).slice().reverse(),
-        expenses: data.expenses.slice(0, start).slice().reverse(),
-        profit: data.profit.slice(0, start).slice().reverse()
-    };
+    const start = Math.max(0, total - count);
+    const sliced = { dates: dates.slice(start) };
+    if (data.series) {
+        sliced.series = {};
+        Object.keys(data.series).forEach(k => {
+            sliced.series[k] = (data.series[k] || []).slice(start);
+        });
+    } else {
+        // старый формат
+        ['revenue','expenses','profit'].forEach(k => {
+            if (data[k]) {
+                sliced[k] = data[k].slice(start);
+            }
+        });
+    }
+    return sliced;
 }
 
 function renderFinanceChart(data) {
-    const canvas = document.getElementById('financeChart');
-    const ctx = canvas.getContext('2d');
-    window.currentChartData = data;
-    if (!data || !data.dates || data.dates.length === 0) {
-        canvas.style.display = 'none';
-        return;
-    }
-    canvas.style.display = 'block';
+	// Три отдельных графика: ₽, штуки, проценты
+	const canvasCurrency = document.getElementById('financeChartCurrency');
+	const ctxCurrency = canvasCurrency.getContext('2d');
+	const canvasCounts = document.getElementById('financeChartCounts');
+	const ctxCounts = canvasCounts.getContext('2d');
+	const canvasPercent = document.getElementById('financeChartPercent');
+	const ctxPercent = canvasPercent.getContext('2d');
+	window.currentChartData = data;
+	if (!data || !data.dates || data.dates.length === 0) {
+		canvasCurrency.style.display = 'none';
+		canvasCounts.style.display = 'none';
+		canvasPercent.style.display = 'none';
+		return;
+	}
+	canvasCurrency.style.display = 'block';
+	canvasCounts.style.display = 'block';
+	canvasPercent.style.display = 'block';
 
-    const rangeData = sliceDataByRange(data);
+	const rangeData = sliceDataByRange(data);
 
-    if (window.financeChart && typeof window.financeChart.destroy === 'function') {
-        window.financeChart.destroy();
-    }
-    window.financeChart = null;
+	// Уничтожим прежние инстансы, если есть
+	try { if (window.financeChart && typeof window.financeChart.destroy === 'function') window.financeChart.destroy(); } catch(e) {}
+	try { if (window.financeChartCurrency && typeof window.financeChartCurrency.destroy === 'function') window.financeChartCurrency.destroy(); } catch(e) {}
+	try { if (window.financeChartCounts && typeof window.financeChartCounts.destroy === 'function') window.financeChartCounts.destroy(); } catch(e) {}
+	try { if (window.financeChartPercent && typeof window.financeChartPercent.destroy === 'function') window.financeChartPercent.destroy(); } catch(e) {}
+	window.financeChart = null;
+	window.financeChartCurrency = null;
+	window.financeChartCounts = null;
+	window.financeChartPercent = null;
 
-    // Убираем плагин Chart.js, вместо него используем DOM-линию поверх canvas
+	// Построение datasets по типам
+	const datasetsCurrency = [];
+	const datasetsCounts = [];
+	const datasetsPercent = [];
+	const palette = [
+		'#48bb78','#f56565','#4299e1','#ed8936','#9f7aea','#38b2ac','#ed64a6','#a0aec0',
+		'#f6ad55','#68d391','#4fd1c5','#63b3ed','#fc8181','#fbb6ce','#cbd5e0','#e9d8fd',
+		'#b794f4','#feb2b2','#81e6d9','#90cdf4','#fbd38d','#f6ad55'
+	];
+    const keys = data.series ? Object.keys(data.series) : ['revenue','expenses','profit'];
+	let colorIdx = 0;
+	keys.forEach(k => {
+        let shouldShow;
+        if (window.selectedMetrics) {
+            // Если набор определён, показываем только явно выбранные (включая пустой набор = ничего)
+            shouldShow = window.selectedMetrics.has(k);
+        } else {
+            // Fallback для очень старого сценария
+            shouldShow = ['revenue','expenses','profit'].includes(k);
+        }
+		if (!shouldShow) return;
+		const color = palette[colorIdx % palette.length];
+		colorIdx++;
+		const seriesData = data.series ? rangeData.series[k] : rangeData[k];
+		if (!seriesData) return;
+		const ds = {
+            label: getMetricLabelRussian(k),
+			data: seriesData,
+			borderColor: color,
+			backgroundColor: hexToRgba(color, 0.1),
+			borderWidth: 2,
+			tension: 0.35,
+			fill: true,
+			pointRadius: 0
+		};
+		if (isCurrencyMetric(k)) {
+			datasetsCurrency.push(ds);
+		} else if (isPercentMetric(k)) {
+			datasetsPercent.push(ds);
+		} else {
+			datasetsCounts.push(ds);
+		}
+	});
 
-    window.financeChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: rangeData.dates,
-            datasets: [
-                {
-                    label: 'Выручка',
-                    data: rangeData.revenue,
-                    borderColor: '#48bb78',
-                    backgroundColor: 'rgba(72, 187, 120, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.35,
-                    fill: true,
-                    pointRadius: 0
-                },
-                {
-                    label: 'Расходы',
-                    data: rangeData.expenses,
-                    borderColor: '#f56565',
-                    backgroundColor: 'rgba(245, 101, 101, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.35,
-                    fill: true,
-                    pointRadius: 0
-                },
-                {
-                    label: 'Прибыль',
-                    data: rangeData.profit,
-                    borderColor: '#4299e1',
-                    backgroundColor: 'rgba(66, 153, 225, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.35,
-                    fill: true,
-                    pointRadius: 0
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: { enabled: false }, // используем свой рид-аут
-                decimation: { enabled: true, algorithm: 'lttb' },
-                // Явно задаём объект опций для нашего плагина, чтобы Chart.js не обращался к undefined.disabled
-                verticalCursor: { enabled: true, disabled: false }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) { return value.toLocaleString('ru-RU') + ' ₽'; }
-                    }
-                },
-                x: { display: false } // скрываем подписи дат на оси X для экономии места
-            },
-            layout: { padding: { top: 6, right: 6, bottom: 6, left: 6 } },
-            elements: { point: { radius: 0 } },
-            aspectRatio: 2 // заставляет график ужиматься по ширине при ограничении высоты
-        },
-        plugins: []
-    });
+	// Построим графики
+    window.financeChartCurrency = new Chart(ctxCurrency, {
+		type: 'line',
+		data: { labels: rangeData.dates, datasets: datasetsCurrency },
+		options: baseChartOptions('₽')
+	});
+	window.financeChartCounts = new Chart(ctxCounts, {
+		type: 'line',
+		data: { labels: rangeData.dates, datasets: datasetsCounts },
+		options: baseChartOptions('')
+	});
+	window.financeChartPercent = new Chart(ctxPercent, {
+		type: 'line',
+		data: { labels: rangeData.dates, datasets: datasetsPercent },
+		options: baseChartOptions('%')
+	});
 
-    attachCursorHandlers(canvas, window.financeChart);
+    attachCursorHandlers(canvasCurrency, window.financeChartCurrency, 'chartReadoutCurrency', 'cursorLineCurrency');
+    attachCursorHandlers(canvasCounts, window.financeChartCounts, 'chartReadoutCounts', 'cursorLineCounts');
+    attachCursorHandlers(canvasPercent, window.financeChartPercent, 'chartReadoutPercent', 'cursorLinePercent');
 }
 
-function attachCursorHandlers(canvas, chart) {
-    const readout = document.getElementById('chartReadout');
-    if (!readout) return;
-    const domLine = document.getElementById('cursorLine');
+function attachCursorHandlers(canvas, chart, readoutId = 'chartReadoutCurrency', lineId = 'cursorLineCurrency') {
+	const readout = document.getElementById(readoutId);
+	if (!readout) return;
+	const domLine = document.getElementById(lineId);
     let isDragging = false;
 
     const updateFromEvent = (evt) => {
@@ -227,8 +247,12 @@ function updateReadout(chart, readoutEl) {
     const date1 = data.labels[i1] ?? date0;
     const dateText = (t < 0.5) ? date0 : date1;
 
-    readoutEl.innerHTML = `${dateText}: ` +
-        series.map(s => `${s.label} ${s.value.toLocaleString('ru-RU')} ₽`).join(' · ');
+    if (series.length === 0) {
+        readoutEl.innerHTML = `${dateText}: нет выбранных метрик`;
+    } else {
+        readoutEl.innerHTML = `${dateText}: ` +
+            series.map(s => `${s.label} ${s.value.toLocaleString('ru-RU')}`).join(' · ');
+    }
     readoutEl.setAttribute('aria-hidden', 'false');
 }
 
@@ -246,18 +270,6 @@ function updatePeriodInfo(data) {
     }
 }
 
-// Функция экспорта основного графика
-function exportChart() {
-    if (!financeChart) {
-        alert('Сначала загрузите данные графика');
-        return;
-    }
-    
-    const link = document.createElement('a');
-    link.download = `business-chart-${new Date().toISOString().split('T')[0]}.png`;
-    link.href = financeChart.toBase64Image();
-    link.click();
-}
 
 // Обработчик изменения размера окна для прокручиваемого графика
 let resizeTimeout;
@@ -422,6 +434,78 @@ function initChartScroll() {
 
     // Устанавливаем начальный курсор
     scrollArea.style.cursor = 'grab';
+}
+
+function hexToRgba(hex, alpha) {
+    const res = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!res) return 'rgba(0,0,0,' + alpha + ')';
+    const r = parseInt(res[1], 16);
+    const g = parseInt(res[2], 16);
+    const b = parseInt(res[3], 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+function baseChartOptions(suffix) {
+	return {
+		responsive: true,
+		maintainAspectRatio: false,
+		interaction: { mode: 'index', intersect: false },
+		plugins: {
+			legend: { display: false }, // отключаем выбор метрик на графике
+			tooltip: { enabled: false },
+			decimation: { enabled: true, algorithm: 'lttb' },
+			verticalCursor: { enabled: true, disabled: false }
+		},
+		scales: {
+			y: {
+				beginAtZero: true,
+				ticks: {
+					callback: function(value) { return suffix ? (value.toLocaleString('ru-RU') + ' ' + suffix) : value.toLocaleString('ru-RU'); }
+				}
+			},
+			x: { display: false }
+		},
+		layout: { padding: { top: 6, right: 6, bottom: 6, left: 6 } },
+		elements: { point: { radius: 0 } },
+		aspectRatio: 2
+	};
+}
+function isCurrencyMetric(key) {
+	return ['revenue','expenses','profit','average_check','investments','marketing_costs','ltv','cac'].includes(key);
+}
+function isPercentMetric(key) {
+	return ['profit_margin','safety_margin','roi','profitability_index','ltv_cac_ratio','customer_profit_margin','sgr','revenue_growth_rate','roe'].includes(key);
+}
+
+function getMetricLabelRussian(key) {
+    const map = {
+        revenue: 'Выручка',
+        expenses: 'Расходы',
+        profit: 'Прибыль',
+        clients: 'Клиенты',
+        average_check: 'Средний чек',
+        investments: 'Инвестиции',
+        marketing_costs: 'Маркетинг',
+        employees: 'Сотрудники',
+        profit_margin: 'Маржа прибыли, %',
+        break_even_clients: 'Точка безуб., клиенты',
+        safety_margin: 'Запас прочности, %',
+        roi: 'ROI, %',
+        profitability_index: 'Индекс прибыльности',
+        ltv: 'LTV',
+        cac: 'CAC',
+        ltv_cac_ratio: 'LTV/CAC',
+        customer_profit_margin: 'Маржа клиента, %',
+        sgr: 'Устойчивый рост, %',
+        revenue_growth_rate: 'Рост выручки, %',
+        asset_turnover: 'Оборачиваемость активов',
+        roe: 'ROE, %',
+        months_to_bankruptcy: 'Месяцев до банкротства',
+        financial_health_score: 'Фин. здоровье',
+        growth_health_score: 'Здоровье роста',
+        efficiency_health_score: 'Здоровье эффективности',
+        overall_health_score: 'Итоговый Health'
+    };
+    return map[key] || key;
 }
 // Bottom Navigation Enhancements
 document.addEventListener('DOMContentLoaded', function() {

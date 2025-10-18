@@ -8,8 +8,21 @@
     <div class="user-selector">
         <label for="userSelect">🔍 Выберите профиль:</label>
         <div class="enhanced-select">
-            <select id="userSelect" onchange="loadAnalyticsData()">
+            <div class="custom-select" id="userSelectCustom">
+                <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" id="userSelectTrigger">Загрузка...</button>
+                <div class="custom-options" role="listbox" id="userOptions"></div>
+            </div>
+            <select id="userSelect" onchange="loadUserData()" style="display:none;">
                 <option value="">Загрузка...</option>
+            </select>
+        </div>
+        <div class="enhanced-select" style="margin-top:10px;">
+            <div class="custom-select" id="businessSelectCustom">
+                <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" id="businessSelectTrigger">Выберите бизнес</button>
+                <div class="custom-options" role="listbox" id="businessOptions"></div>
+            </div>
+            <select id="businessSelect" onchange="loadBusinessData()" style="display:none;">
+                <option value="">Выберите бизнес</option>
             </select>
         </div>
     </div>
@@ -29,12 +42,15 @@
             <div class="loading">Загрузка анализа трендов...</div>
         </div>
     </div>
+
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         loadUsers();
     });
+
+    let currentBusinessId = null;
 
     async function loadUsers() {
         try {
@@ -43,18 +59,34 @@
             
             if (data.success) {
                 const userSelect = document.getElementById('userSelect');
+                const userTrigger = document.getElementById('userSelectTrigger');
+                const userOptions = document.getElementById('userOptions');
                 userSelect.innerHTML = '<option value="">Выберите профиль</option>';
-                
+                userOptions.innerHTML = '';
                 data.users.forEach(user => {
                     const option = document.createElement('option');
                     option.value = user.id;
                     option.textContent = user.name;
                     userSelect.appendChild(option);
+                    const optDiv = document.createElement('div');
+                    optDiv.className = 'custom-option';
+                    optDiv.setAttribute('role','option');
+                    optDiv.dataset.value = user.id;
+                    optDiv.innerHTML = `<span class="option-text">${user.name}</span><span class="option-check">✔</span>`;
+                    optDiv.addEventListener('click', () => {
+                        userSelect.value = user.id;
+                        userTrigger.textContent = user.name;
+                        closeCustomSelect('userSelectCustom');
+                        loadUserData();
+                    });
+                    userOptions.appendChild(optDiv);
                 });
-                
                 if (data.users.length > 0) {
                     userSelect.value = data.users[0].id;
-                    loadAnalyticsData();
+                    userTrigger.textContent = data.users[0].name;
+                    loadUserData();
+                } else {
+                    userTrigger.textContent = 'Нет профилей';
                 }
             }
         } catch (error) {
@@ -62,17 +94,64 @@
         }
     }
 
-    async function loadAnalyticsData() {
+    async function loadUserData() {
         const userId = document.getElementById('userSelect').value;
         if (!userId) return;
-
-        await loadFinancialAnalysis(userId);
-        await loadTrendsAnalysis(userId);
+        // Загрузим бизнесы пользователя и выберем первый
+        const bizResp = await fetch(`/api/businesses/${userId}`);
+        const bizData = await bizResp.json();
+        const businessSelect = document.getElementById('businessSelect');
+        const bizTrigger = document.getElementById('businessSelectTrigger');
+        const bizOptions = document.getElementById('businessOptions');
+        businessSelect.innerHTML = '<option value="">Выберите бизнес</option>';
+        bizOptions.innerHTML = '';
+        if (bizData.success && bizData.businesses.length) {
+            bizData.businesses.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b.business_id;
+                option.textContent = b.business_name;
+                businessSelect.appendChild(option);
+                const optDiv = document.createElement('div');
+                optDiv.className = 'custom-option';
+                optDiv.setAttribute('role','option');
+                optDiv.dataset.value = b.business_id;
+                optDiv.innerHTML = `<span class="option-text">${b.business_name}</span><span class="option-check">✔</span>`;
+                optDiv.addEventListener('click', () => {
+                    businessSelect.value = b.business_id;
+                    bizTrigger.textContent = b.business_name;
+                    closeCustomSelect('businessSelectCustom');
+                    loadBusinessData();
+                });
+                bizOptions.appendChild(optDiv);
+            });
+            businessSelect.value = bizData.businesses[0].business_id;
+            bizTrigger.textContent = bizData.businesses[0].business_name;
+            currentBusinessId = bizData.businesses[0].business_id;
+            await loadBusinessData();
+        } else {
+            currentBusinessId = null;
+            bizTrigger.textContent = 'Нет бизнесов';
+        }
     }
 
-    async function loadFinancialAnalysis(userId) {
+    async function loadBusinessData() {
+        const businessId = document.getElementById('businessSelect').value;
+        if (!businessId) return;
+        currentBusinessId = businessId;
+        await loadAnalyticsData();
+    }
+
+    async function loadAnalyticsData() {
+        if (!currentBusinessId) return;
+
+        await loadFinancialAnalysis(currentBusinessId);
+        await loadTrendsAnalysis(currentBusinessId);
+        await loadChartsForAnalytics(currentBusinessId);
+    }
+
+    async function loadFinancialAnalysis(businessId) {
         try {
-            const aiResponse = await fetch(`/api/user-ai-analysis/${userId}`);
+            const aiResponse = await fetch(`/api/business-ai-analysis/${businessId}`);
             const aiData = await aiResponse.json();
             
             if (aiData.success) {
@@ -83,9 +162,9 @@
         }
     }
 
-    async function loadTrendsAnalysis(userId) {
+    async function loadTrendsAnalysis(businessId) {
         try {
-            const financeResponse = await fetch(`/api/user-finance-data/${userId}`);
+            const financeResponse = await fetch(`/api/business-history/${businessId}`);
             const financeData = await financeResponse.json();
             
             if (financeData.success) {
@@ -93,6 +172,23 @@
             }
         } catch (error) {
             console.error('Ошибка загрузки анализа трендов:', error);
+        }
+    }
+
+    async function loadChartsForAnalytics(businessId) {
+        try {
+            const response = await fetch(`/api/business-history/${businessId}`);
+            const data = await response.json();
+            if (data.success) {
+                // Используем ту же логику рендеринга графиков из dashboard
+                window.currentChartData = data.data;
+                if (!window.selectedMetrics || window.selectedMetrics.size === 0) {
+                    window.selectedMetrics = new Set(['revenue','expenses','profit']);
+                }
+                renderFinanceChart(data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки графиков:', error);
         }
     }
 
@@ -138,9 +234,9 @@
     function renderTrendsAnalysis(data) {
         const container = document.getElementById('trendsAnalysis');
         
-        if (data.revenue.length >= 2) {
-            const revenueGrowth = ((data.revenue[0] - data.revenue[1]) / data.revenue[1] * 100).toFixed(1);
-            const profitGrowth = ((data.profit[0] - data.profit[1]) / data.profit[1] * 100).toFixed(1);
+        if (data.series && data.series.revenue && data.series.revenue.length >= 2) {
+            const revenueGrowth = ((data.series.revenue[0] - data.series.revenue[1]) / data.series.revenue[1] * 100).toFixed(1);
+            const profitGrowth = ((data.series.profit[0] - data.series.profit[1]) / data.series.profit[1] * 100).toFixed(1);
             
             container.innerHTML = `
                 <div class="trends-grid">
@@ -157,6 +253,40 @@
         } else {
             container.innerHTML = '<p>Недостаточно данных для анализа трендов</p>';
         }
+    }
+
+    // Функция экспорта графиков
+    function exportChart(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            alert('График не найден');
+            return;
+        }
+        
+        const link = document.createElement('a');
+        link.download = `chart-${canvasId}-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    // Логика открытия/закрытия кастомных селектов
+    document.addEventListener('click', function(e) {
+        const userCustom = document.getElementById('userSelectCustom');
+        const bizCustom = document.getElementById('businessSelectCustom');
+        [userCustom, bizCustom].forEach(cs => {
+            if (!cs) return;
+            const trigger = cs.querySelector('.custom-select-trigger');
+            if (trigger && trigger.contains(e.target)) {
+                cs.classList.toggle('is-open');
+            } else if (!cs.contains(e.target)) {
+                cs.classList.remove('is-open');
+            }
+        });
+    });
+
+    function closeCustomSelect(id) {
+        const cs = document.getElementById(id);
+        if (cs) cs.classList.remove('is-open');
     }
 </script>
 {% endblock %}
