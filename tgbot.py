@@ -650,18 +650,29 @@ class BusinessBot:
         """Обработка сообщения в рамках активной диалоговой сессии"""
         try:
             conversation = conv_manager.active_sessions[user_id]
-            response_data = await conversation.process_message(user_text)
-
-            # Прогресс перед анализом/ответом
+            
+            # Прогресс СРАЗУ после сообщения пользователя
+            progress_msg = None
             try:
-                await update.message.reply_text(
+                progress_msg = await update.message.reply_text(
                     safe_markdown_text("🛠 *Делаю отчёт...*"),
                     parse_mode='MarkdownV2'
                 )
             except Exception:
                 pass
+            
+            # Обрабатываем сообщение
+            response_data = await conversation.process_message(user_text)
 
-            await self.send_long_message(update, response_data['response'])
+            # Заменяем прогресс-сообщение на результат
+            if progress_msg:
+                try:
+                    await progress_msg.edit_text(response_data['response'], parse_mode='MarkdownV2')
+                except Exception:
+                    # Если не удалось заменить, отправляем новое сообщение
+                    await self.send_long_message(update, response_data['response'], 'MarkdownV2')
+            else:
+                await self.send_long_message(update, response_data['response'], 'MarkdownV2')
             # try:
             #     await db.log_message(
             #         session_id=conversation.session_id,

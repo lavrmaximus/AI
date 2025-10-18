@@ -1,7 +1,7 @@
 import asyncio
 import sqlite3
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
 import logging
 import os
@@ -98,6 +98,12 @@ class Database:
                 efficiency_health_score INTEGER DEFAULT 0,
                 overall_health_score INTEGER DEFAULT 0,
                 
+                -- AI советы (4 штуки)
+                advice1 TEXT DEFAULT '',
+                advice2 TEXT DEFAULT '',
+                advice3 TEXT DEFAULT '',
+                advice4 TEXT DEFAULT '',
+                
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (business_id) REFERENCES businesses (business_id)
             )
@@ -130,6 +136,27 @@ class Database:
                 FOREIGN KEY (session_id) REFERENCES conversation_sessions (session_id)
             )
         ''')
+        
+        # Миграция: добавляем колонки advice1-4 если их нет
+        try:
+            cursor.execute("ALTER TABLE business_snapshots ADD COLUMN advice1 TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # Колонка уже существует
+        
+        try:
+            cursor.execute("ALTER TABLE business_snapshots ADD COLUMN advice2 TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # Колонка уже существует
+            
+        try:
+            cursor.execute("ALTER TABLE business_snapshots ADD COLUMN advice3 TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # Колонка уже существует
+            
+        try:
+            cursor.execute("ALTER TABLE business_snapshots ADD COLUMN advice4 TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # Колонка уже существует
         
         self.conn.commit()
     
@@ -173,12 +200,18 @@ class Database:
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
     
-    async def add_business_snapshot(self, business_id: int, raw_data: Dict, metrics: Dict, period_date: str = None) -> int:
+    async def add_business_snapshot(self, business_id: int, raw_data: Dict, metrics: Dict, period_date: str = None, advice_list: List[str] = None) -> int:
         """Добавление снимка бизнеса со всеми метриками"""
         def _add():
             cursor = self.conn.cursor()
-            # ФИКС: используем другое имя переменной
-            actual_period_date = period_date or datetime.now().strftime("%Y-%m-%d")
+            # ФИКС: используем московское время (UTC+3)
+            moscow_tz = timezone(timedelta(hours=3))
+            actual_period_date = period_date or datetime.now(moscow_tz).strftime("%Y-%m-%d")
+            
+            # Подготавливаем советы (до 4 штук)
+            advice_list_local = (advice_list or [])[:4]
+            while len(advice_list_local) < 4:
+                advice_list_local.append('')
             
             cursor.execute('''
                 INSERT INTO business_snapshots (
@@ -187,10 +220,11 @@ class Database:
                     profit_margin, break_even_clients, safety_margin, roi, profitability_index,
                     ltv, cac, ltv_cac_ratio, customer_profit_margin, sgr, revenue_growth_rate,
                     asset_turnover, roe, months_to_bankruptcy,
-                    financial_health_score, growth_health_score, efficiency_health_score, overall_health_score
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    financial_health_score, growth_health_score, efficiency_health_score, overall_health_score,
+                    advice1, advice2, advice3, advice4
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                business_id, 'monthly', actual_period_date,  # ← ВАЖНО: actual_period_date а не period_date
+                business_id, 'monthly', actual_period_date,
                 raw_data.get('revenue', 0), raw_data.get('expenses', 0), raw_data.get('profit', 0),
                 raw_data.get('clients', 0), raw_data.get('average_check', 0), raw_data.get('investments', 0),
                 raw_data.get('marketing_costs', 0), raw_data.get('employees', 0),
@@ -200,7 +234,8 @@ class Database:
                 metrics.get('customer_profit_margin', 0), metrics.get('sgr', 0), metrics.get('revenue_growth_rate', 0),
                 metrics.get('asset_turnover', 0), metrics.get('roe', 0), metrics.get('months_to_bankruptcy', 0),
                 metrics.get('financial_health_score', 0), metrics.get('growth_health_score', 0),
-                metrics.get('efficiency_health_score', 0), metrics.get('overall_health_score', 0)
+                metrics.get('efficiency_health_score', 0), metrics.get('overall_health_score', 0),
+                advice_list_local[0], advice_list_local[1], advice_list_local[2], advice_list_local[3]
             ))
             self.conn.commit()
             return cursor.lastrowid

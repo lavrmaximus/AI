@@ -33,7 +33,7 @@ class BusinessAnalyzer:
             ai_basic_analysis = await self._get_basic_ai_analysis(ai_description, user_id)
             
             # 3. Сохраняем в базу данных
-            snapshot_id = await db.add_business_snapshot(business_id, raw_data, metrics)
+            snapshot_id = await db.add_business_snapshot(business_id, raw_data, metrics, advice_list=ai_basic_analysis.get('СОВЕТЫ', []))
             logger.info(f"✅ Снимок бизнеса сохранен: {snapshot_id}")
             
             # 4. Формирование ответа
