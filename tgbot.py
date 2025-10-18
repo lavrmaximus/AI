@@ -611,21 +611,27 @@ class BusinessBot:
 
             if message_type == "question":
                 response = await self.handle_question(user_text, user_id)
-                # await db.log_message(
-                #     session_id=None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id,
-                #     user_message=user_text,
-                #     bot_response=response,
-                #     message_type='question'
-                # )
+                try:
+                    await db.log_message(
+                        session_id=None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id,
+                        user_message=user_text,
+                        bot_response=response,
+                        message_type='question'
+                    )
+                except Exception as e:
+                    logger.warning(f"Не удалось записать вопрос в БД: {e}")
                 await self.send_long_message(update, response)
             else:  # general
                 response = await self.handle_general_chat(user_text, user_id)
-                # await db.log_message(
-                #     session_id=None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id,
-                #     user_message=user_text,
-                #     bot_response=response,
-                #     message_type='general'
-                # )
+                try:
+                    await db.log_message(
+                        session_id=None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id,
+                        user_message=user_text,
+                        bot_response=response,
+                        message_type='general'
+                    )
+                except Exception as e:
+                    logger.warning(f"Не удалось записать общение в БД: {e}")
                 await self.send_long_message(update, response, None)
 
             logger.info(f"🤖 Ответ бота ({message_type}): {response[:100]}...")
@@ -673,15 +679,16 @@ class BusinessBot:
                     await self.send_long_message(update, response_data['response'], 'MarkdownV2')
             else:
                 await self.send_long_message(update, response_data['response'], 'MarkdownV2')
-            # try:
-            #     await db.log_message(
-            #         session_id=conversation.session_id,
-            #         user_message=user_text,
-            #         bot_response=response_data['response'],
-            #         message_type='conversation'
-            #     )
-            # except Exception as e:
-            #     logger.warning(f"Не удалось записать сообщение в БД: {e}")
+            
+            try:
+                await db.log_message(
+                    session_id=conversation.session_id,
+                    user_message=user_text,
+                    bot_response=response_data['response'],
+                    message_type='conversation'
+                )
+            except Exception as e:
+                logger.warning(f"Не удалось записать сообщение в БД: {e}")
 
             # Если диалог завершен
             if response_data.get('is_complete', False):
