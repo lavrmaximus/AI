@@ -1,0 +1,61 @@
+# Исключаем ненужные файлы из Docker образа
+
+# Локальные файлы базы данных
+*.db
+*.sqlite
+*.sqlite3
+
+# Логи
+logs/
+*.log
+
+# Python кэш
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Виртуальное окружение
+.venv/
+venv/
+env/
+
+# IDE файлы
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Временные файлы
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Тестовые файлы
+test_*.py
+*_test.py
+migrate_*.py
+fix_*.py
+verify_*.py
+
+# Документация
+README.md
+*.md
+
+# Конфигурационные файлы (кроме .env для локальной разработки)
+.env.local
+.env.development
+.env.test
+
+# Папка с шаблонами (если не используется)
+templates/
+
+# Файлы миграции (уже выполнены)
+migrate_sqlite_to_postgres.py

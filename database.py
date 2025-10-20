@@ -6,6 +6,7 @@ import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
+from env_utils import is_production, get_database_config, should_create_files
 
 try:
     import psycopg2
@@ -14,7 +15,9 @@ except ImportError:
     print("❌ Требуется пакет: pip install psycopg2-binary")
     raise
 
-load_dotenv()
+# Загружаем .env только локально
+if not is_production():
+    load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -57,12 +60,25 @@ class Database:
         return " ".join(parts)
     
     async def init_db(self):
-        """Инициализация PostgreSQL БД"""
-        dsn = self.build_dsn_from_env()
-        self.conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
-        self.conn.autocommit = True
-        await self.create_tables()
-        print(f"✅ PostgreSQL база подключена")
+        """Инициализация базы данных"""
+        try:
+            if is_production():
+                # В продакшене используем PostgreSQL
+                dsn = self.build_dsn_from_env()
+                self.conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
+                self.conn.autocommit = True
+                logger.info("✅ Подключение к PostgreSQL установлено (продакшен)")
+            else:
+                # Локально используем PostgreSQL (мигрировали с SQLite)
+                dsn = self.build_dsn_from_env()
+                self.conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
+                self.conn.autocommit = True
+                logger.info("✅ Подключение к PostgreSQL установлено (локально)")
+            
+            await self.create_tables()
+        except Exception as e:
+            logger.error(f"❌ Ошибка подключения к базе данных: {e}")
+            raise
     
     async def create_tables(self):
         """Создание новых таблиц для мульти-бизнесов"""
