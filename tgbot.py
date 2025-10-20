@@ -1,329 +1,1126 @@
-from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from ai import *
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from ai import classify_message_type, general_chat, answer_question, extract_business_data, conversation_memory # Импортируем только нужные функции
+from conversation_manager import conv_manager
+from business_analyzer import business_analyzer
+from database import db
+from metrics_help import get_categories_keyboard, get_metrics_keyboard, get_metric_description, get_category_description
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
+import asyncio
+from typing import Dict, List
+from datetime import datetime
+from telegram.helpers import escape_markdown
 
-# Настройка логирования
+logging.getLogger('telegram').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
+
+# Настройка логирования (ротация файла, явный путь)
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+class DailyFileHandler(logging.Handler):
+    def __init__(self, log_dir: str):
+        super().__init__()
+        self.log_dir = log_dir
+        self.current_date = None
+        self.file_handler = None
+        self._ensure_file()
+
+    def _ensure_file(self):
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        if date_str != self.current_date:
+            if self.file_handler:
+                try:
+                    self.file_handler.close()
+                except Exception:
+                    pass
+            self.current_date = date_str
+            path = os.path.join(self.log_dir, f'{date_str}.log')
+            self.file_handler = logging.FileHandler(path, encoding='utf-8')
+            self.file_handler.setFormatter(logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S'))
+
+    def emit(self, record: logging.LogRecord):
+        try:
+            self._ensure_file()
+            self.file_handler.emit(record)
+        except Exception:
+            # Не роняем приложение из-за проблем с логами
+            pass
+
+file_handler = DailyFileHandler(LOG_DIR)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('bot.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
+    handlers=[file_handler, stream_handler],
+    force=True
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "8350333926:AAEkf4If4LXh657SOTuGsAhEJx6EFSPKHbU"
+# BOT_TOKEN будет читаться в __init__
+ADMINS = [
+    "1287604685",  # Вставьте сюда ID админа
+]
+
+def safe_markdown_text(text: str) -> str:
+    """
+    Безопасное форматирование Markdown с сохранением жирного текста
+    """
+    # Экранируем все спецсимволы
+    safe_text = escape_markdown(text, version=2)
+    # Возвращаем звездочки для жирного текста
+    safe_text = safe_text.replace(r'\*', '*')
+    return safe_text
+
+def clean_ai_text(text: str) -> str:
+    """
+    Очистка AI-текста от Markdown форматирования для безопасной отправки
+    """
+    import re
+    
+    # Убираем заголовки ###
+    text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)
+    
+    # Убираем жирный текст **текст**
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    
+    # Убираем курсив __текст__
+    text = re.sub(r'__([^_]+)__', r'\1', text)
+    
+    # Убираем курсив _текст_ (одиночные подчёркивания)
+    text = re.sub(r'(?<!_)_([^_]+)_(?!_)', r'\1', text)
+    
+    # Убираем курсив *текст* (одиночные звёздочки)
+    text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'\1', text)
+    
+    # Убираем код `текст`
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+    
+    # Убираем квадратные скобки с экранированием
+    text = re.sub(r'\\\[', '[', text)
+    text = re.sub(r'\\\]', ']', text)
+    
+    return text
+    
+print("Запуск бота....")
 
 class BusinessBot:
     def __init__(self):
-        self.app = Application.builder().token(BOT_TOKEN).build()
+        # Читаем токен при инициализации (не при импорте модуля)
+        token = (
+            os.getenv("BOT_TOKEN")
+            or os.getenv("TELEGRAM_BOT_TOKEN")
+            or os.getenv("TOKEN")
+        )
+        if not token:
+            raise ValueError("BOT_TOKEN environment variable is required (try BOT_TOKEN or TELEGRAM_BOT_TOKEN)")
+        
+        self.app = Application.builder().token(token).concurrent_updates(True).build()
         self.setup_handlers()
-    
+
     def setup_handlers(self):
         self.app.add_handler(CommandHandler("start", self.start_command))
         self.app.add_handler(CommandHandler("help", self.help_command))
         self.app.add_handler(CommandHandler("about", self.about_command))
-        self.app.add_handler(CommandHandler("analysis", self.analysis_command))
         self.app.add_handler(CommandHandler("history", self.history_command))
+        self.app.add_handler(CommandHandler("help_metrics", self.help_metrics_command))
+        self.app.add_handler(CommandHandler("admin_clear", self.admin_clear))
+        self.app.add_handler(CommandHandler("new_business", self.new_business_command))
+        self.app.add_handler(CommandHandler("edit_business", self.edit_business_command))
+        self.app.add_handler(CommandHandler("delete_business", self.delete_business_command))
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
-    
+        self.app.add_handler(CallbackQueryHandler(self.handle_inline_buttons))
+        # Короткий обработчик ошибок без traceback
+        self.app.add_error_handler(self.on_error)
+
+    async def on_error(self, update: object, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            err_text = str(context.error)
+        except Exception:
+            err_text = "unknown"
+        logger.error(f"Update error: {err_text}")
+
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         user_id = str(user.id)
-        
-        # Логируем начало работы
-        logger.info(f"🆕 Новый пользователь: {user.first_name} (ID: {user_id}, @{user.username})")
-        
-        # Сохраняем пользователя в базу
+
+        #logger.info(f"🆕 Новый пользователь: {user.first_name} (ID: {user_id}, @{user.username})")
         await db.save_user(user_id, user.username, user.first_name, user.last_name)
-        
-        await update.message.reply_text(
+
+        text = safe_markdown_text(
             f"Привет, {user.first_name}! 👋\n\n"
             "Я - твой продвинутый AI-аналитик! 🚀\n\n"
-            "📊 *Что я умею:*\n"
-            "• Автоматически определять тип сообщения\n"
-            "• Анализировать бизнес с финансовыми формулами\n"
+            "*Что я умею:*\n"
+            "• Создавать бизнес с умным диалогом\n"
+            "• Рассчитывать 22 финансовые метрики\n"
+            "• Анализировать здоровье бизнеса\n"
             "• Отвечать на вопросы о бизнесе\n"
-            "• Запоминать всю историю диалога\n"
-            "• Сохранять данные в базу\n\n"
-            "💡 *Просто напиши:*\n"
-            "• О своем бизнесе с цифрами\n"
-            "• Вопрос о бизнесе\n"
-            "• Или просто поздоровайся!\n\n"
-            "🤖 *Новые возможности:*\n"
-            "/history - посмотреть историю анализов",
-            parse_mode='Markdown'
+            "• Сохранять всю историю в базу\n\n"
+            "*Начните прямо сейчас:*\n"
+            "/new_business - создать новый бизнес\n"
+            "[вопрос] - задать вопрос о бизнесе"
         )
-    
+
+        await update.message.reply_text(text, parse_mode='MarkdownV2')
+
+    async def help_metrics_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Справочник по метрикам"""
+        try:
+            user_id = str(update.effective_user.id)
+            await db.save_user(
+                user_id=user_id,
+                username=update.effective_user.username or "",
+                first_name=update.effective_user.first_name or "",
+                last_name=update.effective_user.last_name or ""
+            )
+            
+            message = "📚 **СПРАВОЧНИК ПО БИЗНЕС-МЕТРИКАМ**\n\n"
+            message += "Выберите категорию метрик для подробного изучения:\n\n"
+            message += "• **💰 Рентабельность** - метрики прибыльности\n"
+            message += "• **📈 Рост** - метрики развития бизнеса\n"
+            message += "• **👥 Клиенты** - метрики работы с клиентами\n"
+            message += "• **🛡️ Безопасность** - метрики финансовой устойчивости\n"
+            message += "• **🏥 Здоровье** - общие показатели здоровья бизнеса"
+            
+            keyboard = get_categories_keyboard()
+            await update.message.reply_text(
+                safe_markdown_text(message),
+                parse_mode='MarkdownV2',
+                reply_markup=keyboard
+            )
+            
+        except Exception as e:
+            logger.error(f"Ошибка команды help_metrics: {e}")
+            await update.message.reply_text("❌ Произошла ошибка при загрузке справочника.")
+
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
-        logger.info(f"ℹ️  Пользователь {user.first_name} запросил помощь")
-        
-        help_text = (
-            "📋 *Доступные команды:*\n\n"
+        logger.info(f"ℹ️ Пользователь {user.first_name} запросил помощь")
+
+        text = safe_markdown_text(
+            "*Доступные команды:*\n\n"
             "/start - начать работу\n"
-            "/help - помощь\n"  
+            "/help - помощь\n"
             "/about - о проекте\n"
-            "/analysis - запустить анализ\n"
-            "/history - история анализов\n\n"
-            "💬 *Умное определение типов:*\n"
-            "• *Бизнес-анализ:* 'Выручка 500к, расходы 200к, 100 клиентов'\n"
+            "/history - история анализов\n"
+            "/help_metrics - справочник по метрикам 📚\n"
+            "/new_business - создать новый бизнес 🆕\n"
+            "/edit_business - редактировать существующий бизнес ✏️\n"
+            "/delete_business - удалить бизнес 🗑️\n\n"
+            "*Умное определение типов:*\n"
             "• *Вопрос:* 'Как увеличить прибыль?'\n"
+            "• *Бизнес-данные:* 'Выручка 500к, расходы 200к' (Бот предложит команду)\n"
             "• *Общение:* 'Привет! Как дела?'\n\n"
-            "🎯 Я сам определю тип сообщения и отвечу соответственно!"
+            "🎯 Для создания бизнеса используйте /new_business\n"
+            "✏️ Для редактирования используйте /edit_business\n"
+            "🗑️ Для удаления используйте /delete_business\n"
+            "📚 Для изучения метрик используйте /help_metrics"
         )
-        await update.message.reply_text(help_text, parse_mode='Markdown')
-    
+        await update.message.reply_text(text, parse_mode='MarkdownV2')
+
     async def about_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
-        logger.info(f"ℹ️  Пользователь {user.first_name} запросил информацию о боте")
-        
-        about_text = (
-            "🤖 *Business Intelligence AI Assistant*\n\n"
-            "📈 *Расширенная аналитика:*\n"
-            "• Финансовые формулы и метрики\n"
-            "• Автоматическая классификация\n"  
-            "• Анализ рентабельности\n"
-            "• Расчет точки безубыточности\n"
-            "• Сохранение истории в БД\n\n"
-            "🧠 *Умные ответы:*\n"
-            "• AI-классификация сообщений\n"
-            "• Контекстная память\n"
-            "• Персонализированные рекомендации\n\n"
-            "💾 *База данных:*\n"
-            "• PostgreSQL на Render.com\n"
-            "• Сохранение всех диалогов\n"
-            "• История бизнес-анализов\n\n"
-            "🚀 *Постоянное развитие!*"
+        logger.info(f"ℹ️ Пользователь {user.first_name} запросил информацию о боте")
+
+        text = safe_markdown_text(
+            "*💸ФИНАНСОВЫЙ ЛУЧ💸*\n\n"
+            "*Новые возможности:*\n"
+            "• Умный диалог с ИИ\n"
+            "• 22 финансовые метрики\n"
+            "• Business Health Score\n"
+            "• AI рекомендации\n"
+            "• Сохранение истории\n\n"
+            "*Технологии:*\n"
+            "• GPT-4 для анализа\n"
+            "• Расширенные формулы\n"
+            "• PostgreSQL база данных (или SQLite)\n\n"
+            "🚀 *Полный анализ вашего бизнеса!*"
         )
-        await update.message.reply_text(about_text, parse_mode='Markdown')
-    
-    async def analysis_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await update.message.reply_text(text, parse_mode='MarkdownV2')
+
+    async def new_business_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Новая команда - создание бизнеса с умным диалогом"""
         user = update.effective_user
-        logger.info(f"🔍 Пользователь {user.first_name} запустил анализ")
-        
-        await update.message.reply_text(
-            "🔍 *Режим бизнес-анализа активирован!*\n\n"
-            "Расскажи о своем бизнесе с цифрами:\n"
-            "• Выручка и расходы\n"
-            "• Количество клиентов\n" 
-            "• Инвестиции\n"
-            "• Любые другие показатели\n\n"
-            "Я проведу полный финансовый анализ!",
-            parse_mode='Markdown'
-        )
-    
+        user_id = str(user.id)
+
+        logger.info(f"🆕 Пользователь {user.first_name} создает новый бизнес")
+
+        # Получаем сессию диалога
+        conversation = await conv_manager.get_conversation(user_id)
+
+        # Начинаем диалог
+        response = await conversation.process_message("")
+
+        await self.send_long_message(update, response['response'], 'Markdown')
+
+    async def edit_business_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Команда для редактирования существующего бизнеса"""
+        user = update.effective_user
+        user_id = str(user.id)
+
+        logger.info(f"✏️ Пользователь {user.first_name} хочет редактировать бизнес")
+
+        try:
+            businesses = await db.get_user_businesses(user_id)
+
+            if not businesses:
+                await update.message.reply_text(
+                    safe_markdown_text("📝 *У вас нет бизнесов для редактирования*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!"),
+                    parse_mode='MarkdownV2'
+                )
+                return
+
+            # Создаем inline кнопки для выбора бизнеса
+            keyboard = []
+            for i, business in enumerate(businesses[:10], 1):
+                business_name = business.get('business_name', f'Бизнес #{i}')
+                business_id = business.get('business_id')
+                keyboard.append([
+                    InlineKeyboardButton(f"✏️ {business_name}", callback_data=f'edit_{business_id}'),
+                    InlineKeyboardButton("🗑 Удалить", callback_data=f'delete_{business_id}')
+                ])
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            await update.message.reply_text(
+                safe_markdown_text("✏️ *РЕДАКТИРОВАНИЕ БИЗНЕСА*\n\n"
+                "Выберите бизнес для обновления данных:"),
+                reply_markup=reply_markup,
+                parse_mode='MarkdownV2'
+            )
+
+        except Exception as e:
+            logger.error(f"Ошибка получения списка бизнесов: {e}")
+            await update.message.reply_text(
+                safe_markdown_text("❌ Произошла ошибка при получении списка бизнесов\\. Попробуйте позже\\."),
+                parse_mode='MarkdownV2'
+            )
+
+    async def delete_business_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Команда для удаления бизнеса (мягкое удаление)"""
+        user = update.effective_user
+        user_id = str(user.id)
+
+        logger.info(f"🗑 Пользователь {user.first_name} хочет удалить бизнес")
+
+        try:
+            businesses = await db.get_user_businesses(user_id)
+
+            if not businesses:
+                await update.message.reply_text(
+                    safe_markdown_text("📝 *У вас нет бизнесов для удаления*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!"),
+                    parse_mode='MarkdownV2'
+                )
+                return
+
+            keyboard = []
+            for i, business in enumerate(businesses[:10], 1):
+                business_name = business.get('business_name', f'Бизнес #{i}')
+                business_id = business.get('business_id')
+                keyboard.append([InlineKeyboardButton(f"🗑 Удалить {business_name}", callback_data=f'delete_{business_id}')])
+
+            await update.message.reply_text(
+                safe_markdown_text("🗑 *УДАЛЕНИЕ БИЗНЕСА*\n\nВыберите бизнес для удаления:"),
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='MarkdownV2'
+            )
+
+        except Exception as e:
+            logger.error(f"Ошибка получения списка бизнесов для удаления: {e}")
+            await update.message.reply_text(
+                safe_markdown_text("❌ Произошла ошибка\\. Попробуйте позже\\."),
+                parse_mode='MarkdownV2'
+            )
+
     async def history_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         user_id = str(user.id)
-        
+
         logger.info(f"📊 Пользователь {user.first_name} запросил историю")
-        
+
         try:
-            business_data = await db.get_user_business_data(user_id)
-            
-            if not business_data:
+            businesses = await db.get_user_businesses(user_id)
+
+            if not businesses:
                 await update.message.reply_text(
-                    "📝 *История анализов пуста*\n\n"
-                    "Проведите первый бизнес-анализ, и здесь появится ваша история!",
-                    parse_mode='Markdown'
+                    safe_markdown_text("📝 *История анализов пуста*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!"),
+                    parse_mode='MarkdownV2'
                 )
                 return
-            
-            response = "📊 *ИСТОРИЯ ВАШИХ АНАЛИЗОВ*\n\n"
-            
-            for i, analysis in enumerate(business_data[:5], 1):  # Показываем последние 5 анализов
-                date = analysis['created_at'].strftime("%d.%m.%Y %H:%M") if hasattr(analysis['created_at'], 'strftime') else analysis['created_at']
-                
-                response += (
-                    f"*Анализ #{i}* ({date})\n"
-                    f"💰 Выручка: {analysis['revenue']:,.0f} руб\n"
-                    f"📊 Прибыль: {analysis['profit']:,.0f} руб\n"
-                    f"⭐ Оценка: {analysis['rating']}/10\n"
-                )
-                
-                if analysis['commentary']:
-                    response += f"💡 {analysis['commentary'][:100]}...\n"
-                
-                response += "\n"
-            
-            await update.message.reply_text(response, parse_mode='Markdown')
-            
+
+            # Создаем inline кнопки для каждого бизнеса
+            keyboard = []
+
+            for i, business in enumerate(businesses[:10], 1):  # Показываем до 10 бизнесов
+                business_name = business.get('business_name', f'Бизнес #{i}')
+                business_id = business.get('business_id')
+
+                # Получаем последний Health Score
+                try:
+                    history = await db.get_business_history(business_id, limit=1)
+                    if history:
+                        health_score = history[0].get('overall_health_score', 0)
+                        button_text = f"📊 {business_name} (Health: {health_score}/100)"
+                    else:
+                        button_text = f"📊 {business_name}"
+                except Exception as e:
+                    logger.warning(f"Ошибка получения Health Score для бизнеса {business_id}: {e}")
+                    button_text = f"📊 {business_name}" # Если ошибка, показываем только имя
+
+                keyboard.append([InlineKeyboardButton(button_text, callback_data=f'business_{business_id}')])
+
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            await update.message.reply_text(
+                safe_markdown_text("📊 *ВАШИ БИЗНЕСЫ*\n\n"
+                "Выберите бизнес для подробного анализа:"),
+                reply_markup=reply_markup,
+                parse_mode='MarkdownV2'
+            )
+
         except Exception as e:
             logger.error(f"Ошибка получения истории: {e}")
             await update.message.reply_text(
-                "❌ Произошла ошибка при получении истории. Попробуйте позже.",
-                parse_mode='Markdown'
+                safe_markdown_text("❌ Произошла ошибка при получении истории\\. Попробуйте позже\\."),
+                parse_mode='MarkdownV2'
             )
-    
+
+    async def handle_inline_buttons(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обработка inline кнопок"""
+        query = update.callback_query
+        await query.answer()  # Обязательно отвечаем на query
+
+        if query.data.startswith('business_'):
+            business_id = int(query.data.split('_')[1])
+            await self.show_business_details(query, business_id)
+        elif query.data.startswith('edit_'):
+            business_id = int(query.data.split('_')[1])
+            await self.start_edit_business(query, business_id)
+        elif query.data.startswith('delete_confirm_'):
+            business_id = int(query.data.split('_')[2])
+            await self.delete_business_confirmed(query, business_id)
+        elif query.data.startswith('delete_'):
+            business_id = int(query.data.split('_')[1])
+            await self.confirm_delete_business(query, business_id)
+        elif query.data.startswith('metrics_cat_'):
+            category_id = query.data.replace('metrics_cat_', '')
+            await self.show_metrics_category(query, category_id)
+        elif query.data.startswith('metrics_detail_'):
+            metric_id = query.data.replace('metrics_detail_', '')
+            await self.show_metric_detail(query, metric_id)
+        elif query.data == 'metrics_back':
+            await self.show_metrics_categories(query)
+        elif query.data == 'metrics_close':
+            await query.edit_message_text("📚 Справочник закрыт. Используйте /help_metrics для повторного открытия.")
+
+    async def show_metrics_categories(self, query: CallbackQuery):
+        """Показ категорий метрик"""
+        try:
+            message = "📚 **СПРАВОЧНИК ПО БИЗНЕС-МЕТРИКАМ**\n\n"
+            message += "Выберите категорию метрик для подробного изучения:\n\n"
+            message += "• **💰 Рентабельность** - метрики прибыльности\n"
+            message += "• **📈 Рост** - метрики развития бизнеса\n"
+            message += "• **👥 Клиенты** - метрики работы с клиентами\n"
+            message += "• **🛡️ Безопасность** - метрики финансовой устойчивости\n"
+            message += "• **🏥 Здоровье** - общие показатели здоровья бизнеса"
+            
+            keyboard = get_categories_keyboard()
+            await query.edit_message_text(
+                safe_markdown_text(message),
+                parse_mode='MarkdownV2',
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logger.error(f"Ошибка показа категорий метрик: {e}")
+            await query.edit_message_text("❌ Произошла ошибка при загрузке категорий.")
+
+    async def show_metrics_category(self, query: CallbackQuery, category_id: str):
+        """Показ метрик выбранной категории"""
+        try:
+            description = get_category_description(category_id)
+            keyboard = get_metrics_keyboard(category_id)
+            
+            if keyboard is None:
+                await query.edit_message_text("❌ Категория не найдена")
+                return
+
+            await query.edit_message_text(
+                safe_markdown_text(description),
+                parse_mode='MarkdownV2',
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logger.error(f"Ошибка показа метрик категории: {e}")
+            await query.edit_message_text("❌ Произошла ошибка при загрузке метрик.")
+
+    async def show_metric_detail(self, query: CallbackQuery, metric_id: str):
+        """Показ подробного описания метрики"""
+        try:
+            description = get_metric_description(metric_id)
+            
+            # Создаем кнопку "Назад"
+            keyboard = InlineKeyboardMarkup([[
+                InlineKeyboardButton("◀️ Назад", callback_data="metrics_back")
+            ]])
+            
+            await query.edit_message_text(
+                safe_markdown_text(description),
+                parse_mode='MarkdownV2',
+                reply_markup=keyboard
+            )
+        except Exception as e:
+            logger.error(f"Ошибка показа деталей метрики: {e}")
+            await query.edit_message_text("❌ Произошла ошибка при загрузке описания метрики.")
+
+    async def show_business_details(self, query: CallbackQuery, business_id: int):
+        """Показ деталей бизнеса по запросу Inline кнопки"""
+        try:
+            # Получаем историю
+            history = await db.get_business_history(business_id, limit=1)
+            if not history:
+                await query.edit_message_text("❌ Бизнес не найден")
+                return
+            
+            current_data = history[0]
+            
+            # Получаем метрики и рекомендации
+            report = await business_analyzer.generate_business_report(business_id)
+            metrics = report.get('detailed_metrics', {}) if 'error' not in report else {}
+            recommendations = report.get('recommendations', []) if 'error' not in report else []
+            
+            # Используем единый формат отчета
+            response = self.format_business_report(current_data, metrics, recommendations)
+
+            await self.send_long_message(query, response, parse_mode='MarkdownV2')
+
+        except Exception as e:
+            logger.error(f"Ошибка показа деталей бизнеса: {e}")
+            await query.edit_message_text("❌ Произошла ошибка при загрузке деталей.")
+
+    async def start_edit_business(self, query: CallbackQuery, business_id: int):
+        """Начало редактирования бизнеса"""
+        try:
+            user_id = str(query.from_user.id)
+            
+            # Получаем информацию о бизнесе
+            history = await db.get_business_history(business_id, limit=1)
+            if not history:
+                await query.edit_message_text("❌ Бизнес не найден")
+                return
+            
+            current_data = history[0]
+            business_name = current_data.get('business_name', f'Бизнес #{business_id}')
+            
+            # Создаем новую сессию диалога для редактирования
+            conversation = await conv_manager.get_conversation(user_id)
+            conversation.business_id = business_id
+            conversation.collected_data = {
+                'business_name': business_name,
+                'revenue': current_data.get('revenue', 0),
+                'expenses': current_data.get('expenses', 0),
+                'profit': current_data.get('profit', 0),
+                'clients': current_data.get('clients', 0),
+                'average_check': current_data.get('average_check', 0),
+                'investments': current_data.get('investments', 0),
+                'marketing_costs': current_data.get('marketing_costs', 0),
+                'employees': current_data.get('employees', 0),
+                'new_clients_per_month': current_data.get('new_clients_per_month', 0),
+                'customer_retention_rate': current_data.get('customer_retention_rate', 0)
+            }
+            
+            await conversation._update_state(conversation.STATES['COLLECTING_DATA'])
+            
+            # Получаем метрики и рекомендации для отображения
+            report = await business_analyzer.generate_business_report(business_id)
+            metrics = report.get('detailed_metrics', {}) if 'error' not in report else {}
+            recommendations = report.get('recommendations', []) if 'error' not in report else []
+            
+            # Используем единый формат отчета
+            response = f"✏️ *РЕДАКТИРОВАНИЕ: {business_name}*\n\n"
+            response += self.format_business_report(current_data, metrics, recommendations)
+            response += f"\n\nОтправьте новые данные в свободной форме или напишите 'да' для завершения.\n\n"
+            response += f"Чтобы отменить без изменений — напишите 'выйти'"
+            
+            await query.edit_message_text(safe_markdown_text(response), parse_mode='MarkdownV2')
+            
+        except Exception as e:
+            logger.error(f"Ошибка начала редактирования: {e}")
+            await query.edit_message_text("❌ Произошла ошибка при начале редактирования.")
+
+    async def confirm_delete_business(self, query: CallbackQuery, business_id: int):
+        """Подтверждение удаления бизнеса"""
+        try:
+            keyboard = [
+                [InlineKeyboardButton("✅ Да, удалить", callback_data=f'delete_confirm_{business_id}')],
+                [InlineKeyboardButton("❌ Отмена", callback_data=f'business_{business_id}')]
+            ]
+            await query.edit_message_text(
+                safe_markdown_text("⚠️ *Вы уверены, что хотите удалить бизнес?*\nЭто действие можно отменить только через администратора."),
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode='MarkdownV2'
+            )
+        except Exception as e:
+            logger.error(f"Ошибка подтверждения удаления: {e}")
+            await query.edit_message_text("❌ Ошибка при подтверждении удаления.")
+
+    async def delete_business_confirmed(self, query: CallbackQuery, business_id: int):
+        """Выполнение мягкого удаления бизнеса"""
+        try:
+            user_id = str(query.from_user.id)
+            await db.soft_delete_business(user_id, business_id)
+            await query.edit_message_text("✅ Бизнес помечен как удалён.")
+        except Exception as e:
+            logger.error(f"Ошибка удаления бизнеса: {e}")
+            await query.edit_message_text("❌ Не удалось удалить бизнес.")
+
+    async def admin_clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = str(update.effective_user.id)
+
+        # Проверяем что пользователь в списке админов
+        if user_id not in ADMINS:
+            await update.message.reply_text("❌ Нет доступа")
+            return
+
+        if not context.args:
+            await update.message.reply_text(
+                "ℹ️ *Использование:*\n"
+                "`/admin_clear USER_ID` - очистить по ID\n"
+                "`/admin_clear @username` - очистить по username\n\n"
+                f"👑 *Текущие админы*: {', '.join(ADMINS)}",
+                parse_mode='MarkdownV2'
+            )
+            return
+
+        target = context.args[0]
+        deleted_count = 0
+
+        try:
+            # SQLite версия
+            cursor = db.conn.cursor()
+
+            if target.startswith('@'):
+                cursor.execute(
+                    "SELECT user_id FROM users WHERE username = ?",
+                    (target[1:],)
+                )
+                user_row = cursor.fetchone()
+                if not user_row:
+                    await update.message.reply_text("❌ Пользователь не найден")
+                    return
+                target_user_id = user_row[0]
+            else:
+                target_user_id = target
+
+            # Очищаем данные и считаем количество
+            cursor.execute("DELETE FROM conversation_sessions WHERE user_id = ?", (target_user_id,))
+            deleted_count += cursor.rowcount
+
+            cursor.execute("DELETE FROM business_snapshots WHERE business_id IN (SELECT business_id FROM businesses WHERE user_id = ?)", (target_user_id,))
+            deleted_count += cursor.rowcount
+
+            cursor.execute("DELETE FROM businesses WHERE user_id = ?", (target_user_id,))
+            deleted_count += cursor.rowcount
+
+            cursor.execute("DELETE FROM users WHERE user_id = ?", (target_user_id,))
+            deleted_count += cursor.rowcount
+
+            db.conn.commit()
+
+            await update.message.reply_text(
+                f"✅ Данные пользователя `{target}` очищены!\\n"
+                f"🗑️ Удалено записей: {deleted_count}",
+                parse_mode='MarkdownV2'
+            )
+
+        except Exception as e:
+            logger.error(f"Ошибка очистки: {e}")
+            await update.message.reply_text(f"❌ Ошибка: {e}")
+
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_text = update.message.text
         user = update.effective_user
         user_id = str(user.id)
-        
-        # Логируем входящее сообщение
+
         logger.info(f"💬 Сообщение от {user.first_name} (ID: {user_id}): {user_text}")
-        
-        # Сохраняем пользователя
+
         await db.save_user(user_id, user.username, user.first_name, user.last_name)
-        
-        # Определяем тип сообщения с помощью AI
+
+        # Гидратация памяти ИИ из БД при пустой памяти для пользователя
+        try:
+            from ai import conversation_memory as ai_memory
+            if user_id not in ai_memory or len(ai_memory[user_id]) == 0:
+                recent = await db.get_user_recent_messages(user_id, limit=20)
+                history = []
+                for msg in recent:
+                    if msg.get('user_message'):
+                        history.append({"role": "user", "content": msg['user_message']})
+                    if msg.get('bot_response'):
+                        history.append({"role": "assistant", "content": msg['bot_response']})
+                if history:
+                    ai_memory[user_id] = history[-12:]
+        except Exception as e:
+            logger.warning(f"Не удалось гидрировать историю из БД: {e}")
+
+        # ПРОВЕРЯЕМ АКТИВНУЮ СЕССИЮ ДИАЛОГА
+        if user_id in conv_manager.active_sessions:
+            await self._handle_conversation_message(update, user_id, user_text)
+            return
+
+        # Игнорируем команды на этом этапе, они обрабатываются CommandHandler
+        if user_text.startswith('/'):
+            return
+
         thinking_msg = await update.message.reply_text(
-            "🤔 *Анализирую сообщение...*", 
-            parse_mode='Markdown'
+            safe_markdown_text("🤔 *Анализирую сообщение...*"),
+            parse_mode='MarkdownV2'
         )
-        
+
         try:
             message_type = await classify_message_type(user_text)
             logger.info(f"🎯 Определен тип сообщения: {message_type}")
-            
-            await thinking_msg.edit_text(
-                self.get_thinking_message(message_type), 
-                parse_mode='Markdown'
-            )
-            
-            # Обрабатываем в зависимости от типа
-            if message_type == "business_analysis":
-                response = await self.handle_business_analysis(user_text, user_id)
-            elif message_type == "question":
+
+            if message_type == "business_data":
+                # Ненавязчивая подсказка и продолжаем отвечать по сути сообщения
+                try:
+                    await update.message.reply_text(
+                        "ℹ️ Чтобы создать бизнес используйте команду: /new_business"
+                    )
+                except Exception:
+                    pass
+                # Продолжаем как свободный диалог
+                message_type = "general"
+
+            try:
+                await thinking_msg.edit_text(
+                    self.get_thinking_message(message_type),
+                    parse_mode='MarkdownV2'
+                )
+            except Exception:
+                # Игнорируем 'Message is not modified'
+                pass
+
+            if message_type == "question":
                 response = await self.handle_question(user_text, user_id)
-            else:
+                try:
+                    session_id = None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id
+                    if session_id is None:
+                        # Привязываем к общей chat-сессии пользователя
+                        session_id = await db.get_or_create_user_chat_session(user_id)
+                    await db.log_message(
+                        session_id=session_id,
+                        user_message=user_text,
+                        bot_response=response,
+                        message_type='question'
+                    )
+                except Exception as e:
+                    logger.warning(f"Не удалось записать вопрос в БД: {e}")
+                await self.send_long_message(update, response)
+            else:  # general
                 response = await self.handle_general_chat(user_text, user_id)
-            
-            # Сохраняем сообщение и ответ в базу
-            await db.save_message(user_id, user_text, message_type, response)
-            
-            # Логируем ответ
+                try:
+                    session_id = None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id
+                    if session_id is None:
+                        session_id = await db.get_or_create_user_chat_session(user_id)
+                    await db.log_message(
+                        session_id=session_id,
+                        user_message=user_text,
+                        bot_response=response,
+                        message_type='general'
+                    )
+                except Exception as e:
+                    logger.warning(f"Не удалось записать общение в БД: {e}")
+                await self.send_long_message(update, response, None)
+
             logger.info(f"🤖 Ответ бота ({message_type}): {response[:100]}...")
-            
-            await thinking_msg.edit_text(response, parse_mode='Markdown')
-            
+
+            await thinking_msg.delete()
+
         except Exception as e:
-            error_msg = f"❌ Произошла ошибка при обработке запроса. Попробуйте еще раз."
+            error_msg = safe_markdown_text("❌ *Произошла ошибка при обработке запроса*. Попробуйте еще раз.")
             logger.error(f"Ошибка обработки сообщения: {e}")
-            
-            await db.save_message(user_id, user_text, "error", error_msg)
-            await thinking_msg.edit_text(error_msg, parse_mode='Markdown')
-    
-    def get_thinking_message(self, message_type: str) -> str:
-        """Сообщение о процессе обработки"""
-        messages = {
-            "business_analysis": "🔍 *Провожу финансовый анализ...*\n_Рассчитываю метрики и формулы_",
-            "question": "💭 *Обдумываю ответ...*\n_Ищу лучшие решения для вашего бизнеса_", 
-            "general": "💬 *Общаюсь...*\n_Всегда рад поболтать_"
+            await thinking_msg.edit_text(error_msg, parse_mode='MarkdownV2')
+
+    def format_business_report(self, business_data: Dict, metrics: Dict = None, recommendations: List[str] = None) -> str:
+        """Единый формат отчета о бизнесе"""
+        response = ""
+        
+        # Заголовок
+        business_name = business_data.get('business_name', 'Бизнес')
+        response += f"📊 *ДЕТАЛЬНЫЙ АНАЛИЗ БИЗНЕСА: {business_name}*\n\n"
+        
+        # Health Score если есть метрики
+        if metrics:
+            health_score = metrics.get('overall_health_score', 0)
+            health_assessment = self.get_health_assessment(health_score)
+            emoji = health_assessment.get('emoji', '⚪')
+            response += f"🏥 *БИЗНЕС-ЗДОРОВЬЕ: {health_score}/100* {emoji}\n"
+            response += f"*{health_assessment.get('message', '')}*\n\n"
+        
+        # Ключевые метрики
+        response += "💰 *КЛЮЧЕВЫЕ МЕТРИКИ:*\n"
+        if metrics:
+            response += f"• Рентабельность: {metrics.get('profit_margin', 0):.1f}%\n"
+            response += f"• ROI: {metrics.get('roi', 0):.1f}%\n"
+            response += f"• LTV/CAC: {metrics.get('ltv_cac_ratio', 0):.2f}\n"
+            response += f"• Запас прочности: {metrics.get('safety_margin', 0):.1f}%\n"
+            response += f"• Темп роста выручки: {metrics.get('revenue_growth_rate', 0):.1f}%\n"
+            response += f"• До банкротства: {metrics.get('months_to_bankruptcy', 0):.0f} мес\n\n"
+        else:
+            response += "• Рентабельность: _не рассчитано_\n"
+            response += "• ROI: _не рассчитано_\n"
+            response += "• LTV/CAC: _не рассчитано_\n"
+            response += "• Запас прочности: _не рассчитано_\n\n"
+        
+        # Все метрики (включая сырые данные)
+        response += "📊 *ВСЕ МЕТРИКИ:*\n"
+        
+        # Сырые данные
+        raw_fields = {
+            'revenue': '💰 Выручка',
+            'expenses': '📊 Расходы', 
+            'profit': '📈 Прибыль',
+            'clients': '👥 Клиенты',
+            'average_check': '💳 Средний чек',
+            'investments': '💼 Инвестиции',
+            'marketing_costs': '📢 Маркетинг',
+            'employees': '🧑‍🤝‍🧑 Сотрудники',
+            'new_clients_per_month': '🆕 Новые клиенты/мес',
+            'customer_retention_rate': '🔄 Удержание клиентов'
         }
-        return messages.get(message_type, "🤔 *Думаю...*")
-    
-    async def handle_business_analysis(self, text: str, user_id: str) -> str:
-        """Обработка бизнес-анализа с расчетом формул"""
-        business_data = await analyze_business(text, user_id)
         
-        if "error" in business_data:
-            return "❌ Ошибка анализа. Попробуйте описать бизнес более подробно."
+        for field, name in raw_fields.items():
+            value = business_data.get(field, 0)
+            if value and value != 0:
+                if field == 'customer_retention_rate':
+                    response += f"• {name}: {value:.1f}%\n"
+                elif field in ['clients', 'employees', 'new_clients_per_month']:
+                    response += f"• {name}: {value:,.0f}\n"
+                else:
+                    response += f"• {name}: {value:,.0f} руб\n"
+            else:
+                response += f"• {name}: _отсутствует_\n"
         
-        # Рассчитываем продвинутые метрики
-        calculated_metrics = calculate_advanced_metrics(business_data)
+        # Рассчитанные метрики если есть
+        if metrics:
+            calculated_fields = {
+                'profit_margin': 'Рентабельность',
+                'break_even_clients': 'Точка безубыточности',
+                'safety_margin': 'Запас прочности',
+                'roi': 'ROI',
+                'profitability_index': 'Индекс прибыльности',
+                'ltv': 'LTV',
+                'cac': 'CAC',
+                'ltv_cac_ratio': 'LTV/CAC',
+                'customer_profit_margin': 'Маржа на клиента',
+                'sgr': 'SGR',
+                'revenue_growth_rate': 'Темп роста выручки',
+                'asset_turnover': 'Оборачиваемость активов',
+                'roe': 'ROE',
+                'months_to_bankruptcy': 'До банкротства',
+                'financial_health_score': 'Финансовое здоровье',
+                'growth_health_score': 'Здоровье роста',
+                'efficiency_health_score': 'Эффективность',
+                'overall_health_score': 'Общее здоровье'
+            }
+            
+            for field, name in calculated_fields.items():
+                value = metrics.get(field, 0)
+                if field in ['financial_health_score', 'growth_health_score', 'efficiency_health_score', 'overall_health_score']:
+                    response += f"• {name}: {value:.0f}\n"
+                elif field in ['months_to_bankruptcy']:
+                    response += f"• {name}: {value:.0f} мес\n"
+                elif field in ['profit_margin', 'safety_margin', 'roi', 'revenue_growth_rate', 'roe']:
+                    response += f"• {name}: {value:.1f}%\n"
+                else:
+                    response += f"• {name}: {value:.2f}\n"
         
-        # Объединяем данные
-        enhanced_data = {**business_data, **calculated_metrics}
-        
-        return self.format_business_response(enhanced_data)
-    
-    async def handle_question(self, text: str, user_id: str) -> str:
-        """Обработка вопросов"""
-        answer = await answer_question(text, user_id)
-        return self.format_question_response(answer)
-    
-    async def handle_general_chat(self, text: str, user_id: str) -> str:
-        """Обработка общего чата"""
-        response = await general_chat(text, user_id)
-        return self.format_general_response(response)
-    
-    def format_business_response(self, data: dict) -> str:
-        """Форматирование ответа с рассчитанными метриками"""
-        
-        def clean_text(text):
-            if not text:
-                return ""
-            return text.replace('###', '').replace('**', '').replace('__', '')
-        
-        rating_emoji = "🚀" if data["ОЦЕНКА"] >= 8 else "✅" if data["ОЦЕНКА"] >= 6 else "⚠️"
-        
-        response = (
-            f"📊 *ФИНАНСОВЫЙ АНАЛИЗ*\n\n"
-            f"💰 *Основные показатели:*\n"
-            f"• Выручка: {data['ВЫРУЧКА']:,.0f} руб\n"
-            f"• Расходы: {data['РАСХОДЫ']:,.0f} руб\n"
-            f"• Прибыль: {data['ПРИБЫЛЬ']:,.0f} руб\n"
-            f"• Клиенты: {data['КЛИЕНТЫ']:,.0f} чел\n"
-            f"• Средний чек: {data['СРЕДНИЙ_ЧЕК']:,.0f} руб\n"
-            f"• Инвестиции: {data['ИНВЕСТИЦИИ']:,.0f} руб\n\n"
-        )
-        
-        # Добавляем РАССЧИТАННЫЕ метрики
-        response += f"📈 *Рассчитанные метрики:*\n"
-        
-        if data.get("РОЕНТАБЕЛЬНОСТЬ", 0) > 0:
-            rent_emoji = "✅" if data["РОЕНТАБЕЛЬНОСТЬ"] > 20 else "⚠️" if data["РОЕНТАБЕЛЬНОСТЬ"] > 10 else "❌"
-            response += f"• Рентабельность: {data['РОЕНТАБЕЛЬНОСТЬ']:.1f}% {rent_emoji}\n"
-        
-        if data.get("ТОЧКА_БЕЗУБЫТОЧНОСТИ", 0) > 0:
-            response += f"• Точка безубыточности: {data['ТОЧКА_БЕЗУБЫТОЧНОСТИ']:.0f} клиентов\n"
-        
-        if data.get("ЗАПАС_ПРОЧНОСТИ", 0) > 0:
-            safety_emoji = "🛡️" if data["ЗАПАС_ПРОЧНОСТИ"] > 30 else "⚠️"
-            response += f"• Запас прочности: {data['ЗАПАС_ПРОЧНОСТИ']:.1f}% {safety_emoji}\n"
-        
-        if data.get("ИНДЕКС_ПРИБЫЛЬНОСТИ", 0) > 0:
-            pi_emoji = "🚀" if data["ИНДЕКС_ПРИБЫЛЬНОСТИ"] > 1.5 else "✅" if data["ИНДЕКС_ПРИБЫЛЬНОСТИ"] > 1.0 else "⚠️"
-            response += f"• Индекс прибыльности: {data['ИНДЕКС_ПРИБЫЛЬНОСТИ']:.2f} {pi_emoji}\n"
-        
-        if data.get("SGR", 0) > 0:
-            response += f"• Макс. устойчивый рост: {data['SGR']:.1f}%\n"
-        
-        # Комментарий и советы
-        if data.get("КОММЕНТАРИЙ"):
-            clean_comment = clean_text(data["КОММЕНТАРИЙ"])
-            response += f"\n💡 *Комментарий аналитика:*\n{clean_comment}\n\n"
-        
-        if data.get("СОВЕТЫ"):
-            response += f"🎯 *Рекомендации:*\n"
-            for i, advice in enumerate(data["СОВЕТЫ"][:3], 1):
-                clean_advice = clean_text(advice)
-                response += f"{i}. {clean_advice}\n"
-        
-        response += f"\n⭐ *Общая оценка:* {data['ОЦЕНКА']}/10 {rating_emoji}"
+        # Рекомендации
+        if recommendations:
+            response += "\n🎯 *РЕКОМЕНДАЦИИ:*\n"
+            for i, rec in enumerate(recommendations, 1):
+                response += f"{i}. {rec}\n"
         
         return response
     
-    def format_question_response(self, answer: str) -> str:
-        """Форматирование ответа на вопрос"""
-        return f"💡 *ОТВЕТ НА ВОПРОС*\n\n{answer}"
-    
-    def format_general_response(self, response: str) -> str:
-        """Форматирование общего ответа"""
-        return f"💬 {response}"
-    
-    async def run(self):
-        """Запуск бота с инициализацией базы данных"""
-        print("🤖 Умный бот запускается...")
-        
-        # Инициализация базы данных
-        await db.init_db()
-        
-        print("✅ База данных инициализирована")
-        print("✅ Умное определение типов сообщений")
-        print("✅ Расширенная аналитика с финансовыми формулами")
-        print("✅ Логирование всех действий")
-        print("✅ Контекстная память пользователей")
-        
-        self.app.run_polling()
+    def get_health_assessment(self, score: int) -> Dict:
+        """Получение оценки здоровья бизнеса"""
+        if score >= 90:
+            return {'emoji': '🟢', 'message': 'Отличное состояние! Продолжайте в том же духе!'}
+        elif score >= 75:
+            return {'emoji': '🟡', 'message': 'Хорошее состояние. Есть куда расти!'}
+        elif score >= 60:
+            return {'emoji': '🟠', 'message': 'Среднее состояние. Требуются улучшения.'}
+        else:
+            return {'emoji': '🔴', 'message': 'Требуются срочные действия!'}
 
-if __name__ == "__main__":
-    import asyncio
-    
-    bot = BusinessBot()
-    asyncio.run(bot.run())
+    def get_thinking_message(self, message_type: str) -> str:
+        """Сообщение о процессе обработки"""
+        messages = {
+            "question": "💭 *Обдумываю ответ\\.\\.\\.*\n_Ищу лучшие решения для вашего бизнеса_",
+            "general": "💬 *Общаюсь\\.\\.\\.*\n_Всегда рад поболтать_"
+        }
+        return messages.get(message_type, "🤔 *Думаю\\.\\.\\.*")
+
+
+    async def _handle_conversation_message(self, update: Update, user_id: str, user_text: str):
+        """Обработка сообщения в рамках активной диалоговой сессии"""
+        try:
+            conversation = conv_manager.active_sessions[user_id]
+
+            # Прогресс СРАЗУ после сообщения пользователя
+            progress_msg = None
+            try:
+                progress_msg = await update.message.reply_text(
+                    "🛠 *Делаю отчёт\\.\\.\\.*",
+                    parse_mode='MarkdownV2'
+                )
+            except Exception:
+                pass
+
+            # Обрабатываем сообщение
+            response_data = await conversation.process_message(user_text)
+
+            # Заменяем прогресс-сообщение на результат
+            if progress_msg:
+                try:
+                    # Пробуем заменить сообщение
+                    await progress_msg.edit_text(
+                        safe_markdown_text(response_data['response']),
+                        parse_mode='MarkdownV2'
+                    )
+                except Exception as e:
+                    logger.warning(f"Не удалось заменить прогресс-сообщение: {e}")
+                    try:
+                        # Если не получилось заменить, удаляем прогресс-сообщение
+                        await progress_msg.delete()
+                    except Exception:
+                        pass
+                    # Отправляем новое сообщение
+                    await self.send_long_message(update, response_data['response'], 'MarkdownV2')
+            else:
+                await self.send_long_message(update, response_data['response'], 'MarkdownV2')
+            
+            try:
+                await db.log_message(
+                    session_id=conversation.session_id,
+                    user_message=user_text,
+                    bot_response=response_data['response'],
+                    message_type='conversation'
+                )
+            except Exception as e:
+                logger.warning(f"Не удалось записать сообщение в БД: {e}")
+
+            # Если диалог завершен
+            if response_data.get('is_complete', False):
+                # Если анализ уже выполнен conversation_manager-ом (обычно так и есть)
+                if response_data.get('next_action') == 'analysis_complete':
+                    pass
+
+                # Завершаем сессию
+                conv_manager.end_conversation(user_id)
+                logger.info(f"✅ Диалоговая сессия завершена для пользователя {user_id}")
+
+        except Exception as e:
+            logger.error(f"Ошибка в диалоговой сессии для пользователя {user_id}: {e}")
+            await update.message.reply_text(
+                "❌ Произошла ошибка в диалоге. Давайте начнем заново, попробуйте /new_business.",
+                parse_mode='Markdown'
+            )
+            conv_manager.end_conversation(user_id)
+
+    async def handle_question(self, text: str, user_id: str) -> str:
+        """Обработка вопросов. Возвращает ответ."""
+        answer = await answer_question(text, user_id)
+        return clean_ai_text(answer)
+
+    async def handle_general_chat(self, text: str, user_id: str) -> str:
+        """Обработка общего чата. Возвращает ответ."""
+        response = await general_chat(text, user_id)
+        return clean_ai_text(response)
+
+    # Отправляем ответ с возможным разделением
+    async def send_long_message(self, update_or_query_object, text: str, parse_mode: str = None):
+        """
+        Элегантное разделение длинного сообщения на части и отправка.
+        Принимает update или query объект для отправки сообщения.
+        """
+        MAX_LENGTH = 3800  # Максимальная длина сообщения Telegram с запасом
+
+        # Важно! Применяем safe_markdown_text до разделения и отправки
+        final_text_to_send = safe_markdown_text(text) if parse_mode == 'MarkdownV2' else text
+
+        if len(final_text_to_send) <= MAX_LENGTH:
+            if hasattr(update_or_query_object, 'message'):
+                await update_or_query_object.message.reply_text(final_text_to_send, parse_mode=parse_mode)
+            else: # Это CallbackQuery
+                await update_or_query_object.edit_message_text(final_text_to_send, parse_mode=parse_mode)
+            return
+
+        parts = self.split_message_smart(final_text_to_send, MAX_LENGTH)
+
+        for i, part in enumerate(parts):
+            prefix = ""
+            if len(parts) > 1:
+                prefix = f"📄 ({i+1}/{len(parts)})\\n\\n" # Этот префикс тоже может содержать markdown символы
+
+            current_part_to_send = prefix + part
+
+            try:
+                # Безопасная отправка с MarkdownV2
+                safe_text = safe_markdown_text(current_part_to_send)
+                if hasattr(update_or_query_object, 'message'):
+                    await update_or_query_object.message.reply_text(safe_text, parse_mode='MarkdownV2')
+                else:
+                    if i == 0:
+                        await update_or_query_object.edit_message_text(safe_text, parse_mode='MarkdownV2')
+                    else:
+                        user_id = update_or_query_object.from_user.id
+                        await self.app.bot.send_message(chat_id=user_id, text=safe_text, parse_mode='MarkdownV2')
+
+                if i < len(parts) - 1:
+                    await asyncio.sleep(0.7)
+
+            except Exception as e:
+                logger.error(f"Ошибка отправки части {i+1}: {e}. Текст: {current_part_to_send[:200]}...")
+                # Повторная попытка без MarkdownV2 (если ошибка парсинга)
+                try:
+                    if hasattr(update_or_query_object, 'message'):
+                        await update_or_query_object.message.reply_text(f"Часть {i+1} (без форматирования):\n{part}")
+                    else:
+                        user_id = update_or_query_object.from_user.id
+                        await self.app.bot.send_message(chat_id=user_id, text=f"Часть {i+1} (без форматирования):\n{part}")
+                except Exception as e2:
+                    logger.error(f"Критическая ошибка при отправке части сообщения пользователю {user_id}: {e2}")
+
+
+    async def start_business_dialog(self, update: Update, user_id: str, business_text: str):
+        """Начало диалога для анализа бизнеса из сообщения с данными"""
+        try:
+            # Получаем сессию диалога
+            conversation = await conv_manager.get_conversation(user_id)
+
+            # Пропускаем шаг названия и сразу переходим к сбору данных
+            # Если бизнес_нейм не указан в сообщении, используем заполнитель
+            extracted_data = await extract_business_data(business_text)
+            business_name = extracted_data.get('business_name', 'Анализируемый бизнес')
+
+            await conversation.initialize(user_id) # Начинаем новую сессию
+            conversation.collected_data = extracted_data # Присваиваем извлеченные данные
+            conversation.collected_data['business_name'] = business_name
+            conversation.business_id = await db.create_business(user_id, business_name) # Создаем бизнес в БД
+            await conversation._update_state(conversation.STATES['COLLECTING_DATA']) # Переходим в состояние сбора данных
+
+            # Обрабатываем сообщение с данными
+            response_data = await conversation.process_message(business_text)
+
+            # Отправляем ответ с возможным разделением
+            await self.send_long_message(update, response_data['response'], 'Markdown')
+
+            # Если диалог завершен
+            if response_data.get('is_complete', False):
+                conv_manager.end_conversation(user_id)
+                logger.info(f"✅ Диалоговая сессия завершена для пользователя {user_id}")
+
+        except Exception as e:
+            logger.error(f"Ошибка в автодиалоге: {e}")
+            await update.message.reply_text(
+                "❌ Произошла ошибка. Попробуйте снова или используйте команду /new_business",
+                parse_mode='Markdown'
+            )
+
+    def split_message_smart(self, text: str, max_length: int) -> list:
+        """
+        Умное разделение текста на части, стараясь сохранить целостность предложений и абзацев.
+        """
+        if len(text) <= max_length:
+            return [text]
+
+        parts = []
+        current_part = ""
+
+        # Разделение по абзацам
+        paragraphs = text.split('\n\n')
+
+        for paragraph in paragraphs:
+            # Если абзац сам по себе слишком длинный, делим его на предложения
+            if len(paragraph) > max_length:
+                sentences = self.split_by_sentences(paragraph)
+                for sentence in sentences:
+                    # Проверяем, поместится ли предложение в текущую часть
+                    if len(current_part) + len(sentence) + 2 <= max_length: # +2 для переноса строки
+                        current_part += ("\n" if current_part else "") + sentence
+                    else:
+                        # Если не помещается, завершаем текущую часть и начинаем новую
+                        if current_part:
+                            parts.append(current_part.strip())
+                        current_part = sentence
+            else:
+                # Если абзац помещается в текущую часть
+                if len(current_part) + len(paragraph) + 4 <= max_length: # +4 для двойного переноса
+                    current_part += ("\n\n" if current_part else "") + paragraph
+                else:
+                    # Если не помещается, завершаем текущую часть и начинаем новую
+                    if current_part:
+                        parts.append(current_part.strip())
+                    current_part = paragraph
+
+        # Добавляем последнюю часть
+        if current_part:
+            parts.append(current_part.strip())
+
+        return parts
+
+    def split_by_sentences(self, text: str) -> list:
+        """
+        Разделение текста на предложения.
+        """
+        import re
+        # Используем regex для разделения по точкам, восклицательным и вопросительным знакам
+        # (с учетом невидимых символов для русских текстов)
+        sentences = re.split(r'(?<=[.!?…])\s+|(?<=[.!?…]["\'])', text)
+        return [s.strip() for s in sentences if s.strip()]
+
+    def escape_markdown(self, text: str) -> str:
+        """Экранирует все спецсимволы Markdown для Telegram Bot API v2"""
+        escape_chars = r'_*[]()~`>#+-=|{}.!'
+        for char in escape_chars:
+            text = text.replace(char, '\\' + char)
+        return text
+
+    async def run_async(self):
+        """Асинхронный запуск бота"""
+        print("Bot is starting...")
+
+        # Инициализация БД
+        import sqlite3
+        import os
+        # asyncio уже импортирован в начале файла, нет необходимости импортировать его снова
+
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot_v2.db')
+        db.conn = sqlite3.connect(db_path, check_same_thread=False)
+        await db.init_db()
+        print(f"Database connected: {db_path}")
+
+        print("Smart message classification enabled")
+        print("Advanced analytics with 22 metrics")
+        print("Activity logging enabled")
+        print("User context memory enabled")
+        print("Free-form dialog enabled")
+
+        # ПРАВИЛЬНЫЙ ЗАПУСК для версии 20.7
+        await self.app.initialize()
+        await self.app.start()
+        await self.app.updater.start_polling()
+
+        # Бесконечный цикл
+        await asyncio.Event().wait()
+
+# Убедитесь, что здесь нет "bot = BusinessBot()" или других вызовов экземпляра бота

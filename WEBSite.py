@@ -1,125 +1,85 @@
 from flask import Flask, render_template, request, jsonify
-import sqlite3
 import json
 from datetime import datetime, timedelta
+import math
+import asyncio
+import os
+from dotenv import load_dotenv
+
+from database import db as async_db
+
+load_dotenv()
 
 app = Flask(__name__)
 
-# Синхронная версия работы с базой данных
-class SyncDatabase:
-    def __init__(self):
-        self.conn = None
-        self.init_db()
+# Инициализируем новую БД (async) один раз при старте процесса
+_event_loop = asyncio.new_event_loop()
+asyncio.set_event_loop(_event_loop)
+try:
+    _event_loop.run_until_complete(async_db.init_db())
+except Exception as e:
+    print(f"Database initialization error: {e}")
+
+def await_db(coro):
+    """Выполнить async-вызов к БД в синхронном Flask обработчике."""
+    return _event_loop.run_until_complete(coro)
+
+# Подготовка данных для 22+ метрик на основе снимков новой БД
+def prepare_multi_metric_data(snapshots):
+    # Отсортируем по дате по возрастанию для фронтенда
+    snapshots_sorted = sorted(snapshots, key=lambda s: s.get('period_date') or s.get('created_at'))
+    def fmt_dt(s):
+        dt = s.get('created_at')
+        if dt:
+            try:
+                # dt может быть datetime или строка
+                from datetime import datetime
+                if isinstance(dt, str):
+                    # Оставим как есть, если уже содержит время
+                    return dt if (':' in dt) else dt + ' 00:00'
+                # datetime -> строка с временем
+                return dt.strftime('%Y-%m-%d %H:%M')
+            except Exception:
+                return str(dt)
+        pd = s.get('period_date')
+        return pd if isinstance(pd, str) else str(pd)
+    dates = [fmt_dt(s) for s in snapshots_sorted]
+    metric_keys = [
+        'revenue', 'expenses', 'profit', 'clients', 'average_check', 'investments', 'marketing_costs', 'employees',
+        'profit_margin', 'break_even_clients', 'safety_margin', 'roi', 'profitability_index',
+        'ltv', 'cac', 'ltv_cac_ratio', 'customer_profit_margin', 'sgr', 'revenue_growth_rate',
+        'asset_turnover', 'roe', 'months_to_bankruptcy',
+        'financial_health_score', 'growth_health_score', 'efficiency_health_score', 'overall_health_score'
+    ]
+    series = {k: [float(s.get(k) or 0) for s in snapshots_sorted] for k in metric_keys}
+    return {'dates': dates, 'series': series}
+
+def get_data_summary(chart_data):
+    """Получение сводки по данным"""
+    if not chart_data or not chart_data['revenue']:
+        return {}
     
-    def init_db(self):
-        """Инициализация подключения к SQLite базе данных"""
-        try:
-            self.conn = sqlite3.connect('business_bot.db', check_same_thread=False)
-            self.conn.row_factory = sqlite3.Row
-            self.create_tables()
-            print("SQLite база данных подключена и таблицы созданы")
-        except Exception as e:
-            print(f"Ошибка подключения к базе данных: {e}")
+    revenue = chart_data['revenue']
+    expenses = chart_data['expenses']
+    profit = chart_data['profit']
     
-    def create_tables(self):
-        """Создание таблиц в SQLite"""
-        cursor = self.conn.cursor()
-        
-        # Таблица пользователей
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                user_id TEXT PRIMARY KEY,
-                username TEXT,
-                first_name TEXT,
-                last_name TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Таблица сообщений
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT,
-                message_text TEXT,
-                message_type TEXT,
-                response_text TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
-            )
-        ''')
-        
-        # Таблица бизнес-анализов
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS business_analyses (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT,
-                revenue REAL DEFAULT 0,
-                expenses REAL DEFAULT 0,
-                profit REAL DEFAULT 0,
-                clients INTEGER DEFAULT 0,
-                average_check REAL DEFAULT 0,
-                investments REAL DEFAULT 0,
-                rating INTEGER DEFAULT 0,
-                commentary TEXT,
-                advice TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
-            )
-        ''')
-        
-        self.conn.commit()
+    return {
+        'total_revenue': sum(revenue),
+        'total_expenses': sum(expenses),
+        'total_profit': sum(profit),
+        'avg_revenue': sum(revenue) / len(revenue) if revenue else 0,
+        'data_points': len(chart_data['dates'])
+    }
 
-    def get_user_business_data(self, user_id: str):
-        """Получение истории бизнес-анализов пользователя"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute('''
-                SELECT revenue, expenses, profit, clients, average_check, 
-                       investments, rating, commentary, created_at
-                FROM business_analyses 
-                WHERE user_id = ? 
-                ORDER BY created_at DESC
-            ''', (user_id,))
-            
-            rows = cursor.fetchall()
-            return [
-                {
-                    'revenue': row[0],
-                    'expenses': row[1],
-                    'profit': row[2],
-                    'clients': row[3],
-                    'average_check': row[4],
-                    'investments': row[5],
-                    'rating': row[6],
-                    'commentary': row[7],
-                    'created_at': row[8]
-                }
-                for row in rows
-            ]
-        except Exception as e:
-            print(f"Ошибка получения бизнес-данных: {e}")
-            return []
-
-    def get_users(self):
-        """Получение списка пользователей"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute('SELECT user_id, username, first_name, last_name FROM users')
-            rows = cursor.fetchall()
-            return [
-                {
-                    'id': row[0],
-                    'name': f"{row[2]} {row[3]}" if row[2] and row[3] else row[1] or f"User {row[0]}"
-                }
-                for row in rows
-            ]
-        except Exception as e:
-            print(f"Ошибка получения пользователей: {e}")
-            return []
-
-# Инициализируем базу данных
-db = SyncDatabase()
+def get_period_info(dates):
+    """Получение информации о периоде"""
+    if not dates:
+        return "Нет данных"
+    
+    if len(dates) == 1:
+        return dates[0]
+    else:
+        return f"{dates[-1]} - {dates[0]}"
 
 # Главная страница
 @app.route('/')
@@ -136,123 +96,79 @@ def dashboard():
 def analytics():
     return render_template('analytics.html')
 
-# API endpoint для получения финансовых данных пользователя
-@app.route('/api/user-finance-data/<user_id>')
-def get_user_finance_data(user_id):
+# Новый API: список бизнесов пользователя
+@app.route('/api/businesses/<user_id>')
+def get_businesses(user_id):
     try:
-        business_data = db.get_user_business_data(user_id)
-        
-        if not business_data:
-            return jsonify({
-                'success': False,
-                'error': 'Данные не найдены. Выберите пользователя с данными.'
-            }), 404
-        
-        # Преобразуем данные для графиков
-        dates = []
-        revenue = []
-        expenses = []
-        profit = []
-        clients = []
-        
-        for record in business_data[:30]:  # Последние 30 записей
-            if isinstance(record['created_at'], str):
-                dates.append(record['created_at'][:10])
-            else:
-                dates.append(record['created_at'].strftime('%d.%m'))
-            
-            revenue.append(float(record['revenue'] or 0))
-            expenses.append(float(record['expenses'] or 0))
-            profit.append(float(record['profit'] or 0))
-            clients.append(int(record['clients'] or 0))
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'dates': dates,
-                'revenue': revenue,
-                'expenses': expenses,
-                'profit': profit,
-                'clients': clients
-            },
-            'latest': business_data[0] if business_data else None
-        })
-        
+        businesses = await_db(async_db.get_user_businesses(user_id))
+        return jsonify({'success': True, 'businesses': businesses})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-# API endpoint для KPI метрик пользователя
-@app.route('/api/user-kpi-metrics/<user_id>')
-def get_user_kpi_metrics(user_id):
+# Новый API: история снимков по бизнесу (включая все метрики)
+@app.route('/api/business-history/<int:business_id>')
+def get_business_history(business_id):
     try:
-        business_data = db.get_user_business_data(user_id)
-        
-        if not business_data:
-            return jsonify({
-                'success': False,
-                'error': 'Данные не найдены. Выберите пользователя с данными.'
-            }), 404
-        
-        latest = business_data[0]
-        previous = business_data[1] if len(business_data) > 1 else None
-        
-        # Расчет изменений в %
-        def calculate_change(current_val, previous_val):
-            if previous_val and float(previous_val) > 0:
-                return round(((float(current_val) - float(previous_val)) / float(previous_val)) * 100, 1)
+        snapshots = await_db(async_db.get_business_history(business_id, limit=120))
+        data = prepare_multi_metric_data(snapshots)
+        latest = snapshots[-1] if snapshots else None
+        return jsonify({'success': True, 'data': data, 'latest': latest})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# Упрощённый endpoint полноэкранного графика (используем фронтенд для построения)
+@app.route('/api/fullscreen-chart/<int:business_id>')
+def get_fullscreen_chart(business_id):
+    try:
+        snapshots = await_db(async_db.get_business_history(business_id, limit=180))
+        data = prepare_multi_metric_data(snapshots)
+        return jsonify({'success': True, 'data': data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# API endpoint для KPI метрик по бизнесу (на основе новой схемы)
+@app.route('/api/business-kpi/<int:business_id>')
+def get_business_kpi(business_id):
+    try:
+        snapshots = await_db(async_db.get_business_history(business_id, limit=2))
+        if not snapshots:
+            return jsonify({'success': False, 'error': 'Нет данных'}), 404
+        latest = snapshots[0]
+        previous = snapshots[1] if len(snapshots) > 1 else None
+        def calc_change(curr, prev):
+            prev = float(prev or 0)
+            curr = float(curr or 0)
+            if prev > 0:
+                return round(((curr - prev) / prev) * 100, 1)
             return 0
-        
-        kpi_data = {
-            'revenue': {
-                'current': float(latest['revenue'] or 0),
-                'change': calculate_change(latest['revenue'], previous['revenue'] if previous else 0)
-            },
-            'expenses': {
-                'current': float(latest['expenses'] or 0),
-                'change': calculate_change(latest['expenses'], previous['expenses'] if previous else 0)
-            },
-            'profit': {
-                'current': float(latest['profit'] or 0),
-                'change': calculate_change(latest['profit'], previous['profit'] if previous else 0)
-            },
-            'clients': {
-                'current': int(latest['clients'] or 0),
-                'change': calculate_change(latest['clients'], previous['clients'] if previous else 0)
-            },
-            'average_check': float(latest['average_check'] or 0),
-            'rating': int(latest['rating'] or 0)
+        kpi = {
+            'revenue': {'current': float(latest.get('revenue') or 0), 'change': calc_change(latest.get('revenue'), previous.get('revenue') if previous else 0)},
+            'expenses': {'current': float(latest.get('expenses') or 0), 'change': calc_change(latest.get('expenses'), previous.get('expenses') if previous else 0)},
+            'profit': {'current': float(latest.get('profit') or 0), 'change': calc_change(latest.get('profit'), previous.get('profit') if previous else 0)},
+            'clients': {'current': int(latest.get('clients') or 0), 'change': calc_change(latest.get('clients'), previous.get('clients') if previous else 0)},
+            'average_check': float(latest.get('average_check') or 0),
+            'overall_health_score': int(latest.get('overall_health_score') or 0)
         }
-        
-        return jsonify({
-            'success': True,
-            'kpi': kpi_data
-        })
-        
+        return jsonify({'success': True, 'kpi': kpi})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-# API endpoint для анализа от ИИ
+# API endpoint для анализа от ИИ (оставляем, но используем новую БД по первому бизнесу)
 @app.route('/api/user-ai-analysis/<user_id>')
 def get_user_ai_analysis(user_id):
     try:
-        business_data = db.get_user_business_data(user_id)
-        
-        if not business_data:
+        businesses = await_db(async_db.get_user_businesses(user_id))
+        if not businesses:
             return jsonify({
                 'success': False,
-                'error': 'Данные не найдены. Выберите пользователя с данными.'
+                'error': 'Данные не найдены. Выберите профиль с данными.'
             }), 404
-        
-        latest = business_data[0]
-        
-        # Генерируем анализ на основе данных
-        analysis_data = generate_ai_analysis(latest, business_data)
+        business_id = businesses[0]['business_id']
+        snapshots = await_db(async_db.get_business_history(business_id, limit=12))
+        if not snapshots:
+            return jsonify({'success': False, 'error': 'Нет данных'}), 404
+        latest = snapshots[0]
+        analysis_data = generate_ai_analysis(latest, snapshots)
         
         return jsonify({
             'success': True,
@@ -265,30 +181,87 @@ def get_user_ai_analysis(user_id):
             'error': str(e)
         }), 500
 
-# API endpoint для списка пользователей
-@app.route('/api/users')
-def get_users():
+# API endpoint для анализа от ИИ по конкретному бизнесу
+@app.route('/api/business-ai-analysis/<int:business_id>')
+def get_business_ai_analysis(business_id):
     try:
-        users = db.get_users()
+        snapshots = await_db(async_db.get_business_history(business_id, limit=12))
+        
+        if not snapshots:
+            return jsonify({'success': False, 'error': 'Нет данных для аналитики'}), 404
+        
+        latest = snapshots[0]
+        analysis_data = generate_ai_analysis(latest, snapshots)
+        
         return jsonify({
             'success': True,
-            'users': users
+            'analysis': analysis_data
         })
+        
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
+# API endpoint для списка пользователей (читаем из новой БД)
+@app.route('/api/users')
+def get_users():
+    try:
+        users = await_db(async_db.get_all_users())
+        return jsonify({'success': True, 'users': users})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# API endpoint для системной статистики (простая версия по новой схеме)
+@app.route('/api/system-stats')
+def get_system_stats():
+    try:
+        stats = await_db(async_db.get_system_stats())
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e), 'stats': {'total_users': 0, 'total_analyses': 0, 'active_today': 0}}), 500
+
+# API endpoint для получения советов
+@app.route('/api/advice')
+def get_advice():
+    try:
+        advice = await_db(async_db.get_advice())
+        return jsonify({'success': True, 'advice': advice})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e), 'advice': [
+            "Проанализируйте категории расходов в разделе аналитики",
+            "Отслеживайте динамику привлечения клиентов", 
+            "Получайте персональные советы для вашего бизнеса",
+            "Используйте AI-рекомендации для оптимизации процессов"
+        ]}), 500
+
+# API endpoint для советов по конкретному бизнесу (из последнего снимка)
+@app.route('/api/business-advice/<int:business_id>')
+def get_business_advice(business_id):
+    try:
+        snapshots = await_db(async_db.get_business_history(business_id, limit=1))
+        if not snapshots:
+            return jsonify({'success': True, 'advice': []})
+        latest = snapshots[0]
+        advice = []
+        for key in ['advice1','advice2','advice3','advice4']:
+            val = latest.get(key)
+            if val and str(val).strip():
+                advice.append(str(val).strip())
+        return jsonify({'success': True, 'advice': advice})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e), 'advice': []}), 500
+
 def generate_ai_analysis(latest_data, history_data):
     """Генерация AI анализа на основе данных из БД"""
     
-    revenue = float(latest_data['revenue'] or 0)
-    expenses = float(latest_data['expenses'] or 0)
-    profit = float(latest_data['profit'] or 0)
-    clients = int(latest_data['clients'] or 0)
-    avg_check = float(latest_data['average_check'] or 0)
-    rating = int(latest_data['rating'] or 0)
+    revenue = float(latest_data.get('revenue') or 0)
+    expenses = float(latest_data.get('expenses') or 0)
+    profit = float(latest_data.get('profit') or 0)
+    clients = int(latest_data.get('clients') or 0)
+    avg_check = float(latest_data.get('average_check') or 0)
+    rating = int((latest_data.get('overall_health_score') or 0) / 10)
     
     # Анализ прибыльности
     profitability = (profit / revenue * 100) if revenue > 0 else 0
@@ -316,7 +289,7 @@ def generate_ai_analysis(latest_data, history_data):
         recommendations.append("Внедрить up-sell стратегии")
     if len(history_data) > 1:
         previous = history_data[1]
-        prev_revenue = float(previous['revenue'] or 0)
+        prev_revenue = float(previous.get('revenue') or 0)
         if prev_revenue > 0:
             growth = ((revenue - prev_revenue) / prev_revenue * 100)
             if growth < 5:
@@ -332,9 +305,10 @@ def generate_ai_analysis(latest_data, history_data):
         'trends': efficiency_analysis if efficiency_analysis else ["Бизнес стабилен, продолжайте в том же духе!"],
         'recommendations': recommendations if recommendations else ["Продолжайте текущую стратегию"],
         'rating': rating,
-        'commentary': latest_data.get('commentary', '')
+        'commentary': ''
     }
 
+# Страница для отладки
 @app.route('/test-css')
 @app.route('/debug-static')
 def debug_static():

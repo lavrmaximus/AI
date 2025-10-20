@@ -6,8 +6,21 @@
 <div class="user-selector">
     <label for="userSelect">Выберите профиль:</label>
     <div class="enhanced-select">
-        <select id="userSelect" onchange="loadUserData()">
+        <div class="custom-select" id="userSelectCustom">
+            <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" id="userSelectTrigger">Загрузка...</button>
+            <div class="custom-options" role="listbox" id="userOptions"></div>
+        </div>
+        <select id="userSelect" onchange="loadUserData()" style="display:none;">
             <option value="">Загрузка...</option>
+        </select>
+    </div>
+    <div class="enhanced-select" style="margin-top:10px;">
+        <div class="custom-select" id="businessSelectCustom">
+            <button type="button" class="custom-select-trigger" aria-haspopup="listbox" aria-expanded="false" id="businessSelectTrigger">Выберите бизнес</button>
+            <div class="custom-options" role="listbox" id="businessOptions"></div>
+        </div>
+        <select id="businessSelect" onchange="loadBusinessData()" style="display:none;">
+            <option value="">Выберите бизнес</option>
         </select>
     </div>
 </div>
@@ -42,42 +55,116 @@
 <!-- Charts Section -->
 <div class="charts-section">
     <div class="chart-container">
-        <h3>Финансовая динамика</h3>
-        <div class="chart-wrapper">
-            <canvas id="financeChart"></canvas>
+        <div class="chart-header">
+            <h3>Финансовая динамика (₽)</h3>
+            <div class="chart-actions">
+                <div class="time-range">
+                    <button class="range-btn" data-range="day" onclick="setTimeRange('day')">День</button>
+                    <button class="range-btn" data-range="week" onclick="setTimeRange('week')">Неделя</button>
+                    <button class="range-btn" data-range="month" onclick="setTimeRange('month')">Месяц</button>
+                    <button class="range-btn" data-range="quarter" onclick="setTimeRange('quarter')">Квартал</button>
+                    <button class="range-btn active" data-range="all" onclick="setTimeRange('all')">Все</button>
+                </div>
+                <button class="export-btn" onclick="exportChart('financeChartCurrency')">📊 Экспорт графика PNG</button>
+            </div>
+        </div>
+        
+        <div class="scrollable-chart-container chart-no-scroll">
+            <div class="chart-wrapper">
+                <canvas id="financeChartCurrency"></canvas>
+                <div id="cursorLineCurrency" class="cursor-line" style="display:none;"></div>
+            </div>
+            <div id="chartReadoutCurrency" class="chart-readout" aria-hidden="true"></div>
+        </div>
+    </div>
+
+    <div class="chart-container" style="margin-top: 16px;">
+        <div class="chart-header">
+            <h3>Динамика показателей (штуки)</h3>
+            <div class="chart-actions">
+                <button class="export-btn" onclick="exportChart('financeChartCounts')">📊 Экспорт PNG</button>
+            </div>
+        </div>
+        <div class="scrollable-chart-container chart-no-scroll">
+            <div class="chart-wrapper">
+                <canvas id="financeChartCounts"></canvas>
+                <div id="cursorLineCounts" class="cursor-line" style="display:none;"></div>
+            </div>
+            <div id="chartReadoutCounts" class="chart-readout" aria-hidden="true"></div>
+        </div>
+    </div>
+
+    <div class="chart-container" style="margin-top: 16px;">
+        <div class="chart-header">
+            <h3>Динамика показателей (%)</h3>
+            <div class="chart-actions">
+                <button class="export-btn" onclick="exportChart('financeChartPercent')">📊 Экспорт PNG</button>
+            </div>
+        </div>
+        <div class="scrollable-chart-container chart-no-scroll">
+            <div class="chart-wrapper">
+                <canvas id="financeChartPercent"></canvas>
+                <div id="cursorLinePercent" class="cursor-line" style="display:none;"></div>
+            </div>
+            <div id="chartReadoutPercent" class="chart-readout" aria-hidden="true"></div>
         </div>
     </div>
     
     <div class="metrics-container">
-        <h3>Дополнительные метрики</h3>
-        <div class="metrics-grid">
-            <div class="metric-item">
-                <span class="metric-label">Средний чек</span>
-                <span class="metric-value" id="avg-check-value">0 ₽</span>
-            </div>
-            <div class="metric-item">
-                <span class="metric-label">Рейтинг бизнеса</span>
-                <span class="metric-value" id="rating-value">0/10</span>
-            </div>
-            <div class="metric-item">
-                <span class="metric-label">Рентабельность</span>
-                <span class="metric-value" id="profitability-value">0%</span>
+        <div style="display:flex; align-items:center; gap:12px; justify-content:space-between;">
+            <h3>Все метрики (вкл/выкл для графика)</h3>
+            <div>
+                <button class="range-btn" onclick="selectAllMetrics(true)">Включить все</button>
+                <button class="range-btn" onclick="selectAllMetrics(false)">Выключить все</button>
             </div>
         </div>
+        <div class="kpi-grid" id="allMetricsGrid"></div>
     </div>
 </div>
 
-<!-- AI Analysis Section -->
-<div class="analysis-section">
-    <h2>Анализ от ИИ</h2>
-    <div id="aiAnalysis">
-        <div class="loading">Загрузка анализа...</div>
-    </div>
-</div>
+
+
+
 
 <script>
     // Глобальная переменная для хранения экземпляра графика
-    let financeChart = null;
+    let financeChart = null; // не используется, оставлено для совместимости
+    let financeChartCurrency = null;
+    let financeChartCounts = null;
+    let financeChartPercent = null;
+    // Определение всех метрик и локализаций
+    const METRICS = [
+        { key: 'revenue', label: 'Выручка', unit: '₽' },
+        { key: 'expenses', label: 'Расходы', unit: '₽' },
+        { key: 'profit', label: 'Прибыль', unit: '₽' },
+        { key: 'clients', label: 'Клиенты', unit: '' },
+        { key: 'average_check', label: 'Средний чек', unit: '₽' },
+        { key: 'investments', label: 'Инвестиции', unit: '₽' },
+        { key: 'marketing_costs', label: 'Маркетинг', unit: '₽' },
+        { key: 'employees', label: 'Сотрудники', unit: '' },
+        { key: 'profit_margin', label: 'Маржа прибыли, %', unit: '%' },
+        { key: 'break_even_clients', label: 'Точка безуб., клиенты', unit: '' },
+        { key: 'safety_margin', label: 'Запас прочности, %', unit: '%' },
+        { key: 'roi', label: 'ROI, %', unit: '%' },
+        { key: 'profitability_index', label: 'Индекс прибыльности', unit: '' },
+        { key: 'ltv', label: 'LTV', unit: '₽' },
+        { key: 'cac', label: 'CAC', unit: '₽' },
+        { key: 'ltv_cac_ratio', label: 'LTV/CAC', unit: '' },
+        { key: 'customer_profit_margin', label: 'Маржа клиента, %', unit: '%' },
+        { key: 'sgr', label: 'Sustainable Growth, %', unit: '%' },
+        { key: 'revenue_growth_rate', label: 'Рост выручки, %', unit: '%' },
+        { key: 'asset_turnover', label: 'Оборачиваемость активов', unit: '' },
+        { key: 'roe', label: 'ROE, %', unit: '%' },
+        { key: 'months_to_bankruptcy', label: 'Мес. до банкр.', unit: '' },
+        { key: 'financial_health_score', label: 'Фин. здоровье', unit: '' },
+        { key: 'growth_health_score', label: 'Рост здоровье', unit: '' },
+        { key: 'efficiency_health_score', label: 'Эфф. здоровье', unit: '' },
+        { key: 'overall_health_score', label: 'Итоговый Health', unit: '' }
+    ];
+    // По умолчанию включим базовые 3 серии
+    let selectedMetrics = new Set(['revenue','expenses','profit']);
+    let currentBusinessId = null;
+    window.selectedMetrics = selectedMetrics;
 
     // Загрузка списка пользователей при открытии страницы
     document.addEventListener('DOMContentLoaded', function() {
@@ -91,19 +178,35 @@
             
             if (data.success) {
                 const userSelect = document.getElementById('userSelect');
-                userSelect.innerHTML = '<option value="">Выберите пользователя</option>';
-                
+                const userTrigger = document.getElementById('userSelectTrigger');
+                const userOptions = document.getElementById('userOptions');
+                userSelect.innerHTML = '<option value="">Выберите профиль</option>';
+                userOptions.innerHTML = '';
                 data.users.forEach(user => {
                     const option = document.createElement('option');
                     option.value = user.id;
-                    option.textContent = user.name;
+                    option.textContent = (user && user.name) ? user.name : (`User ${user && user.id ? user.id : ''}`).trim();
                     userSelect.appendChild(option);
+                    const optDiv = document.createElement('div');
+                    optDiv.className = 'custom-option';
+                    optDiv.setAttribute('role','option');
+                    optDiv.dataset.value = user.id;
+                    const displayName = (user && user.name) ? user.name : (`User ${user && user.id ? user.id : ''}`).trim();
+                    optDiv.innerHTML = `<span class="option-text">${displayName}</span><span class="option-check">✔</span>`;
+                    optDiv.addEventListener('click', () => {
+                        userSelect.value = user.id;
+                        userTrigger.textContent = displayName;
+                        closeCustomSelect('userSelectCustom');
+                        loadUserData();
+                    });
+                    userOptions.appendChild(optDiv);
                 });
-                
-                // Автоматически выбираем первого пользователя для демонстрации
                 if (data.users.length > 0) {
                     userSelect.value = data.users[0].id;
+                    userTrigger.textContent = data.users[0].name;
                     loadUserData();
+                } else {
+                    userTrigger.textContent = 'Нет профилей';
                 }
             }
         } catch (error) {
@@ -114,17 +217,56 @@
     async function loadUserData() {
         const userId = document.getElementById('userSelect').value;
         if (!userId) return;
-
-        await loadKPIMetrics(userId);
-        await loadFinanceData(userId);
-        await loadAIAnalysis(userId);
+        // Загрузим бизнесы пользователя и выберем первый
+        const bizResp = await fetch(`/api/businesses/${userId}`);
+        const bizData = await bizResp.json();
+        const businessSelect = document.getElementById('businessSelect');
+        const bizTrigger = document.getElementById('businessSelectTrigger');
+        const bizOptions = document.getElementById('businessOptions');
+        businessSelect.innerHTML = '<option value="">Выберите бизнес</option>';
+        bizOptions.innerHTML = '';
+        if (bizData.success && bizData.businesses.length) {
+                    bizData.businesses.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b.business_id;
+                        const bizName = (b && b.business_name) ? b.business_name : `Бизнес ${b && b.business_id ? b.business_id : ''}`;
+                        option.textContent = bizName;
+                businessSelect.appendChild(option);
+                const optDiv = document.createElement('div');
+                optDiv.className = 'custom-option';
+                optDiv.setAttribute('role','option');
+                optDiv.dataset.value = b.business_id;
+                        optDiv.innerHTML = `<span class=\"option-text\">${bizName}</span><span class=\"option-check\">✔</span>`;
+                optDiv.addEventListener('click', () => {
+                    businessSelect.value = b.business_id;
+                            bizTrigger.textContent = bizName;
+                    closeCustomSelect('businessSelectCustom');
+                    loadBusinessData();
+                });
+                bizOptions.appendChild(optDiv);
+            });
+            businessSelect.value = bizData.businesses[0].business_id;
+            bizTrigger.textContent = (bizData.businesses[0] && bizData.businesses[0].business_name) ? bizData.businesses[0].business_name : `Бизнес ${bizData.businesses[0].business_id}`;
+            currentBusinessId = bizData.businesses[0].business_id;
+            await loadBusinessData();
+        } else {
+            currentBusinessId = null;
+            bizTrigger.textContent = 'Нет бизнесов';
+        }
     }
 
-    async function loadKPIMetrics(userId) {
+    async function loadBusinessData() {
+        const businessId = document.getElementById('businessSelect').value;
+        if (!businessId) return;
+        currentBusinessId = businessId;
+        await loadKPIMetricsForBusiness(businessId);
+        await loadFinanceDataForBusiness(businessId);
+    }
+
+    async function loadKPIMetricsForBusiness(businessId) {
         try {
-            const response = await fetch(`/api/user-kpi-metrics/${userId}`);
+            const response = await fetch(`/api/business-kpi/${businessId}`);
             const data = await response.json();
-            
             if (data.success) {
                 updateKPICards(data.kpi);
             }
@@ -133,32 +275,22 @@
         }
     }
 
-    async function loadFinanceData(userId) {
+    async function loadFinanceDataForBusiness(businessId) {
         try {
-            const response = await fetch(`/api/user-finance-data/${userId}`);
+            const response = await fetch(`/api/business-history/${businessId}`);
             const data = await response.json();
-            
             if (data.success) {
+                buildAllMetricCards(data.latest, data.data);
+                // Сохраним полный набор данных для script.js
+                window.currentChartData = data.data;
+                // Не пере-включаем метрики автоматически, уважаем пустой набор
                 renderFinanceChart(data.data);
-                updateAdditionalMetrics(data.latest, data.data);
             }
         } catch (error) {
-            console.error('Ошибка загрузки финансовых данных:', error);
+            console.error('Ошибка загрузки данных бизнеса:', error);
         }
     }
 
-    async function loadAIAnalysis(userId) {
-        try {
-            const response = await fetch(`/api/user-ai-analysis/${userId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                renderAIAnalysis(data.analysis);
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки AI анализа:', error);
-        }
-    }
 
     function updateKPICards(kpi) {
         updateKPICard('revenue', kpi.revenue, '₽');
@@ -178,158 +310,156 @@
         changeElement.className = `change ${change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral'}`;
     }
 
-    function updateAdditionalMetrics(latest, financeData) {
-        if (latest) {
-            document.getElementById('avg-check-value').textContent = 
-                formatNumber(latest.average_check) + ' ₽';
-            document.getElementById('rating-value').textContent = 
-                (latest.rating || 0) + '/10';
-            
-            // Рассчитываем рентабельность
-            if (financeData && financeData.revenue.length > 0) {
-                const currentRevenue = financeData.revenue[0];
-                const currentProfit = financeData.profit[0];
-                const profitability = currentRevenue > 0 ? (currentProfit / currentRevenue * 100) : 0;
-                document.getElementById('profitability-value').textContent = 
-                    profitability.toFixed(1) + '%';
-            }
-        }
-    }
-
-function renderFinanceChart(data) {
-    const canvas = document.getElementById('financeChart');
-    const ctx = canvas.getContext('2d');
-    
-    // Проверяем данные
-    if (!data || !data.dates || data.dates.length === 0) {
-        console.log('Нет данных для графика');
-        return;
-    }
-    
-    // Уничтожаем предыдущий график, если он существует
-    if (financeChart) {
-        console.log('Уничтожаем предыдущий график');
-        financeChart.destroy();
-        financeChart = null;
-    }
-    
-    // Ждем следующего tick для гарантии очистки
-    setTimeout(() => {
-        try {
-            // Создаем новый график
-            financeChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.dates,
-                    datasets: [
-                        {
-                            label: 'Выручка',
-                            data: data.revenue,
-                            borderColor: '#48bb78',
-                            backgroundColor: 'rgba(72, 187, 120, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Расходы',
-                            data: data.expenses,
-                            borderColor: '#f56565',
-                            backgroundColor: 'rgba(245, 101, 101, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Прибыль',
-                            data: data.profit,
-                            borderColor: '#4299e1',
-                            backgroundColor: 'rgba(66, 153, 225, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            fill: true
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true, // Изменили на true
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        title: {
-                            display: true,
-                            text: 'Динамика за период'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString('ru-RU') + ' ₽';
-                                }
-                            }
-                        }
-                    }
+    function buildAllMetricCards(latest, data) {
+        const grid = document.getElementById('allMetricsGrid');
+        grid.innerHTML = '';
+        METRICS.forEach(m => {
+            const card = document.createElement('div');
+            card.className = 'kpi-card';
+            const title = document.createElement('h3');
+            title.textContent = m.label;
+            const value = document.createElement('div');
+            value.className = 'value';
+            const latestVal = latest && (latest[m.key] != null) ? latest[m.key] : (data.series[m.key] && data.series[m.key].length ? data.series[m.key][data.series[m.key].length-1] : 0);
+            value.textContent = formatNumber(latestVal) + (m.unit ? ' ' + m.unit : '');
+            const toggle = document.createElement('button');
+            toggle.className = 'range-btn';
+            const enabled = window.selectedMetrics.has(m.key);
+            toggle.classList.toggle('active', enabled);
+            toggle.textContent = enabled ? 'Показать: да' : 'Показать: нет';
+            toggle.onclick = () => {
+                if (window.selectedMetrics.has(m.key)) {
+                    window.selectedMetrics.delete(m.key);
+                } else {
+                    window.selectedMetrics.add(m.key);
                 }
-            });
-            console.log('График создан');
-        } catch (error) {
-            console.error('Ошибка создания графика:', error);
-        }
-    }, 10);
-}
-
-    function renderAIAnalysis(analysis) {
-        const container = document.getElementById('aiAnalysis');
-        
-        container.innerHTML = `
-            <div class="ai-summary">
-                <h4>📈 Общий анализ</h4>
-                <p>${analysis.summary}</p>
-            </div>
-            
-            <div class="ai-metrics">
-                <h4>📊 Ключевые показатели</h4>
-                <div class="metrics-grid">
-                    <div class="metric-badge">
-                        <span class="metric-label">Рентабельность</span>
-                        <span class="metric-value">${analysis.metrics.profitability}%</span>
-                    </div>
-                    <div class="metric-badge">
-                        <span class="metric-label">Оценка эффективности</span>
-                        <span class="metric-value">${analysis.metrics.efficiency_score}/100</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="ai-trends">
-                <h4>🔍 Тренды и наблюдения</h4>
-                <ul>
-                    ${analysis.trends.map(trend => `<li>${trend}</li>`).join('')}
-                </ul>
-            </div>
-            
-            <div class="ai-recommendations">
-                <h4>💡 Рекомендации</h4>
-                <ul>
-                    ${analysis.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                </ul>
-            </div>
-            
-            ${analysis.commentary ? `
-            <div class="ai-commentary">
-                <h4>💬 Комментарий</h4>
-                <p>${analysis.commentary}</p>
-            </div>
-            ` : ''}
-        `;
+                toggle.classList.toggle('active', window.selectedMetrics.has(m.key));
+                toggle.textContent = window.selectedMetrics.has(m.key) ? 'Показать: да' : 'Показать: нет';
+                if (window.currentChartData) renderFinanceChart(window.currentChartData);
+            };
+            card.appendChild(title);
+            card.appendChild(value);
+            card.appendChild(toggle);
+            grid.appendChild(card);
+        });
     }
+
+    function selectAllMetrics(enable) {
+        if (!window.selectedMetrics) window.selectedMetrics = new Set();
+        if (enable) {
+            // включаем все доступные ключи
+            window.selectedMetrics = new Set(METRICS.map(m => m.key));
+        } else {
+            window.selectedMetrics.clear();
+        }
+        // Обновим кнопки в карточках
+        const grid = document.getElementById('allMetricsGrid');
+        const buttons = grid.querySelectorAll('button.range-btn');
+        buttons.forEach((btn, idx) => {
+            const m = METRICS[idx];
+            const on = window.selectedMetrics.has(m.key);
+            btn.classList.toggle('active', on);
+            btn.textContent = on ? 'Показать: да' : 'Показать: нет';
+        });
+        if (window.currentChartData) renderFinanceChart(window.currentChartData);
+    }
+
+    // renderFinanceChart используется из static/script.js
+    // AI анализ перенесён на вкладку Аналитика
 
     function formatNumber(num) {
         return new Intl.NumberFormat('ru-RU').format(Math.round(num));
+    }
+
+    // Логика открытия/закрытия кастомных селектов
+    document.addEventListener('click', function(e) {
+        const userCustom = document.getElementById('userSelectCustom');
+        const bizCustom = document.getElementById('businessSelectCustom');
+        [userCustom, bizCustom].forEach(cs => {
+            if (!cs) return;
+            const trigger = cs.querySelector('.custom-select-trigger');
+            if (trigger && trigger.contains(e.target)) {
+                cs.classList.toggle('is-open');
+                if (cs.classList.contains('is-open')) {
+                    positionDropdownPortal(cs);
+                }
+            } else if (!cs.contains(e.target)) {
+                cs.classList.remove('is-open');
+            }
+        });
+    });
+
+    function positionDropdownPortal(customSelect) {
+        const trigger = customSelect.querySelector('.custom-select-trigger');
+        const options = customSelect.querySelector('.custom-options');
+        if (!trigger || !options) return;
+        
+        const rect = trigger.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const optionsHeight = 200; // estimated height
+        
+        // Position below trigger, or above if not enough space
+        let top = rect.bottom + 8;
+        if (top + optionsHeight > viewportHeight) {
+            top = rect.top - optionsHeight - 8;
+        }
+        
+        // Center horizontally relative to trigger
+        const left = rect.left + (rect.width / 2);
+        
+        options.style.top = `${top}px`;
+        options.style.left = `${left}px`;
+        options.style.transform = 'translateX(-50%)';
+        options.style.width = `${Math.max(rect.width, 200)}px`;
+    }
+
+    function closeCustomSelect(id) {
+        const cs = document.getElementById(id);
+        if (cs) cs.classList.remove('is-open');
+    }
+
+    // Reposition dropdowns on window resize
+    window.addEventListener('resize', function() {
+        const userCustom = document.getElementById('userSelectCustom');
+        const bizCustom = document.getElementById('businessSelectCustom');
+        [userCustom, bizCustom].forEach(cs => {
+            if (cs && cs.classList.contains('is-open')) {
+                positionDropdownPortal(cs);
+            }
+        });
+    });
+
+    // Функция экспорта графиков
+    function exportChart(canvasId) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            alert('График не найден');
+            return;
+        }
+        
+        // Проверяем, есть ли данные на графике
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        let hasContent = false;
+        
+        // Проверяем, есть ли непустые пиксели (не прозрачные)
+        for (let i = 3; i < data.length; i += 4) {
+            if (data[i] > 0) { // alpha channel
+                hasContent = true;
+                break;
+            }
+        }
+        
+        if (!hasContent) {
+            alert('Сначала загрузите данные графика');
+            return;
+        }
+        
+        const link = document.createElement('a');
+        link.download = `chart-${canvasId}-${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
     }
 </script>
 {% endblock %}

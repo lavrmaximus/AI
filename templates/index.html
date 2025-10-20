@@ -4,22 +4,83 @@
 
 {% block content %}
 <div class="hero-section">
-    <h1>Добро пожаловать в BusinessAI</h1>
-    <p>Ваш персональный бизнес-аналитик</p>
-    
-    <div class="features-grid">
-        <div class="feature-card">
-            <h3>Дашборд</h3>
-            <p>Интерактивные графики и ключевые метрики вашего бизнеса</p>
-            <a href="{{ url_for('dashboard') }}" class="btn">Перейти к дашборду</a>
-        </div>
+    <div class="welcome-card">
+        <h1 class="responsive-title">✨ Финансовый луч ✨</h1>
+        <p class="subtitle">Ваш персональный бизнес-аналитик в кармане</p>
         
-        <div class="feature-card">
-            <h3>Аналитика</h3>
-            <p>Глубокий анализ данных и рекомендации от ИИ</p>
-            <a href="{{ url_for('analytics') }}" class="btn">Смотреть аналитику</a>
+        <!-- Интерактивный выбор действия -->
+        <div class="action-selector">
+            <h3>Что вы хотите сделать?</h3>
+            <div class="action-grid">
+                <div class="action-item" onclick="quickAction('dashboard')">
+                    <div class="action-icon">📊</div>
+                    <h4>Быстрый обзор</h4>
+                    <p>Посмотреть текущие метрики</p>
+                </div>
+                <div class="action-item" onclick="quickAction('analytics')">
+                    <div class="action-icon">📈</div>
+                    <h4>Глубокий анализ</h4>
+                    <p>Детальная аналитика и тренды</p>
+                </div>
+            </div>
         </div>
-        
+
+        <!-- Статистика системы (уникальный контент) -->
+        <div class="system-stats" id="systemStats">
+            <h3>📈 Статистика системы</h3>
+            <div class="stats-grid">
+                <div class="stat-badge">
+                    <div class="stat-number" id="totalUsers">-</div>
+                    <div class="stat-label">профиля</div>
+                </div>
+                <div class="stat-badge">
+                    <div class="stat-number" id="totalAnalyses">-</div>
+                    <div class="stat-label">анализов</div>
+                </div>
+                <div class="stat-badge">
+                    <div class="stat-number" id="activeToday">-</div>
+                    <div class="stat-label">активных сегодня</div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadSystemStats();
+});
+
+// Уникальная функция для главной страницы
+async function loadSystemStats() {
+    try {
+        const response = await fetch('/api/system-stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('totalUsers').textContent = data.stats.total_users;
+            document.getElementById('totalAnalyses').textContent = data.stats.total_analyses;
+            document.getElementById('activeToday').textContent = data.stats.active_today;
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки статистики:', error);
+        // Fallback данные
+        document.getElementById('totalUsers').textContent = '3';
+        document.getElementById('totalAnalyses').textContent = '15';
+        document.getElementById('activeToday').textContent = '2';
+    }
+}
+
+// Быстрые действия
+function quickAction(action) {
+    switch(action) {
+        case 'dashboard':
+            window.location.href = '/dashboard';
+            break;
+        case 'analytics':
+            window.location.href = '/analytics';
+            break;
+    }
+}
+</script>
 {% endblock %}

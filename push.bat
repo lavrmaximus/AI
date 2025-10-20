@@ -1,4 +1,4 @@
 @echo off
 git add .
-git commit -m "dashboard fix"
+git commit -m "Pre-release version."
 git push AI site
