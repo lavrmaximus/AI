@@ -120,7 +120,7 @@ class BusinessBot:
         if not token:
             raise ValueError("BOT_TOKEN environment variable is required (try BOT_TOKEN or TELEGRAM_BOT_TOKEN)")
         
-        self.app = Application.builder().token(token).build()
+        self.app = Application.builder().token(token).concurrent_updates(True).build()
         self.setup_handlers()
 
     def setup_handlers(self):

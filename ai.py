@@ -206,10 +206,15 @@ async def extract_business_data(text: str) -> Dict:
             {"role": "user", "content": text}
         ]
         
-        response = g4f.ChatCompletion.create(
-            model=g4f.models.gpt_4,
-            messages=messages,
-            stream=False
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: g4f.ChatCompletion.create(
+                model=g4f.models.gpt_4,
+                messages=messages,
+                stream=False
+            )
         )
 
         logger.debug("Извлечение данных выполнено")
@@ -282,10 +287,15 @@ async def answer_question(question: str, user_id: str = "default") -> str:
     try:
         messages = prepare_messages(user_id, QUESTION_ANSWER_PROMPT, question)
 
-        response = g4f.ChatCompletion.create(
-            model=SIMPLE_MODEL,
-            messages=messages,
-            stream=False
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: g4f.ChatCompletion.create(
+                model=SIMPLE_MODEL,
+                messages=messages,
+                stream=False
+            )
         )
         
         conversation_memory[user_id].extend([
@@ -307,10 +317,15 @@ async def general_chat(message: str, user_id: str = "default") -> str:
     try:
         messages = prepare_messages(user_id, GENERAL_CHAT_PROMPT, message)
 
-        response = g4f.ChatCompletion.create(
-            model=SIMPLE_MODEL,
-            messages=messages,
-            stream=False
+        import asyncio
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: g4f.ChatCompletion.create(
+                model=SIMPLE_MODEL,
+                messages=messages,
+                stream=False
+            )
         )
         
         conversation_memory[user_id].extend([
