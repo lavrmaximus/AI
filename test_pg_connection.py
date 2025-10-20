@@ -1,5 +1,14 @@
 import os
 import sys
+from typing import Optional
+
+try:
+    from dotenv import load_dotenv  # автозагрузка .env
+    load_dotenv()
+except Exception:
+    # Если dotenv не установлен — просто пропускаем, можно задать переменные через среду
+    pass
+from dotenv import *
 
 try:
     import psycopg2
@@ -12,7 +21,7 @@ except Exception:
 def build_dsn_from_env() -> str:
     db_url = os.getenv("DATABASE_URL")
     if db_url:
-        return db_url
+        return db_url  # поддерживает postgresql:// и postgres://
 
     host = os.getenv("PGHOST") or os.getenv("POSTGRES_HOST")
     port = os.getenv("PGPORT") or os.getenv("POSTGRES_PORT") or "5432"
