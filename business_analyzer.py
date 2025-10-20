@@ -207,13 +207,28 @@ class BusinessAnalyzer:
         Генерация полного отчета для бизнеса
         """
         try:
+            # Инициализируем БД если нужно
+            if db.conn is None:
+                await db.init_db()
+            
             history = await db.get_business_history(business_id)
             
             if not history:
                 return {'error': 'Бизнес не найден'}
             
             current_data = history[0]
-            metrics = current_data  # В истории уже есть рассчитанные метрики
+            
+            # Извлекаем только рассчитанные метрики из БД
+            metrics = {}
+            metric_fields = [
+                'profit_margin', 'break_even_clients', 'safety_margin', 'roi', 'profitability_index',
+                'ltv', 'cac', 'ltv_cac_ratio', 'customer_profit_margin', 'sgr', 'revenue_growth_rate',
+                'asset_turnover', 'roe', 'months_to_bankruptcy',
+                'financial_health_score', 'growth_health_score', 'efficiency_health_score', 'overall_health_score'
+            ]
+            
+            for field in metric_fields:
+                metrics[field] = current_data.get(field, 0)
             
             # Health assessment
             health_assessment = self.calculator.get_health_assessment(
@@ -221,10 +236,7 @@ class BusinessAnalyzer:
             )
             
             # Benchmark report
-            benchmark_report = self.calculator.generate_benchmark_report(
-                metrics, 
-                'other'  # Можно добавить поле industry в бизнес
-            )
+            benchmark_report = self.calculator.generate_benchmark_report(metrics)
             
             # Рекомендации
             recommendations = self._generate_recommendations(metrics, health_assessment)
@@ -234,8 +246,7 @@ class BusinessAnalyzer:
                 'health_score': metrics.get('overall_health_score', 0),
                 'health_assessment': health_assessment,
                 'key_metrics': self._extract_key_metrics(metrics),
-                'all_metrics': metrics,
-                'benchmark_report': benchmark_report,
+                'detailed_metrics': metrics,  # Переименовано для совместимости
                 'recommendations': recommendations,
                 'trends': self._calculate_trends(history)
             }

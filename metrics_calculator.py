@@ -56,7 +56,7 @@ class MetricsCalculator:
             metrics.update(self._calculate_growth_metrics(raw_data, previous_data))
             
             # 4. Health Score
-            metrics.update(self._calculate_health_scores(metrics, raw_data.get('industry', 'other')))
+            metrics.update(self._calculate_health_scores(metrics))
             
             logger.info(f"✅ Рассчитано {len(metrics)} метрик")
             return metrics
@@ -72,7 +72,8 @@ class MetricsCalculator:
         try:
             revenue = data.get('revenue', 0)
             expenses = data.get('expenses', 0)
-            profit = data.get('profit', 0) or (revenue - expenses)
+            # Прибыль всегда рассчитывается как выручка минус расходы
+            profit = revenue - expenses
             investments = data.get('investments', 0)
             marketing_costs = data.get('marketing_costs', 0)
             clients = data.get('clients', 0)
@@ -213,10 +214,10 @@ class MetricsCalculator:
             logger.error(f"Ошибка метрик роста: {e}")
             return {}
     
-    def _calculate_health_scores(self, metrics: Dict, industry: str = 'other') -> Dict:
+    def _calculate_health_scores(self, metrics: Dict) -> Dict:
         """Расчет Health Score по 100-балльной шкале"""
         
-        benchmark = self.industry_benchmarks.get(industry, self.industry_benchmarks['other'])
+        benchmark = self.industry_benchmarks['other']  # Используем общий бенчмарк
         
         # 15-17. Компоненты Health Score
         financial_score = self._calculate_financial_health_score(metrics, benchmark)
@@ -373,12 +374,12 @@ class MetricsCalculator:
                 'color': 'red'
             }
     
-    def generate_benchmark_report(self, metrics: Dict, industry: str = 'other') -> Dict:
+    def generate_benchmark_report(self, metrics: Dict) -> Dict:
         """Сравнение с бенчмарками индустрии"""
-        benchmark = self.industry_benchmarks.get(industry, self.industry_benchmarks['other'])
+        benchmark = self.industry_benchmarks['other']  # Используем общий бенчмарк
         
         report = {
-            'industry': industry,
+            'industry': 'other',  # Всегда используем общий бенчмарк
             'comparisons': []
         }
         

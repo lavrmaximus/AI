@@ -51,7 +51,6 @@ class Database:
                 user_id TEXT,
                 business_name TEXT,
                 business_type TEXT,
-                industry TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_active BOOLEAN DEFAULT TRUE,
                 FOREIGN KEY (user_id) REFERENCES users (user_id)
@@ -75,6 +74,8 @@ class Database:
                 investments REAL DEFAULT 0,
                 marketing_costs REAL DEFAULT 0,
                 employees INTEGER DEFAULT 0,
+                new_clients_per_month INTEGER DEFAULT 0,
+                customer_retention_rate REAL DEFAULT 0,
                 
                 -- Рассчитанные метрики (22 штуки)
                 profit_margin REAL DEFAULT 0,
@@ -151,18 +152,70 @@ class Database:
                 except sqlite3.OperationalError as e:
                     print(f"❌ Ошибка добавления колонки {col}: {e}")
         
+        # Миграция: добавляем колонки new_clients_per_month и customer_retention_rate
+        additional_columns = ['new_clients_per_month', 'customer_retention_rate']
+        for col in additional_columns:
+            if col not in existing_columns:
+                try:
+                    if col == 'new_clients_per_month':
+                        cursor.execute(f"ALTER TABLE business_snapshots ADD COLUMN {col} INTEGER DEFAULT 0")
+                    else:  # customer_retention_rate
+                        cursor.execute(f"ALTER TABLE business_snapshots ADD COLUMN {col} REAL DEFAULT 0")
+                    print(f"✅ Добавлена колонка {col}")
+                except sqlite3.OperationalError as e:
+                    print(f"❌ Ошибка добавления колонки {col}: {e}")
+        
+        # Миграция: удаляем колонку industry из таблицы businesses
+        # Проверяем существование колонки industry
+        cursor.execute("PRAGMA table_info(businesses)")
+        businesses_columns = [row[1] for row in cursor.fetchall()]
+        
+        if 'industry' in businesses_columns:
+            try:
+                # SQLite не поддерживает DROP COLUMN, поэтому пересоздаем таблицу
+                print("🔄 Удаляем колонку industry из таблицы businesses...")
+                
+                # Создаем временную таблицу без industry
+                cursor.execute('''
+                    CREATE TABLE businesses_new (
+                        business_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id TEXT,
+                        business_name TEXT,
+                        business_type TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        FOREIGN KEY (user_id) REFERENCES users (user_id)
+                    )
+                ''')
+                
+                # Копируем данные без колонки industry
+                cursor.execute('''
+                    INSERT INTO businesses_new (business_id, user_id, business_name, business_type, created_at, is_active)
+                    SELECT business_id, user_id, business_name, business_type, created_at, is_active
+                    FROM businesses
+                ''')
+                
+                # Удаляем старую таблицу и переименовываем новую
+                cursor.execute('DROP TABLE businesses')
+                cursor.execute('ALTER TABLE businesses_new RENAME TO businesses')
+                
+                print("✅ Колонка industry успешно удалена из таблицы businesses")
+                
+            except sqlite3.OperationalError as e:
+                print(f"❌ Ошибка удаления колонки industry: {e}")
+        
         self.conn.commit()
     
     # ===== НОВЫЕ МЕТОДЫ ДЛЯ МУЛЬТИ-БИЗНЕСОВ =====
     
-    async def create_business(self, user_id: str, name: str, business_type: str = "general", industry: str = "other") -> int:
+    async def create_business(self, user_id: str, name: str, business_type: str = "general") -> int:
         """Создание нового бизнеса"""
         def _create():
             cursor = self.conn.cursor()
             cursor.execute('''
-                INSERT INTO businesses (user_id, business_name, business_type, industry)
-                VALUES (?, ?, ?, ?)
-            ''', (user_id, name, business_type, industry))
+                INSERT INTO businesses (user_id, business_name, business_type)
+                VALUES (?, ?, ?)
+            ''', (user_id, name, business_type))
             self.conn.commit()
             return cursor.lastrowid
         
@@ -173,7 +226,7 @@ class Database:
         def _get():
             cursor = self.conn.cursor()
             cursor.execute('''
-                SELECT business_id, business_name, business_type, industry, created_at, is_active
+                SELECT business_id, business_name, business_type, created_at, is_active
                 FROM businesses 
                 WHERE user_id = ? AND is_active = TRUE
                 ORDER BY created_at DESC
@@ -184,9 +237,8 @@ class Database:
                     'business_id': row[0],
                     'business_name': row[1],
                     'business_type': row[2],
-                    'industry': row[3],
-                    'created_at': row[4],
-                    'is_active': row[5]
+                    'created_at': row[3],
+                    'is_active': row[4]
                 }
                 for row in rows
             ]
@@ -214,17 +266,19 @@ class Database:
                 INSERT INTO business_snapshots (
                     business_id, period_type, period_date,
                     revenue, expenses, profit, clients, average_check, investments, marketing_costs, employees,
+                    new_clients_per_month, customer_retention_rate,
                     profit_margin, break_even_clients, safety_margin, roi, profitability_index,
                     ltv, cac, ltv_cac_ratio, customer_profit_margin, sgr, revenue_growth_rate,
                     asset_turnover, roe, months_to_bankruptcy,
                     financial_health_score, growth_health_score, efficiency_health_score, overall_health_score,
                     advice1, advice2, advice3, advice4, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 business_id, 'monthly', actual_period_date,
                 raw_data.get('revenue', 0), raw_data.get('expenses', 0), raw_data.get('profit', 0),
                 raw_data.get('clients', 0), raw_data.get('average_check', 0), raw_data.get('investments', 0),
                 raw_data.get('marketing_costs', 0), raw_data.get('employees', 0),
+                raw_data.get('new_clients_per_month', 0), raw_data.get('customer_retention_rate', 0),
                 metrics.get('profit_margin', 0), metrics.get('break_even_clients', 0),
                 metrics.get('safety_margin', 0), metrics.get('roi', 0), metrics.get('profitability_index', 0),
                 metrics.get('ltv', 0), metrics.get('cac', 0), metrics.get('ltv_cac_ratio', 0),
@@ -366,6 +420,58 @@ class Database:
             self.conn.commit()
         
         await asyncio.get_event_loop().run_in_executor(self.executor, _insert)
+    
+    async def get_user_recent_messages(self, user_id: str, limit: int = 20) -> List[Dict]:
+        """Возвращает последние сообщения пользователя из всех его сессий для восстановления контекста."""
+        def _select():
+            cursor = self.conn.cursor()
+            # Берем сообщения, связанные с сессиями данного пользователя
+            cursor.execute('''
+                SELECT m.user_message, m.bot_response, m.message_type, m.created_at
+                FROM messages m
+                JOIN conversation_sessions cs ON cs.session_id = m.session_id
+                WHERE cs.user_id = ? AND m.session_id IS NOT NULL
+                ORDER BY m.created_at DESC
+                LIMIT ?
+            ''', (user_id, limit))
+            rows = cursor.fetchall()
+            results: List[Dict] = []
+            for row in rows:
+                results.append({
+                    'user_message': row[0] or '',
+                    'bot_response': row[1] or '',
+                    'message_type': row[2] or '',
+                    'created_at': row[3]
+                })
+            # Разворачиваем обратно в хронологический порядок (старые -> новые)
+            results.reverse()
+            return results
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _select)
+
+    async def get_or_create_user_chat_session(self, user_id: str) -> int:
+        """Возвращает id сессии для общего чата пользователя; создает при отсутствии."""
+        def _get_or_create() -> int:
+            cursor = self.conn.cursor()
+            # Ищем последнюю сессию типа chat без привязки к бизнесу
+            cursor.execute('''
+                SELECT session_id FROM conversation_sessions
+                WHERE user_id = ? AND current_state = 'chat'
+                ORDER BY updated_at DESC, session_id DESC
+                LIMIT 1
+            ''', (user_id,))
+            row = cursor.fetchone()
+            if row:
+                return row[0]
+            # Создаем новую chat-сессию
+            cursor.execute('''
+                INSERT INTO conversation_sessions (user_id, business_id, current_state, collected_data)
+                VALUES (?, NULL, 'chat', '{}')
+            ''', (user_id,))
+            self.conn.commit()
+            return cursor.lastrowid
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _get_or_create)
     
     async def save_business_analysis(self, user_id: str, business_data: Dict):
         """Сохранение бизнес-анализа (старый метод для обратной совместимости)"""

@@ -22,7 +22,7 @@ class BusinessConversation:
     
     # Минимально необходимые поля для анализа
     REQUIRED_FIELDS = ['revenue', 'expenses', 'clients']
-    OPTIONAL_FIELDS = ['investments', 'marketing_costs']
+    OPTIONAL_FIELDS = ['investments', 'marketing_costs', 'employees', 'new_clients_per_month', 'customer_retention_rate']
     
     def __init__(self, session_id: int = None):
         self.session_id = session_id
@@ -149,13 +149,19 @@ class BusinessConversation:
             extracted_data = await extract_business_data(user_message)
             logger.info(f"🔍 Извлечено данных: {extracted_data}")
 
-            # Объединяем с уже собранными данными, не перезаписывая, а дополняя
+            # Объединяем с уже собранными данными: мердж только "значимых" значений
             for key, value in extracted_data.items():
-                if value is not None:  # Не перезаписываем None
-                    # Если поле уже есть и новое значение != 0 или новое значение - строка
-                    # АИ может вернуть 0 если не нашел. Если предыдущее было числовым, оставляем его.
-                    if key in self.collected_data and self.collected_data[key] is not None and value == 0:
+                if value is None:
+                    continue
+                # Если пришёл ноль от ИИ как "не нашёл", не затираем ранее сохранённое число
+                if key in self.collected_data and isinstance(self.collected_data[key], (int, float)) and value == 0:
+                    continue
+                # Строки и положительные/ненулевые числа обновляем
+                if isinstance(value, str):
+                    if value.strip() == "":
                         continue
+                    self.collected_data[key] = value
+                else:
                     self.collected_data[key] = value
 
             # Отрасль больше не используется
@@ -169,6 +175,10 @@ class BusinessConversation:
                 else:
                     collected_data_for_ai_prompt[field] = "НЕТ"
             
+            # Если monthly_costs отсутствует, но есть expenses — подставляем для полноты анализа
+            if ('monthly_costs' not in self.collected_data or not self.collected_data.get('monthly_costs')) and self.collected_data.get('expenses'):
+                self.collected_data['monthly_costs'] = self.collected_data['expenses']
+
             # Проверяем, сколько обязательных полей собрано
             required_fields_count = sum(1 for field in self.REQUIRED_FIELDS if field in self.collected_data and self.collected_data[field] is not None)
             
@@ -348,7 +358,9 @@ class BusinessConversation:
         response += f"• Рентабельность: {key_metrics.get('profit_margin', 0):.1f}%\n"
         response += f"• ROI: {key_metrics.get('roi', 0):.1f}%\n"
         response += f"• LTV/CAC: {key_metrics.get('ltv_cac_ratio', 0):.2f}\n"
-        response += f"• Запас прочности: {key_metrics.get('safety_margin', 0):.1f}%\n\n"
+        response += f"• Запас прочности: {key_metrics.get('safety_margin', 0):.1f}%\n"
+        response += f"• Темп роста выручки: {key_metrics.get('revenue_growth_rate', 0):.1f}%\n"
+        response += f"• До банкротства: {key_metrics.get('months_to_bankruptcy', 0):.0f} мес\n\n"
 
         # Полный список рассчитанных метрик
         if detailed_metrics:

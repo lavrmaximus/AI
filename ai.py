@@ -44,15 +44,13 @@ BUSINESS_DATA_EXTRACTION_PROMPT = """Ты - инструмент для извл
   "business_name": "название бизнеса или null",
   "revenue": число или null,
   "expenses": число или null,
-  "profit": число или null,
   "clients": число или null,
   "investments": число или null,
   "marketing_costs": число или null,
   "employees": число или null,
   "monthly_costs": число или null,
   "new_clients_per_month": число или null,
-  "customer_retention_rate": число или null,
-  "industry": "отрасль или null"
+  "customer_retention_rate": число или null
 }
 
 Пример:
@@ -63,15 +61,13 @@ BUSINESS_DATA_EXTRACTION_PROMPT = """Ты - инструмент для извл
   "business_name": "кофейня",
   "revenue": 500000,
   "expenses": 300000,
-  "profit": 200000,
   "clients": 1000,
   "investments": null,
   "marketing_costs": null,
   "employees": null,
   "monthly_costs": 300000,
   "new_clients_per_month": null,
-  "customer_retention_rate": null,
-  "industry": "общепит"
+  "customer_retention_rate": null
 }
 
 НИКАКИХ ДРУГИХ ТЕКСТОВ КРОМЕ JSON!"""
@@ -94,7 +90,6 @@ MISSING_DATA_ANALYSIS_PROMPT = """Ты - бизнес-аналитик, кото
 - business_name (название бизнеса)
 - revenue (выручка)
 - expenses (расходы)
-- profit (прибыль)
 - clients (количество клиентов)
 - investments (инвестиции)
 - marketing_costs (затраты на маркетинг)
@@ -102,7 +97,6 @@ MISSING_DATA_ANALYSIS_PROMPT = """Ты - бизнес-аналитик, кото
 - monthly_costs (ежемесячные постоянные расходы)
 - new_clients_per_month (новых клиентов в месяц)
 - customer_retention_rate (коэффициент удержания клиентов в процентах)
-- industry (отрасль бизнеса)
 
 ТРЕБУЕМЫЕ ДАННЫЕ (критически важны для минимального анализа):
 - revenue
@@ -116,7 +110,6 @@ MISSING_DATA_ANALYSIS_PROMPT = """Ты - бизнес-аналитик, кото
 - monthly_costs
 - new_clients_per_month
 - customer_retention_rate
-- industry
 
 ЗАДАЧА:
 1. Идентифицируй, каких данных не хватает из "ТРЕБУЕМЫХ ДАННЫХ", учитывая "УЖЕ СОБРАННЫЕ ДАННЫЕ".
@@ -244,7 +237,13 @@ async def analyze_missing_data(collected_data: Dict) -> str:
     """Анализ недостающих данных и формирование вопросов"""
     try:
         # Форматируем собранные данные для промпта
-        data_text = "\n".join([f"- {k}: {v}" for k, v in collected_data.items() if v is not None])
+        # Фильтруем только значимые данные (не None, не 0, не пустые строки)
+        significant_data = {}
+        for k, v in collected_data.items():
+            if v is not None and v != 0 and v != '' and str(v).strip() != '':
+                significant_data[k] = v
+        
+        data_text = "\n".join([f"- {k}: {v}" for k, v in significant_data.items()])
         
         prompt = MISSING_DATA_ANALYSIS_PROMPT.format(collected_data=data_text)
         
