@@ -171,11 +171,19 @@ def main():
             # Гарантируем существование пользователей до зависимых таблиц
             # Сначала очищаем таблицы в правильном порядке (от зависимых к родительским)
             print("🧹 Очищаю таблицы в Postgres (если есть данные)...")
-            for table in ['messages', 'conversation_sessions', 'business_snapshots', 'businesses', 'users']:
+            tables_to_clear = ['messages', 'conversation_sessions', 'business_snapshots', 'businesses', 'users']
+            for table in tables_to_clear:
                 try:
                     pg_cur.execute(f'TRUNCATE TABLE {table} RESTART IDENTITY CASCADE')
-                except Exception:
-                    pass  # таблица может не существовать
+                    print(f"  ✅ Таблица {table} очищена")
+                except Exception as e:
+                    print(f"  ⚠️  Ошибка очистки таблицы {table}: {e}")
+                    # Попробуем удалить данные по-другому
+                    try:
+                        pg_cur.execute(f'DELETE FROM {table}')
+                        print(f"  ✅ Данные из {table} удалены через DELETE")
+                    except Exception as e2:
+                        print(f"  ❌ Не удалось очистить {table}: {e2}")
             pg_conn.commit()
 
             print("➡️  Переношу данные...")
@@ -238,6 +246,54 @@ def main():
             migrate_table(sqlite_cur, pg_cur, 'messages', [
                 'id','session_id','user_message','bot_response','message_type','created_at'
             ])
+
+            # Обновляем последовательности (sequences) для SERIAL полей
+            print("🔄 Обновляю последовательности...")
+            sequences_to_update = [
+                ('businesses_business_id_seq', 'businesses', 'business_id'),
+                ('business_snapshots_snapshot_id_seq', 'business_snapshots', 'snapshot_id'),
+                ('conversation_sessions_session_id_seq', 'conversation_sessions', 'session_id'),
+                ('messages_id_seq', 'messages', 'id')
+            ]
+            
+            for seq_name, table_name, column_name in sequences_to_update:
+                try:
+                    pg_cur.execute(f"SELECT MAX({column_name}) FROM {table_name}")
+                    max_val = pg_cur.fetchone()[0]
+                    
+                    if max_val is not None and max_val > 0:
+                        # Устанавливаем последовательность на максимальное значение
+                        pg_cur.execute(f"SELECT setval('{seq_name}', {max_val})")
+                        result = pg_cur.fetchone()[0]
+                        print(f"  ✅ {seq_name} установлен в {result}")
+                    elif max_val == 0:
+                        # Если максимальное значение 0, устанавливаем в 1
+                        pg_cur.execute(f"SELECT setval('{seq_name}', 1)")
+                        result = pg_cur.fetchone()[0]
+                        print(f"  ✅ {seq_name} установлен в {result} (было 0)")
+                    else:
+                        # Таблица пуста, устанавливаем в 1
+                        pg_cur.execute(f"SELECT setval('{seq_name}', 1)")
+                        result = pg_cur.fetchone()[0]
+                        print(f"  ✅ {seq_name} установлен в {result} (таблица пуста)")
+                        
+                except Exception as e:
+                    print(f"  ❌ Ошибка обновления {seq_name}: {e}")
+            
+            # Проверяем, что последовательности работают
+            print("🧪 Проверяем последовательности...")
+            test_sequences = [
+                ('businesses_business_id_seq', 'businesses'),
+                ('conversation_sessions_session_id_seq', 'conversation_sessions')
+            ]
+            
+            for seq_name, table_name in test_sequences:
+                try:
+                    pg_cur.execute(f"SELECT nextval('{seq_name}')")
+                    next_id = pg_cur.fetchone()[0]
+                    print(f"  ✅ {seq_name}: следующий ID будет {next_id}")
+                except Exception as e:
+                    print(f"  ❌ Ошибка проверки {seq_name}: {e}")
 
             pg_conn.commit()
 

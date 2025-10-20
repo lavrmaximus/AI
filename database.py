@@ -1,11 +1,20 @@
 import asyncio
-import sqlite3
 import json
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
+from dotenv import load_dotenv
+
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor, execute_values
+except ImportError:
+    print("❌ Требуется пакет: pip install psycopg2-binary")
+    raise
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -17,194 +26,155 @@ class Database:
         self.conn = None
         self.executor = executor
     
-    async def init_db(self):
-        """Инициализация новой БД"""
-        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot_v2.db')
-        # Поднимем timeout и busy_timeout, без включения WAL
-        self.conn = sqlite3.connect(db_path, timeout=5.0, check_same_thread=False)
-        try:
-            self.conn.execute('PRAGMA busy_timeout=5000')
-        except Exception:
-            pass
-        self.create_tables()
-        print(f"✅ Новая SQLite база подключена: {db_path}")
+    def build_dsn_from_env(self) -> str:
+        """Build PostgreSQL DSN from environment variables"""
+        db_url = os.getenv("DATABASE_URL")
+        if db_url:
+            return db_url
+
+        host = os.getenv("PGHOST") or os.getenv("POSTGRES_HOST")
+        port = os.getenv("PGPORT") or os.getenv("POSTGRES_PORT") or "5432"
+        db = os.getenv("PGDATABASE") or os.getenv("POSTGRES_DB")
+        user = os.getenv("PGUSER") or os.getenv("POSTGRES_USER")
+        pwd = os.getenv("PGPASSWORD") or os.getenv("POSTGRES_PASSWORD")
+        sslmode = os.getenv("PGSSLMODE")
+
+        missing = [k for k, v in {
+            "PGHOST": host, "PGDATABASE": db, "PGUSER": user, "PGPASSWORD": pwd
+        }.items() if not v]
+        if missing:
+            raise RuntimeError(f"Нет переменных: {', '.join(missing)} (или задайте DATABASE_URL)")
+
+        parts = [
+            f"host={host}",
+            f"port={port}",
+            f"dbname={db}",
+            f"user={user}",
+            f"password={pwd}",
+        ]
+        if sslmode:
+            parts.append(f"sslmode={sslmode}")
+        return " ".join(parts)
     
-    def create_tables(self):
+    async def init_db(self):
+        """Инициализация PostgreSQL БД"""
+        dsn = self.build_dsn_from_env()
+        self.conn = psycopg2.connect(dsn, cursor_factory=RealDictCursor)
+        self.conn.autocommit = True
+        await self.create_tables()
+        print(f"✅ PostgreSQL база подключена")
+    
+    async def create_tables(self):
         """Создание новых таблиц для мульти-бизнесов"""
-        cursor = self.conn.cursor()
+        def _create():
+            cursor = self.conn.cursor()
+            
+            # Таблица пользователей
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id TEXT PRIMARY KEY,
+                    username TEXT,
+                    first_name TEXT,
+                    last_name TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Новая таблица бизнесов
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS businesses (
+                    business_id SERIAL PRIMARY KEY,
+                    user_id TEXT,
+                    business_name TEXT,
+                    business_type TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id)
+                )
+            ''')
+            
+            # Основная таблица снимков бизнеса
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS business_snapshots (
+                    snapshot_id SERIAL PRIMARY KEY,
+                    business_id INTEGER,
+                    period_type TEXT,
+                    period_date DATE,
+                    
+                    -- Сырые данные от пользователя
+                    revenue DOUBLE PRECISION DEFAULT 0,
+                    expenses DOUBLE PRECISION DEFAULT 0,
+                    profit DOUBLE PRECISION DEFAULT 0,
+                    clients INTEGER DEFAULT 0,
+                    average_check DOUBLE PRECISION DEFAULT 0,
+                    investments DOUBLE PRECISION DEFAULT 0,
+                    marketing_costs DOUBLE PRECISION DEFAULT 0,
+                    employees INTEGER DEFAULT 0,
+                    new_clients_per_month INTEGER DEFAULT 0,
+                    customer_retention_rate DOUBLE PRECISION DEFAULT 0,
+                    
+                    -- Рассчитанные метрики (22 штуки)
+                    profit_margin DOUBLE PRECISION DEFAULT 0,
+                    break_even_clients DOUBLE PRECISION DEFAULT 0,
+                    safety_margin DOUBLE PRECISION DEFAULT 0,
+                    roi DOUBLE PRECISION DEFAULT 0,
+                    profitability_index DOUBLE PRECISION DEFAULT 0,
+                    ltv DOUBLE PRECISION DEFAULT 0,
+                    cac DOUBLE PRECISION DEFAULT 0,
+                    ltv_cac_ratio DOUBLE PRECISION DEFAULT 0,
+                    customer_profit_margin DOUBLE PRECISION DEFAULT 0,
+                    sgr DOUBLE PRECISION DEFAULT 0,
+                    revenue_growth_rate DOUBLE PRECISION DEFAULT 0,
+                    asset_turnover DOUBLE PRECISION DEFAULT 0,
+                    roe DOUBLE PRECISION DEFAULT 0,
+                    months_to_bankruptcy DOUBLE PRECISION DEFAULT 0,
+                    
+                    -- Health Score
+                    financial_health_score INTEGER DEFAULT 0,
+                    growth_health_score INTEGER DEFAULT 0,
+                    efficiency_health_score INTEGER DEFAULT 0,
+                    overall_health_score INTEGER DEFAULT 0,
+                    
+                    -- AI советы (4 штуки)
+                    advice1 TEXT DEFAULT '',
+                    advice2 TEXT DEFAULT '',
+                    advice3 TEXT DEFAULT '',
+                    advice4 TEXT DEFAULT '',
+                    
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (business_id) REFERENCES businesses(business_id)
+                )
+            ''')
+            
+            # Сессии диалогов для умного сбора данных
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS conversation_sessions (
+                    session_id SERIAL PRIMARY KEY,
+                    user_id TEXT,
+                    business_id INTEGER,
+                    current_state TEXT,
+                    collected_data TEXT, -- JSON
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(user_id),
+                    FOREIGN KEY (business_id) REFERENCES businesses(business_id)
+                )
+            ''')
+            
+            # Сообщения (логи чата)
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS messages (
+                    id SERIAL PRIMARY KEY,
+                    session_id INTEGER,
+                    user_message TEXT,
+                    bot_response TEXT,
+                    message_type TEXT,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (session_id) REFERENCES conversation_sessions(session_id)
+                )
+            ''')
         
-        # Таблица пользователей (остается)
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                user_id TEXT PRIMARY KEY,
-                username TEXT,
-                first_name TEXT,
-                last_name TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Новая таблица бизнесов
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS businesses (
-                business_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT,
-                business_name TEXT,
-                business_type TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                is_active BOOLEAN DEFAULT TRUE,
-                FOREIGN KEY (user_id) REFERENCES users (user_id)
-            )
-        ''')
-        
-        # Основная таблица снимков бизнеса
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS business_snapshots (
-                snapshot_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                business_id INTEGER,
-                period_type TEXT,
-                period_date DATE,
-                
-                -- Сырые данные от пользователя
-                revenue REAL DEFAULT 0,
-                expenses REAL DEFAULT 0,
-                profit REAL DEFAULT 0,
-                clients INTEGER DEFAULT 0,
-                average_check REAL DEFAULT 0,
-                investments REAL DEFAULT 0,
-                marketing_costs REAL DEFAULT 0,
-                employees INTEGER DEFAULT 0,
-                new_clients_per_month INTEGER DEFAULT 0,
-                customer_retention_rate REAL DEFAULT 0,
-                
-                -- Рассчитанные метрики (22 штуки)
-                profit_margin REAL DEFAULT 0,
-                break_even_clients REAL DEFAULT 0,
-                safety_margin REAL DEFAULT 0,
-                roi REAL DEFAULT 0,
-                profitability_index REAL DEFAULT 0,
-                ltv REAL DEFAULT 0,
-                cac REAL DEFAULT 0,
-                ltv_cac_ratio REAL DEFAULT 0,
-                customer_profit_margin REAL DEFAULT 0,
-                sgr REAL DEFAULT 0,
-                revenue_growth_rate REAL DEFAULT 0,
-                asset_turnover REAL DEFAULT 0,
-                roe REAL DEFAULT 0,
-                months_to_bankruptcy REAL DEFAULT 0,
-                
-                -- Health Score
-                financial_health_score INTEGER DEFAULT 0,
-                growth_health_score INTEGER DEFAULT 0,
-                efficiency_health_score INTEGER DEFAULT 0,
-                overall_health_score INTEGER DEFAULT 0,
-                
-                -- AI советы (4 штуки)
-                advice1 TEXT DEFAULT '',
-                advice2 TEXT DEFAULT '',
-                advice3 TEXT DEFAULT '',
-                advice4 TEXT DEFAULT '',
-                
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (business_id) REFERENCES businesses (business_id)
-            )
-        ''')
-        
-        # Сессии диалогов для умного сбора данных
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS conversation_sessions (
-                session_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id TEXT,
-                business_id INTEGER,
-                current_state TEXT,
-                collected_data TEXT, -- JSON
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (user_id),
-                FOREIGN KEY (business_id) REFERENCES businesses (business_id)
-            )
-        ''')
-        
-        # Сообщения (логи чата)
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id INTEGER,
-                user_message TEXT,
-                bot_response TEXT,
-                message_type TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (session_id) REFERENCES conversation_sessions (session_id)
-            )
-        ''')
-        
-        # Миграция: добавляем колонки advice1-4 если их нет
-        # Проверяем существование колонок
-        cursor.execute("PRAGMA table_info(business_snapshots)")
-        existing_columns = [row[1] for row in cursor.fetchall()]
-        
-        advice_columns = ['advice1', 'advice2', 'advice3', 'advice4']
-        for col in advice_columns:
-            if col not in existing_columns:
-                try:
-                    cursor.execute(f"ALTER TABLE business_snapshots ADD COLUMN {col} TEXT DEFAULT ''")
-                    print(f"✅ Добавлена колонка {col}")
-                except sqlite3.OperationalError as e:
-                    print(f"❌ Ошибка добавления колонки {col}: {e}")
-        
-        # Миграция: добавляем колонки new_clients_per_month и customer_retention_rate
-        additional_columns = ['new_clients_per_month', 'customer_retention_rate']
-        for col in additional_columns:
-            if col not in existing_columns:
-                try:
-                    if col == 'new_clients_per_month':
-                        cursor.execute(f"ALTER TABLE business_snapshots ADD COLUMN {col} INTEGER DEFAULT 0")
-                    else:  # customer_retention_rate
-                        cursor.execute(f"ALTER TABLE business_snapshots ADD COLUMN {col} REAL DEFAULT 0")
-                    print(f"✅ Добавлена колонка {col}")
-                except sqlite3.OperationalError as e:
-                    print(f"❌ Ошибка добавления колонки {col}: {e}")
-        
-        # Миграция: удаляем колонку industry из таблицы businesses
-        # Проверяем существование колонки industry
-        cursor.execute("PRAGMA table_info(businesses)")
-        businesses_columns = [row[1] for row in cursor.fetchall()]
-        
-        if 'industry' in businesses_columns:
-            try:
-                # SQLite не поддерживает DROP COLUMN, поэтому пересоздаем таблицу
-                print("🔄 Удаляем колонку industry из таблицы businesses...")
-                
-                # Создаем временную таблицу без industry
-                cursor.execute('''
-                    CREATE TABLE businesses_new (
-                        business_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id TEXT,
-                        business_name TEXT,
-                        business_type TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        is_active BOOLEAN DEFAULT TRUE,
-                        FOREIGN KEY (user_id) REFERENCES users (user_id)
-                    )
-                ''')
-                
-                # Копируем данные без колонки industry
-                cursor.execute('''
-                    INSERT INTO businesses_new (business_id, user_id, business_name, business_type, created_at, is_active)
-                    SELECT business_id, user_id, business_name, business_type, created_at, is_active
-                    FROM businesses
-                ''')
-                
-                # Удаляем старую таблицу и переименовываем новую
-                cursor.execute('DROP TABLE businesses')
-                cursor.execute('ALTER TABLE businesses_new RENAME TO businesses')
-                
-                print("✅ Колонка industry успешно удалена из таблицы businesses")
-                
-            except sqlite3.OperationalError as e:
-                print(f"❌ Ошибка удаления колонки industry: {e}")
-        
-        self.conn.commit()
+        await asyncio.get_event_loop().run_in_executor(self.executor, _create)
     
     # ===== НОВЫЕ МЕТОДЫ ДЛЯ МУЛЬТИ-БИЗНЕСОВ =====
     
@@ -214,10 +184,9 @@ class Database:
             cursor = self.conn.cursor()
             cursor.execute('''
                 INSERT INTO businesses (user_id, business_name, business_type)
-                VALUES (?, ?, ?)
+                VALUES (%s, %s, %s) RETURNING business_id
             ''', (user_id, name, business_type))
-            self.conn.commit()
-            return cursor.lastrowid
+            return cursor.fetchone()['business_id']
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _create)
     
@@ -228,17 +197,17 @@ class Database:
             cursor.execute('''
                 SELECT business_id, business_name, business_type, created_at, is_active
                 FROM businesses 
-                WHERE user_id = ? AND is_active = TRUE
+                WHERE user_id = %s AND is_active = TRUE
                 ORDER BY created_at DESC
             ''', (user_id,))
             rows = cursor.fetchall()
             return [
                 {
-                    'business_id': row[0],
-                    'business_name': row[1],
-                    'business_type': row[2],
-                    'created_at': row[3],
-                    'is_active': row[4]
+                    'business_id': row['business_id'],
+                    'business_name': row['business_name'],
+                    'business_type': row['business_type'],
+                    'created_at': row['created_at'],
+                    'is_active': row['is_active']
                 }
                 for row in rows
             ]
@@ -272,7 +241,7 @@ class Database:
                     asset_turnover, roe, months_to_bankruptcy,
                     financial_health_score, growth_health_score, efficiency_health_score, overall_health_score,
                     advice1, advice2, advice3, advice4, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING snapshot_id
             ''', (
                 business_id, 'monthly', actual_period_date,
                 raw_data.get('revenue', 0), raw_data.get('expenses', 0), raw_data.get('profit', 0),
@@ -289,8 +258,7 @@ class Database:
                 advice_list_local[0], advice_list_local[1], advice_list_local[2], advice_list_local[3],
                 moscow_time_str
             ))
-            self.conn.commit()
-            return cursor.lastrowid
+            return cursor.fetchone()['snapshot_id']
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _add)
     
@@ -300,16 +268,12 @@ class Database:
             cursor = self.conn.cursor()
             cursor.execute('''
                 SELECT * FROM business_snapshots 
-                WHERE business_id = ? 
+                WHERE business_id = %s 
                 ORDER BY created_at DESC, snapshot_id DESC 
-                LIMIT ?
+                LIMIT %s
             ''', (business_id, limit))
             rows = cursor.fetchall()
-            
-            # Получаем названия колонок
-            columns = [description[0] for description in cursor.description]
-            
-            return [dict(zip(columns, row)) for row in rows]
+            return [dict(row) for row in rows]
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
 
@@ -320,11 +284,10 @@ class Database:
             cursor.execute(
                 """
                 UPDATE businesses SET is_active = FALSE
-                WHERE business_id = ? AND user_id = ?
+                WHERE business_id = %s AND user_id = %s
                 """,
                 (business_id, user_id)
             )
-            self.conn.commit()
         await asyncio.get_event_loop().run_in_executor(self.executor, _del)
 
     # Удалено: отрасль больше не обновляется
@@ -337,10 +300,9 @@ class Database:
             cursor = self.conn.cursor()
             cursor.execute('''
                 INSERT INTO conversation_sessions (user_id, business_id, current_state, collected_data)
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s) RETURNING session_id
             ''', (user_id, business_id, initial_state, json.dumps({})))
-            self.conn.commit()
-            return cursor.lastrowid
+            return cursor.fetchone()['session_id']
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _create)
     
@@ -351,16 +313,15 @@ class Database:
             if new_data:
                 cursor.execute('''
                     UPDATE conversation_sessions 
-                    SET current_state = ?, collected_data = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE session_id = ?
+                    SET current_state = %s, collected_data = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE session_id = %s
                 ''', (new_state, json.dumps(new_data), session_id))
             else:
                 cursor.execute('''
                     UPDATE conversation_sessions 
-                    SET current_state = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE session_id = ?
+                    SET current_state = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE session_id = %s
                 ''', (new_state, session_id))
-            self.conn.commit()
         
         await asyncio.get_event_loop().run_in_executor(self.executor, _update)
     
@@ -371,17 +332,17 @@ class Database:
             cursor.execute('''
                 SELECT session_id, user_id, business_id, current_state, collected_data, created_at
                 FROM conversation_sessions 
-                WHERE session_id = ?
+                WHERE session_id = %s
             ''', (session_id,))
             row = cursor.fetchone()
             if row:
                 return {
-                    'session_id': row[0],
-                    'user_id': row[1],
-                    'business_id': row[2],
-                    'current_state': row[3],
-                    'collected_data': json.loads(row[4]) if row[4] else {},
-                    'created_at': row[5]
+                    'session_id': row['session_id'],
+                    'user_id': row['user_id'],
+                    'business_id': row['business_id'],
+                    'current_state': row['current_state'],
+                    'collected_data': json.loads(row['collected_data']) if row['collected_data'] else {},
+                    'created_at': row['created_at']
                 }
             return None
         
@@ -394,10 +355,13 @@ class Database:
         def _save():
             cursor = self.conn.cursor()
             cursor.execute('''
-                INSERT OR REPLACE INTO users (user_id, username, first_name, last_name)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO users (user_id, username, first_name, last_name)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    username = EXCLUDED.username,
+                    first_name = EXCLUDED.first_name,
+                    last_name = EXCLUDED.last_name
             ''', (user_id, username, first_name, last_name))
-            self.conn.commit()
         
         await asyncio.get_event_loop().run_in_executor(self.executor, _save)
     
@@ -415,9 +379,8 @@ class Database:
             cursor = self.conn.cursor()
             cursor.execute('''
                 INSERT INTO messages (session_id, user_message, bot_response, message_type)
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
             ''', (session_id, user_message, bot_response, message_type))
-            self.conn.commit()
         
         await asyncio.get_event_loop().run_in_executor(self.executor, _insert)
     
@@ -430,18 +393,18 @@ class Database:
                 SELECT m.user_message, m.bot_response, m.message_type, m.created_at
                 FROM messages m
                 JOIN conversation_sessions cs ON cs.session_id = m.session_id
-                WHERE cs.user_id = ? AND m.session_id IS NOT NULL
+                WHERE cs.user_id = %s AND m.session_id IS NOT NULL
                 ORDER BY m.created_at DESC
-                LIMIT ?
+                LIMIT %s
             ''', (user_id, limit))
             rows = cursor.fetchall()
             results: List[Dict] = []
             for row in rows:
                 results.append({
-                    'user_message': row[0] or '',
-                    'bot_response': row[1] or '',
-                    'message_type': row[2] or '',
-                    'created_at': row[3]
+                    'user_message': row['user_message'] or '',
+                    'bot_response': row['bot_response'] or '',
+                    'message_type': row['message_type'] or '',
+                    'created_at': row['created_at']
                 })
             # Разворачиваем обратно в хронологический порядок (старые -> новые)
             results.reverse()
@@ -456,20 +419,19 @@ class Database:
             # Ищем последнюю сессию типа chat без привязки к бизнесу
             cursor.execute('''
                 SELECT session_id FROM conversation_sessions
-                WHERE user_id = ? AND current_state = 'chat'
+                WHERE user_id = %s AND current_state = 'chat'
                 ORDER BY updated_at DESC, session_id DESC
                 LIMIT 1
             ''', (user_id,))
             row = cursor.fetchone()
             if row:
-                return row[0]
+                return row['session_id']
             # Создаем новую chat-сессию
             cursor.execute('''
                 INSERT INTO conversation_sessions (user_id, business_id, current_state, collected_data)
-                VALUES (?, NULL, 'chat', '{}')
+                VALUES (%s, NULL, 'chat', '{}') RETURNING session_id
             ''', (user_id,))
-            self.conn.commit()
-            return cursor.lastrowid
+            return cursor.fetchone()['session_id']
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _get_or_create)
     
