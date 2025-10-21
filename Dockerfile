@@ -18,6 +18,6 @@ COPY . .
 ENV ENVIRONMENT=production
 
 # Открываем порт (Railway автоматически назначает PORT)
-EXPOSE 8000
+EXPOSE 5000
 
 CMD ["python", "main.py"]
