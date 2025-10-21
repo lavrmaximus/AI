@@ -43,6 +43,7 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     <div class="analytics-section">
         <h2>Советы для бизнеса</h2>
         <div id="adviceCard">
@@ -50,6 +51,8 @@
         </div>
     </div>
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 </div>
 
 <script>
@@ -145,10 +148,22 @@
         const businessId = document.getElementById('businessSelect').value;
         if (!businessId) return;
         currentBusinessId = businessId;
+<<<<<<< HEAD
         await loadFinancialAnalysis(currentBusinessId);
         await loadTrendsAnalysis(currentBusinessId);
         await loadChartsForAnalytics(currentBusinessId);
         await loadAdvice(currentBusinessId);
+=======
+        await loadAnalyticsData();
+    }
+
+    async function loadAnalyticsData() {
+        if (!currentBusinessId) return;
+
+        await loadFinancialAnalysis(currentBusinessId);
+        await loadTrendsAnalysis(currentBusinessId);
+        await loadChartsForAnalytics(currentBusinessId);
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     }
 
     async function loadFinancialAnalysis(businessId) {
@@ -158,9 +173,12 @@
             
             if (aiData.success) {
                 renderFinancialAnalysis(aiData.analysis);
+<<<<<<< HEAD
             } else {
                 const container = document.getElementById('financialAnalysis');
                 container.innerHTML = `<p>Нет данных для анализа: ${aiData.error || 'сервер не вернул данные'}</p>`;
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             }
         } catch (error) {
             console.error('Ошибка загрузки финансового анализа:', error);
@@ -221,6 +239,23 @@
         } catch (e) {
             const card = document.getElementById('adviceCard');
             card.innerHTML = '<p>Ошибка загрузки советов</p>';
+        }
+    }
+
+    async function loadChartsForAnalytics(businessId) {
+        try {
+            const response = await fetch(`/api/business-history/${businessId}`);
+            const data = await response.json();
+            if (data.success) {
+                // Используем ту же логику рендеринга графиков из dashboard
+                window.currentChartData = data.data;
+                if (!window.selectedMetrics || window.selectedMetrics.size === 0) {
+                    window.selectedMetrics = new Set(['revenue','expenses','profit']);
+                }
+                renderFinanceChart(data.data);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки графиков:', error);
         }
     }
 

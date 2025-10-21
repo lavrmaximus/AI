@@ -34,12 +34,21 @@ function showNotification(message, type = 'info') {
         notification.remove();
     }, 3000);
 }
+<<<<<<< HEAD
 // Legacy compatibility: define only if a page didn't already provide its own implementation
 if (!window.loadAnalyticsData) {
     window.loadAnalyticsData = async function() {
         // No-op placeholder to avoid overriding page-specific logic (e.g., Analytics page)
         return;
     };
+=======
+async function loadAnalyticsData() {
+    const userId = document.getElementById('userSelect').value;
+    if (!userId) return;
+
+    await loadFinancialAnalysis(userId);
+    await loadTrendsAnalysis(userId);
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 }
 // Новый адаптивный график с вертикальным курсором, интерполяцией и фильтрами периода
 let currentRange = 'all';
@@ -231,6 +240,10 @@ function updateReadout(chart, readoutEl) {
     if (!xScale) return;
     const px = Math.max(xScale.left, Math.min(cursorX, xScale.right));
     const xValue = xScale.getValueForPixel(px);
+<<<<<<< HEAD
+=======
+    // Интерполяция значений между ближайшими индексами
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     const i0 = Math.floor(xValue);
     const i1 = Math.min(i0 + 1, data.labels.length - 1);
     const t = Math.min(1, Math.max(0, xValue - i0));
@@ -239,7 +252,11 @@ function updateReadout(chart, readoutEl) {
     const series = chart.data.datasets.map(ds => {
         const v0 = Number(ds.data[i0] ?? 0);
         const v1 = Number(ds.data[i1] ?? v0);
+<<<<<<< HEAD
         return { label: ds.label, value: Math.round(lerp(v0, v1, t)), color: ds.borderColor };
+=======
+        return { label: ds.label, value: Math.round(lerp(v0, v1, t)) };
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     });
 
     const date0 = data.labels[i0] ?? '';
@@ -249,12 +266,18 @@ function updateReadout(chart, readoutEl) {
     if (series.length === 0) {
         readoutEl.innerHTML = `${dateText}: нет выбранных метрик`;
     } else {
+<<<<<<< HEAD
         const parts = series.map(s => `<span style="display:inline-flex;align-items:center;gap:6px;margin-right:10px;white-space:nowrap;"><span style="width:10px;height:10px;border-radius:2px;background:${s.color};display:inline-block;"></span><span>${s.label} ${s.value.toLocaleString('ru-RU')}</span></span>`);
         readoutEl.innerHTML = `<strong>${dateText}:</strong> ${parts.join('')}`;
+=======
+        readoutEl.innerHTML = `${dateText}: ` +
+            series.map(s => `${s.label} ${s.value.toLocaleString('ru-RU')}`).join(' · ');
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     }
     readoutEl.setAttribute('aria-hidden', 'false');
 }
 
+<<<<<<< HEAD
 // Enhance export to include readout overlay
 (function wrapExport() {
     const originalExport = window.exportChart;
@@ -375,6 +398,8 @@ function updateReadout(chart, readoutEl) {
     };
 })();
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 // Функция обновления информации о периоде
 function updatePeriodInfo(data) {
     if (!data || !data.dates || data.dates.length === 0) return;

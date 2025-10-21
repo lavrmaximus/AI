@@ -44,13 +44,24 @@ BUSINESS_DATA_EXTRACTION_PROMPT = """Ты - инструмент для извл
   "business_name": "название бизнеса или null",
   "revenue": число или null,
   "expenses": число или null,
+<<<<<<< HEAD
   "clients": число или null,
+=======
+  "profit": число или null,
+  "clients": число или null,
+  "average_check": число или null,
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
   "investments": число или null,
   "marketing_costs": число или null,
   "employees": число или null,
   "monthly_costs": число или null,
   "new_clients_per_month": число или null,
+<<<<<<< HEAD
   "customer_retention_rate": число или null
+=======
+  "customer_retention_rate": число или null,
+  "industry": "отрасль или null"
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 }
 
 Пример:
@@ -61,13 +72,24 @@ BUSINESS_DATA_EXTRACTION_PROMPT = """Ты - инструмент для извл
   "business_name": "кофейня",
   "revenue": 500000,
   "expenses": 300000,
+<<<<<<< HEAD
   "clients": 1000,
+=======
+  "profit": 200000,
+  "clients": 1000,
+  "average_check": 500,
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
   "investments": null,
   "marketing_costs": null,
   "employees": null,
   "monthly_costs": 300000,
   "new_clients_per_month": null,
+<<<<<<< HEAD
   "customer_retention_rate": null
+=======
+  "customer_retention_rate": null,
+  "industry": "общепит"
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 }
 
 НИКАКИХ ДРУГИХ ТЕКСТОВ КРОМЕ JSON!"""
@@ -90,18 +112,32 @@ MISSING_DATA_ANALYSIS_PROMPT = """Ты - бизнес-аналитик, кото
 - business_name (название бизнеса)
 - revenue (выручка)
 - expenses (расходы)
+<<<<<<< HEAD
 - clients (количество клиентов)
+=======
+- profit (прибыль)
+- clients (количество клиентов)
+- average_check (средний чек)
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 - investments (инвестиции)
 - marketing_costs (затраты на маркетинг)
 - employees (количество сотрудников)
 - monthly_costs (ежемесячные постоянные расходы)
 - new_clients_per_month (новых клиентов в месяц)
 - customer_retention_rate (коэффициент удержания клиентов в процентах)
+<<<<<<< HEAD
+=======
+- industry (отрасль бизнеса)
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
 ТРЕБУЕМЫЕ ДАННЫЕ (критически важны для минимального анализа):
 - revenue
 - expenses
 - clients
+<<<<<<< HEAD
+=======
+- average_check
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
 ДОПОЛНИТЕЛЬНЫЕ ДАННЫЕ (для расширенного анализа, спрашивай о них, только если основные уже есть):
 - investments
@@ -110,6 +146,10 @@ MISSING_DATA_ANALYSIS_PROMPT = """Ты - бизнес-аналитик, кото
 - monthly_costs
 - new_clients_per_month
 - customer_retention_rate
+<<<<<<< HEAD
+=======
+- industry
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
 ЗАДАЧА:
 1. Идентифицируй, каких данных не хватает из "ТРЕБУЕМЫХ ДАННЫХ", учитывая "УЖЕ СОБРАННЫЕ ДАННЫЕ".
@@ -206,6 +246,7 @@ async def extract_business_data(text: str) -> Dict:
             {"role": "user", "content": text}
         ]
         
+<<<<<<< HEAD
         import asyncio
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
@@ -256,6 +297,54 @@ async def analyze_missing_data(collected_data: Dict) -> str:
             {"role": "user", "content": prompt}
         ]
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
+        response = g4f.ChatCompletion.create(
+            model=g4f.models.gpt_4,
+            messages=messages,
+            stream=False
+        )
+
+<<<<<<< HEAD
+        logger.debug("Анализ недостающих данных выполнен")
+        
+        return response.strip()
+        
+    except Exception as e:
+=======
+        logger.debug("Извлечение данных выполнено")
+
+        # Парсим JSON ответ
+        import json
+        try:
+            # Ищем JSON в ответе
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group())
+                return data
+            else:
+                logger.warning(f"Не найден JSON в ответе: {response}")
+                return {}
+        except json.JSONDecodeError as e:
+            logger.error(f"Ошибка парсинга JSON: {e}")
+            return {}
+        
+    except Exception as e:
+        logger.error(f"Ошибка извлечения бизнес-данных: {e}")
+        return {}
+
+async def analyze_missing_data(collected_data: Dict) -> str:
+    """Анализ недостающих данных и формирование вопросов"""
+    try:
+        # Форматируем собранные данные для промпта
+        data_text = "\n".join([f"- {k}: {v}" for k, v in collected_data.items() if v is not None])
+        
+        prompt = MISSING_DATA_ANALYSIS_PROMPT.format(collected_data=data_text)
+        
+        messages = [
+            {"role": "user", "content": prompt}
+        ]
+
         response = g4f.ChatCompletion.create(
             model=g4f.models.gpt_4,
             messages=messages,
@@ -267,6 +356,7 @@ async def analyze_missing_data(collected_data: Dict) -> str:
         return response.strip()
         
     except Exception as e:
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         logger.error(f"Ошибка анализа недостающих данных: {e}")
         return "ENOUGH_DATA"  # В случае ошибки считаем что данных достаточно
 
@@ -287,6 +377,7 @@ async def answer_question(question: str, user_id: str = "default") -> str:
     try:
         messages = prepare_messages(user_id, QUESTION_ANSWER_PROMPT, question)
 
+<<<<<<< HEAD
         import asyncio
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
@@ -296,6 +387,12 @@ async def answer_question(question: str, user_id: str = "default") -> str:
                 messages=messages,
                 stream=False
             )
+=======
+        response = g4f.ChatCompletion.create(
+            model=SIMPLE_MODEL,
+            messages=messages,
+            stream=False
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         )
         
         conversation_memory[user_id].extend([
@@ -317,6 +414,7 @@ async def general_chat(message: str, user_id: str = "default") -> str:
     try:
         messages = prepare_messages(user_id, GENERAL_CHAT_PROMPT, message)
 
+<<<<<<< HEAD
         import asyncio
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
@@ -326,6 +424,12 @@ async def general_chat(message: str, user_id: str = "default") -> str:
                 messages=messages,
                 stream=False
             )
+=======
+        response = g4f.ChatCompletion.create(
+            model=SIMPLE_MODEL,
+            messages=messages,
+            stream=False
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         )
         
         conversation_memory[user_id].extend([

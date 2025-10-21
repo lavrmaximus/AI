@@ -1,14 +1,22 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+<<<<<<< HEAD
 from ai import classify_message_type, general_chat, answer_question, extract_business_data, conversation_memory # Импортируем только нужные функции
 from conversation_manager import conv_manager
 from business_analyzer import business_analyzer
 from database import db
 from metrics_help import get_categories_keyboard, get_metrics_keyboard, get_metric_description, get_category_description
+=======
+from ai import classify_message_type, general_chat, answer_question, extract_business_data # Импортируем только нужные функции
+from conversation_manager import conv_manager
+from business_analyzer import business_analyzer
+from database import db
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime
 import asyncio
+<<<<<<< HEAD
 from typing import Dict, List
 from datetime import datetime
 from telegram.helpers import escape_markdown
@@ -57,12 +65,65 @@ stream_handler.setFormatter(logging.Formatter('[%(asctime)s] %(name)s - %(leveln
 
 logging.basicConfig(
     level=logging.INFO,
+=======
+from datetime import datetime
+from telegram.helpers import escape_markdown
+
+logging.getLogger('telegram').setLevel(logging.WARNING)
+logging.getLogger('httpx').setLevel(logging.WARNING)
+
+# Настройка логирования (ротация файла, явный путь)
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+
+class DailyFileHandler(logging.Handler):
+    def __init__(self, log_dir: str):
+        super().__init__()
+        self.log_dir = log_dir
+        self.current_date = None
+        self.file_handler = None
+        self._ensure_file()
+
+    def _ensure_file(self):
+        date_str = datetime.now().strftime('%Y-%m-%d')
+        if date_str != self.current_date:
+            if self.file_handler:
+                try:
+                    self.file_handler.close()
+                except Exception:
+                    pass
+            self.current_date = date_str
+            path = os.path.join(self.log_dir, f'{date_str}.log')
+            self.file_handler = logging.FileHandler(path, encoding='utf-8')
+            self.file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+    def emit(self, record: logging.LogRecord):
+        try:
+            self._ensure_file()
+            self.file_handler.emit(record)
+        except Exception:
+            # Не роняем приложение из-за проблем с логами
+            pass
+
+file_handler = DailyFileHandler(LOG_DIR)
+
+stream_handler = logging.StreamHandler()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     handlers=[file_handler, stream_handler],
     force=True
 )
 logger = logging.getLogger(__name__)
 
+<<<<<<< HEAD
 # BOT_TOKEN будет читаться в __init__
+=======
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8350333926:AAEkf4If4LXh657SOTuGsAhEJx6EFSPKHbU")
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 ADMINS = [
     "1287604685",  # Вставьте сюда ID админа
 ]
@@ -77,6 +138,7 @@ def safe_markdown_text(text: str) -> str:
     safe_text = safe_text.replace(r'\*', '*')
     return safe_text
 
+<<<<<<< HEAD
 def clean_ai_text(text: str) -> str:
     """
     Очистка AI-текста от Markdown форматирования для безопасной отправки
@@ -107,6 +169,8 @@ def clean_ai_text(text: str) -> str:
     
     return text
     
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 print("Запуск бота....")
 
 class BusinessBot:
@@ -128,7 +192,10 @@ class BusinessBot:
         self.app.add_handler(CommandHandler("help", self.help_command))
         self.app.add_handler(CommandHandler("about", self.about_command))
         self.app.add_handler(CommandHandler("history", self.history_command))
+<<<<<<< HEAD
         self.app.add_handler(CommandHandler("help_metrics", self.help_metrics_command))
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         self.app.add_handler(CommandHandler("admin_clear", self.admin_clear))
         self.app.add_handler(CommandHandler("new_business", self.new_business_command))
         self.app.add_handler(CommandHandler("edit_business", self.edit_business_command))
@@ -168,6 +235,7 @@ class BusinessBot:
 
         await update.message.reply_text(text, parse_mode='MarkdownV2')
 
+<<<<<<< HEAD
     async def help_metrics_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Справочник по метрикам"""
         try:
@@ -198,6 +266,8 @@ class BusinessBot:
             logger.error(f"Ошибка команды help_metrics: {e}")
             await update.message.reply_text("❌ Произошла ошибка при загрузке справочника.")
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         logger.info(f"ℹ️ Пользователь {user.first_name} запросил помощь")
@@ -208,18 +278,27 @@ class BusinessBot:
             "/help - помощь\n"
             "/about - о проекте\n"
             "/history - история анализов\n"
+<<<<<<< HEAD
             "/help_metrics - справочник по метрикам 📚\n"
             "/new_business - создать новый бизнес 🆕\n"
             "/edit_business - редактировать существующий бизнес ✏️\n"
             "/delete_business - удалить бизнес 🗑️\n\n"
+=======
+            "/new_business - создать новый бизнес 🆕\n"
+            "/edit_business - редактировать существующий бизнес ✏️\n\n"
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             "*Умное определение типов:*\n"
             "• *Вопрос:* 'Как увеличить прибыль?'\n"
             "• *Бизнес-данные:* 'Выручка 500к, расходы 200к' (Бот предложит команду)\n"
             "• *Общение:* 'Привет! Как дела?'\n\n"
             "🎯 Для создания бизнеса используйте /new_business\n"
+<<<<<<< HEAD
             "✏️ Для редактирования используйте /edit_business\n"
             "🗑️ Для удаления используйте /delete_business\n"
             "📚 Для изучения метрик используйте /help_metrics"
+=======
+            "✏️ Для редактирования используйте /edit_business"
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         )
         await update.message.reply_text(text, parse_mode='MarkdownV2')
 
@@ -270,8 +349,13 @@ class BusinessBot:
 
             if not businesses:
                 await update.message.reply_text(
+<<<<<<< HEAD
                     safe_markdown_text("📝 *У вас нет бизнесов для редактирования*\n\n"
                     "Создайте первый бизнес с помощью /new_business!"),
+=======
+                    "📝 *У вас нет бизнесов для редактирования*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                     parse_mode='MarkdownV2'
                 )
                 return
@@ -289,8 +373,13 @@ class BusinessBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await update.message.reply_text(
+<<<<<<< HEAD
                 safe_markdown_text("✏️ *РЕДАКТИРОВАНИЕ БИЗНЕСА*\n\n"
                 "Выберите бизнес для обновления данных:"),
+=======
+                "✏️ *РЕДАКТИРОВАНИЕ БИЗНЕСА*\n\n"
+                "Выберите бизнес для обновления данных:",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 reply_markup=reply_markup,
                 parse_mode='MarkdownV2'
             )
@@ -298,7 +387,11 @@ class BusinessBot:
         except Exception as e:
             logger.error(f"Ошибка получения списка бизнесов: {e}")
             await update.message.reply_text(
+<<<<<<< HEAD
                 safe_markdown_text("❌ Произошла ошибка при получении списка бизнесов\\. Попробуйте позже\\."),
+=======
+                "❌ Произошла ошибка при получении списка бизнесов. Попробуйте позже.",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 parse_mode='MarkdownV2'
             )
 
@@ -314,8 +407,13 @@ class BusinessBot:
 
             if not businesses:
                 await update.message.reply_text(
+<<<<<<< HEAD
                     safe_markdown_text("📝 *У вас нет бизнесов для удаления*\n\n"
                     "Создайте первый бизнес с помощью /new_business!"),
+=======
+                    "📝 *У вас нет бизнесов для удаления*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                     parse_mode='MarkdownV2'
                 )
                 return
@@ -327,7 +425,11 @@ class BusinessBot:
                 keyboard.append([InlineKeyboardButton(f"🗑 Удалить {business_name}", callback_data=f'delete_{business_id}')])
 
             await update.message.reply_text(
+<<<<<<< HEAD
                 safe_markdown_text("🗑 *УДАЛЕНИЕ БИЗНЕСА*\n\nВыберите бизнес для удаления:"),
+=======
+                "🗑 *УДАЛЕНИЕ БИЗНЕСА*\n\nВыберите бизнес для удаления:",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode='MarkdownV2'
             )
@@ -335,7 +437,11 @@ class BusinessBot:
         except Exception as e:
             logger.error(f"Ошибка получения списка бизнесов для удаления: {e}")
             await update.message.reply_text(
+<<<<<<< HEAD
                 safe_markdown_text("❌ Произошла ошибка\\. Попробуйте позже\\."),
+=======
+                "❌ Произошла ошибка. Попробуйте позже.",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 parse_mode='MarkdownV2'
             )
 
@@ -350,8 +456,13 @@ class BusinessBot:
 
             if not businesses:
                 await update.message.reply_text(
+<<<<<<< HEAD
                     safe_markdown_text("📝 *История анализов пуста*\n\n"
                     "Создайте первый бизнес с помощью /new_business!"),
+=======
+                    "📝 *История анализов пуста*\n\n"
+                    "Создайте первый бизнес с помощью /new_business!",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                     parse_mode='MarkdownV2'
                 )
                 return
@@ -380,8 +491,13 @@ class BusinessBot:
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await update.message.reply_text(
+<<<<<<< HEAD
                 safe_markdown_text("📊 *ВАШИ БИЗНЕСЫ*\n\n"
                 "Выберите бизнес для подробного анализа:"),
+=======
+                "📊 *ВАШИ БИЗНЕСЫ*\n\n"
+                "Выберите бизнес для подробного анализа:",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 reply_markup=reply_markup,
                 parse_mode='MarkdownV2'
             )
@@ -389,7 +505,11 @@ class BusinessBot:
         except Exception as e:
             logger.error(f"Ошибка получения истории: {e}")
             await update.message.reply_text(
+<<<<<<< HEAD
                 safe_markdown_text("❌ Произошла ошибка при получении истории\\. Попробуйте позже\\."),
+=======
+                "❌ Произошла ошибка при получении истории. Попробуйте позже.",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 parse_mode='MarkdownV2'
             )
 
@@ -410,6 +530,7 @@ class BusinessBot:
         elif query.data.startswith('delete_'):
             business_id = int(query.data.split('_')[1])
             await self.confirm_delete_business(query, business_id)
+<<<<<<< HEAD
         elif query.data.startswith('metrics_cat_'):
             category_id = query.data.replace('metrics_cat_', '')
             await self.show_metrics_category(query, category_id)
@@ -479,11 +600,14 @@ class BusinessBot:
         except Exception as e:
             logger.error(f"Ошибка показа деталей метрики: {e}")
             await query.edit_message_text("❌ Произошла ошибка при загрузке описания метрики.")
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
     async def show_business_details(self, query: CallbackQuery, business_id: int):
         """Показ деталей бизнеса по запросу Inline кнопки"""
         try:
             # Получаем историю
+<<<<<<< HEAD
             history = await db.get_business_history(business_id, limit=1)
             if not history:
                 await query.edit_message_text("❌ Бизнес не найден")
@@ -498,6 +622,54 @@ class BusinessBot:
             
             # Используем единый формат отчета
             response = self.format_business_report(current_data, metrics, recommendations)
+=======
+            # Здесь мы используем business_analyzer, чтобы получить полный отчет
+            report = await business_analyzer.generate_business_report(business_id)
+
+            if 'error' in report:
+                await query.edit_message_text(f"❌ Ошибка: {report['error']}")
+                return
+
+            health_score = report.get('health_score', 0)
+            health_assessment = report.get('health_assessment', {})
+            key_metrics = report.get('key_metrics', {})
+            recommendations = report.get('recommendations', [])
+
+            response = f"📊 *ДЕТАЛЬНЫЙ АНАЛИЗ БИЗНЕСА: {business_id}*\n\n" \
+                       f"🏥 *БИЗНЕС-ЗДОРОВЬЕ: {health_score}/100 {health_assessment.get('emoji', '')}*\n" \
+                       f"*{health_assessment.get('message', '')}*\n\n" \
+                       f"📈 *Ключевые метрики:*\n" \
+                       f"• Рентабельность: {key_metrics.get('profit_margin', 0):.1f}%\n" \
+                       f"• ROI: {key_metrics.get('roi', 0):.1f}%\n" \
+                       f"• LTV/CAC: {key_metrics.get('ltv_cac_ratio', 0):.2f}\n" \
+                       f"• Запас прочности: {key_metrics.get('safety_margin', 0):.1f}%\n" \
+                       f"• Темп роста выручки: {key_metrics.get('revenue_growth_rate', 0):.1f}%\n" \
+                       f"• До банкротства: {key_metrics.get('months_to_bankruptcy', 0):.0f} мес\n\n"
+
+            if recommendations:
+                response += "🎯 *Рекомендации:*\n"
+                for i, rec in enumerate(recommendations, 1):
+                    response += f"{i}. {rec}\n"
+                response += "\n"
+
+            # Полный список рассчитанных метрик (если есть)
+            all_metrics = report.get('all_metrics', {})
+            if all_metrics:
+                response += "📊 *ВСЕ МЕТРИКИ:*\n"
+                metric_lines = []
+                def fmt(name, value):
+                    try:
+                        if isinstance(value, (int, float)):
+                            return f"{name}: {value:.2f}"
+                        return f"{name}: {value}"
+                    except Exception:
+                        return f"{name}: {value}"
+                for k, v in all_metrics.items():
+                    if k in ['business_id','snapshot_id','period_type','period_date','created_at']:
+                        continue
+                    metric_lines.append("• " + fmt(k, v))
+                response += "\n".join(metric_lines) + "\n\n"
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
             await self.send_long_message(query, response, parse_mode='MarkdownV2')
 
@@ -531,13 +703,18 @@ class BusinessBot:
                 'average_check': current_data.get('average_check', 0),
                 'investments': current_data.get('investments', 0),
                 'marketing_costs': current_data.get('marketing_costs', 0),
+<<<<<<< HEAD
                 'employees': current_data.get('employees', 0),
                 'new_clients_per_month': current_data.get('new_clients_per_month', 0),
                 'customer_retention_rate': current_data.get('customer_retention_rate', 0)
+=======
+                'employees': current_data.get('employees', 0)
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             }
             
             await conversation._update_state(conversation.STATES['COLLECTING_DATA'])
             
+<<<<<<< HEAD
             # Получаем метрики и рекомендации для отображения
             report = await business_analyzer.generate_business_report(business_id)
             metrics = report.get('detailed_metrics', {}) if 'error' not in report else {}
@@ -548,6 +725,11 @@ class BusinessBot:
             response += self.format_business_report(current_data, metrics, recommendations)
             response += f"\n\nОтправьте новые данные в свободной форме или напишите 'да' для завершения.\n\n"
             response += f"Чтобы отменить без изменений — напишите 'выйти'"
+=======
+            response = f"✏️ *РЕДАКТИРОВАНИЕ: {business_name}*\n\n" \
+                      f"Текущие данные:\n{conversation._get_data_summary()}\n\n" \
+                      f"Отправьте новые данные в свободной форме или напишите 'да' для завершения."
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             
             await query.edit_message_text(safe_markdown_text(response), parse_mode='MarkdownV2')
             
@@ -653,6 +835,7 @@ class BusinessBot:
 
         await db.save_user(user_id, user.username, user.first_name, user.last_name)
 
+<<<<<<< HEAD
         # Гидратация памяти ИИ из БД при пустой памяти для пользователя
         try:
             from ai import conversation_memory as ai_memory
@@ -669,6 +852,8 @@ class BusinessBot:
         except Exception as e:
             logger.warning(f"Не удалось гидрировать историю из БД: {e}")
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         # ПРОВЕРЯЕМ АКТИВНУЮ СЕССИЮ ДИАЛОГА
         if user_id in conv_manager.active_sessions:
             await self._handle_conversation_message(update, user_id, user_text)
@@ -688,6 +873,7 @@ class BusinessBot:
             logger.info(f"🎯 Определен тип сообщения: {message_type}")
 
             if message_type == "business_data":
+<<<<<<< HEAD
                 # Ненавязчивая подсказка и продолжаем отвечать по сути сообщения
                 try:
                     await update.message.reply_text(
@@ -701,6 +887,28 @@ class BusinessBot:
             try:
                 await thinking_msg.edit_text(
                     self.get_thinking_message(message_type),
+=======
+                await thinking_msg.delete()
+                try:
+                    await update.message.reply_text(
+                        safe_markdown_text(
+                            "💡 *Обнаружены бизнес-данные!*\n\n"
+                            "Для создания и анализа бизнеса используйте команду:\n"
+                            "/new_business\n\n"
+                            "Там я проведу полный диалог и рассчитаю все 22 метрики!"
+                        ),
+                        parse_mode='MarkdownV2'
+                    )
+                except Exception:
+                    await update.message.reply_text(
+                        "Обнаружены бизнес-данные. Для создания используйте команду: /new_business"
+                    )
+                return
+
+            try:
+                await thinking_msg.edit_text(
+                    safe_markdown_text(self.get_thinking_message(message_type)),
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                     parse_mode='MarkdownV2'
                 )
             except Exception:
@@ -709,6 +917,7 @@ class BusinessBot:
 
             if message_type == "question":
                 response = await self.handle_question(user_text, user_id)
+<<<<<<< HEAD
                 try:
                     session_id = None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id
                     if session_id is None:
@@ -737,6 +946,23 @@ class BusinessBot:
                     )
                 except Exception as e:
                     logger.warning(f"Не удалось записать общение в БД: {e}")
+=======
+                # await db.log_message(
+                #     session_id=None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id,
+                #     user_message=user_text,
+                #     bot_response=response,
+                #     message_type='question'
+                # )
+                await self.send_long_message(update, response, 'MarkdownV2')
+            else:  # general
+                response = await self.handle_general_chat(user_text, user_id)
+                # await db.log_message(
+                #     session_id=None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id,
+                #     user_message=user_text,
+                #     bot_response=response,
+                #     message_type='general'
+                # )
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 await self.send_long_message(update, response, None)
 
             logger.info(f"🤖 Ответ бота ({message_type}): {response[:100]}...")
@@ -748,6 +974,7 @@ class BusinessBot:
             logger.error(f"Ошибка обработки сообщения: {e}")
             await thinking_msg.edit_text(error_msg, parse_mode='MarkdownV2')
 
+<<<<<<< HEAD
     def format_business_report(self, business_data: Dict, metrics: Dict = None, recommendations: List[str] = None) -> str:
         """Единый формат отчета о бизнесе"""
         response = ""
@@ -869,22 +1096,42 @@ class BusinessBot:
         }
         return messages.get(message_type, "🤔 *Думаю\\.\\.\\.*")
 
+=======
+    def get_thinking_message(self, message_type: str) -> str:
+        """Сообщение о процессе обработки"""
+        messages = {
+            "question": "💭 *Обдумываю ответ...*\n_Ищу лучшие решения для вашего бизнеса_",
+            "general": "💬 *Общаюсь...*\n_Всегда рад поболтать_"
+        }
+        return messages.get(message_type, "🤔 *Думаю...*")
+
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
     async def _handle_conversation_message(self, update: Update, user_id: str, user_text: str):
         """Обработка сообщения в рамках активной диалоговой сессии"""
         try:
             conversation = conv_manager.active_sessions[user_id]
+<<<<<<< HEAD
 
             # Прогресс СРАЗУ после сообщения пользователя
             progress_msg = None
             try:
                 progress_msg = await update.message.reply_text(
                     "🛠 *Делаю отчёт\\.\\.\\.*",
+=======
+            response_data = await conversation.process_message(user_text)
+
+            # Прогресс перед анализом/ответом
+            try:
+                await update.message.reply_text(
+                    safe_markdown_text("🛠 *Делаю отчёт...*"),
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                     parse_mode='MarkdownV2'
                 )
             except Exception:
                 pass
 
+<<<<<<< HEAD
             # Обрабатываем сообщение
             response_data = await conversation.process_message(user_text)
 
@@ -917,6 +1164,18 @@ class BusinessBot:
                 )
             except Exception as e:
                 logger.warning(f"Не удалось записать сообщение в БД: {e}")
+=======
+            await self.send_long_message(update, response_data['response'], 'MarkdownV2')
+            # try:
+            #     await db.log_message(
+            #         session_id=conversation.session_id,
+            #         user_message=user_text,
+            #         bot_response=response_data['response'],
+            #         message_type='conversation'
+            #     )
+            # except Exception as e:
+            #     logger.warning(f"Не удалось записать сообщение в БД: {e}")
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
             # Если диалог завершен
             if response_data.get('is_complete', False):
@@ -939,12 +1198,20 @@ class BusinessBot:
     async def handle_question(self, text: str, user_id: str) -> str:
         """Обработка вопросов. Возвращает ответ."""
         answer = await answer_question(text, user_id)
+<<<<<<< HEAD
         return clean_ai_text(answer)
+=======
+        return answer
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
     async def handle_general_chat(self, text: str, user_id: str) -> str:
         """Обработка общего чата. Возвращает ответ."""
         response = await general_chat(text, user_id)
+<<<<<<< HEAD
         return clean_ai_text(response)
+=======
+        return response
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
     # Отправляем ответ с возможным разделением
     async def send_long_message(self, update_or_query_object, text: str, parse_mode: str = None):
@@ -974,6 +1241,7 @@ class BusinessBot:
             current_part_to_send = prefix + part
 
             try:
+<<<<<<< HEAD
                 # Безопасная отправка с MarkdownV2
                 safe_text = safe_markdown_text(current_part_to_send)
                 if hasattr(update_or_query_object, 'message'):
@@ -984,6 +1252,17 @@ class BusinessBot:
                     else:
                         user_id = update_or_query_object.from_user.id
                         await self.app.bot.send_message(chat_id=user_id, text=safe_text, parse_mode='MarkdownV2')
+=======
+                # Здесь parse_mode применяется к каждой части
+                if hasattr(update_or_query_object, 'message'):
+                    await update_or_query_object.message.reply_text(current_part_to_send, parse_mode='MarkdownV2') # Всегда MarkdownV2
+                else:
+                    if i == 0:
+                        await update_or_query_object.edit_message_text(current_part_to_send, parse_mode='MarkdownV2') # Всегда MarkdownV2
+                    else:
+                        user_id = update_or_query_object.from_user.id
+                        await self.app.bot.send_message(chat_id=user_id, text=current_part_to_send, parse_mode='MarkdownV2') # Всегда MarkdownV2
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
                 if i < len(parts) - 1:
                     await asyncio.sleep(0.7)

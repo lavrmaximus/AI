@@ -1,15 +1,25 @@
 from flask import Flask, render_template, request, jsonify
+<<<<<<< HEAD
+=======
+import sqlite3
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 import json
 from datetime import datetime, timedelta
 import math
 import asyncio
 import os
+<<<<<<< HEAD
 from dotenv import load_dotenv
 
 from database import db as async_db
 
 load_dotenv()
 
+=======
+
+from database import db as async_db
+
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 app = Flask(__name__)
 
 # Инициализируем новую БД (async) один раз при старте процесса
@@ -18,16 +28,27 @@ asyncio.set_event_loop(_event_loop)
 try:
     _event_loop.run_until_complete(async_db.init_db())
 except Exception as e:
+<<<<<<< HEAD
     print(f"Database initialization error: {e}")
+=======
+    print(f"Ошибка инициализации новой БД: {e}")
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
 def await_db(coro):
     """Выполнить async-вызов к БД в синхронном Flask обработчике."""
     return _event_loop.run_until_complete(coro)
 
+<<<<<<< HEAD
+=======
+def get_new_db_path():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot_v2.db')
+
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 # Подготовка данных для 22+ метрик на основе снимков новой БД
 def prepare_multi_metric_data(snapshots):
     # Отсортируем по дате по возрастанию для фронтенда
     snapshots_sorted = sorted(snapshots, key=lambda s: s.get('period_date') or s.get('created_at'))
+<<<<<<< HEAD
     def fmt_dt(s):
         dt = s.get('created_at')
         if dt:
@@ -44,6 +65,9 @@ def prepare_multi_metric_data(snapshots):
         pd = s.get('period_date')
         return pd if isinstance(pd, str) else str(pd)
     dates = [fmt_dt(s) for s in snapshots_sorted]
+=======
+    dates = [s.get('period_date') or str(s.get('created_at'))[:10] for s in snapshots_sorted]
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     metric_keys = [
         'revenue', 'expenses', 'profit', 'clients', 'average_check', 'investments', 'marketing_costs', 'employees',
         'profit_margin', 'break_even_clients', 'safety_margin', 'roi', 'profitability_index',
@@ -186,10 +210,15 @@ def get_user_ai_analysis(user_id):
 def get_business_ai_analysis(business_id):
     try:
         snapshots = await_db(async_db.get_business_history(business_id, limit=12))
+<<<<<<< HEAD
         
         if not snapshots:
             return jsonify({'success': False, 'error': 'Нет данных для аналитики'}), 404
         
+=======
+        if not snapshots:
+            return jsonify({'success': False, 'error': 'Нет данных'}), 404
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         latest = snapshots[0]
         analysis_data = generate_ai_analysis(latest, snapshots)
         
@@ -204,11 +233,27 @@ def get_business_ai_analysis(business_id):
             'error': str(e)
         }), 500
 
+<<<<<<< HEAD
 # API endpoint для списка пользователей (читаем из новой БД)
 @app.route('/api/users')
 def get_users():
     try:
         users = await_db(async_db.get_all_users())
+=======
+# API endpoint для списка пользователей (читаем из новой БД напрямую)
+@app.route('/api/users')
+def get_users():
+    try:
+        conn = sqlite3.connect(get_new_db_path())
+        cursor = conn.cursor()
+        cursor.execute('SELECT user_id, username, first_name, last_name FROM users')
+        rows = cursor.fetchall()
+        users = [{
+            'id': row[0],
+            'name': f"{row[2]} {row[3]}".strip() if (row[2] or row[3]) else (row[1] or f"User {row[0]}")
+        } for row in rows]
+        conn.close()
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         return jsonify({'success': True, 'users': users})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -217,6 +262,7 @@ def get_users():
 @app.route('/api/system-stats')
 def get_system_stats():
     try:
+<<<<<<< HEAD
         stats = await_db(async_db.get_system_stats())
         return jsonify({'success': True, 'stats': stats})
     except Exception as e:
@@ -253,6 +299,25 @@ def get_business_advice(business_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e), 'advice': []}), 500
 
+=======
+        conn = sqlite3.connect(get_new_db_path())
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM users')
+        total_users = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(*) FROM businesses WHERE is_active = TRUE')
+        total_businesses = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(*) FROM business_snapshots WHERE DATE(created_at) = DATE("now")')
+        active_today = cursor.fetchone()[0]
+        conn.close()
+        return jsonify({'success': True, 'stats': {
+            'total_users': total_users,
+            'total_analyses': total_businesses,
+            'active_today': active_today
+        }})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e), 'stats': {'total_users': 0, 'total_analyses': 0, 'active_today': 0}}), 500
+
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 def generate_ai_analysis(latest_data, history_data):
     """Генерация AI анализа на основе данных из БД"""
     

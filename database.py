@@ -1,10 +1,17 @@
 import asyncio
+<<<<<<< HEAD
 import json
 from datetime import datetime, timezone, timedelta
+=======
+import sqlite3
+import json
+from datetime import datetime
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 from typing import Dict, List, Optional
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
+<<<<<<< HEAD
 from dotenv import load_dotenv
 
 try:
@@ -15,6 +22,8 @@ except ImportError:
     raise
 
 load_dotenv()
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -26,6 +35,7 @@ class Database:
         self.conn = None
         self.executor = executor
     
+<<<<<<< HEAD
     def build_dsn_from_env(self) -> str:
         """Build PostgreSQL DSN from environment variables"""
         db_url = os.getenv("DATABASE_URL")
@@ -284,6 +294,214 @@ class Database:
             ''', (business_id, limit))
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
+=======
+    async def init_db(self):
+        """Инициализация новой БД"""
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot_v2.db')
+        # Поднимем timeout и busy_timeout, без включения WAL
+        self.conn = sqlite3.connect(db_path, timeout=5.0, check_same_thread=False)
+        try:
+            self.conn.execute('PRAGMA busy_timeout=5000')
+        except Exception:
+            pass
+        self.create_tables()
+        print(f"✅ Новая SQLite база подключена: {db_path}")
+    
+    def create_tables(self):
+        """Создание новых таблиц для мульти-бизнесов"""
+        cursor = self.conn.cursor()
+        
+        # Таблица пользователей (остается)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                user_id TEXT PRIMARY KEY,
+                username TEXT,
+                first_name TEXT,
+                last_name TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # Новая таблица бизнесов
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS businesses (
+                business_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                business_name TEXT,
+                business_type TEXT,
+                industry TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_active BOOLEAN DEFAULT TRUE,
+                FOREIGN KEY (user_id) REFERENCES users (user_id)
+            )
+        ''')
+        
+        # Основная таблица снимков бизнеса
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS business_snapshots (
+                snapshot_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                business_id INTEGER,
+                period_type TEXT,
+                period_date DATE,
+                
+                -- Сырые данные от пользователя
+                revenue REAL DEFAULT 0,
+                expenses REAL DEFAULT 0,
+                profit REAL DEFAULT 0,
+                clients INTEGER DEFAULT 0,
+                average_check REAL DEFAULT 0,
+                investments REAL DEFAULT 0,
+                marketing_costs REAL DEFAULT 0,
+                employees INTEGER DEFAULT 0,
+                
+                -- Рассчитанные метрики (22 штуки)
+                profit_margin REAL DEFAULT 0,
+                break_even_clients REAL DEFAULT 0,
+                safety_margin REAL DEFAULT 0,
+                roi REAL DEFAULT 0,
+                profitability_index REAL DEFAULT 0,
+                ltv REAL DEFAULT 0,
+                cac REAL DEFAULT 0,
+                ltv_cac_ratio REAL DEFAULT 0,
+                customer_profit_margin REAL DEFAULT 0,
+                sgr REAL DEFAULT 0,
+                revenue_growth_rate REAL DEFAULT 0,
+                asset_turnover REAL DEFAULT 0,
+                roe REAL DEFAULT 0,
+                months_to_bankruptcy REAL DEFAULT 0,
+                
+                -- Health Score
+                financial_health_score INTEGER DEFAULT 0,
+                growth_health_score INTEGER DEFAULT 0,
+                efficiency_health_score INTEGER DEFAULT 0,
+                overall_health_score INTEGER DEFAULT 0,
+                
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (business_id) REFERENCES businesses (business_id)
+            )
+        ''')
+        
+        # Сессии диалогов для умного сбора данных
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS conversation_sessions (
+                session_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                business_id INTEGER,
+                current_state TEXT,
+                collected_data TEXT, -- JSON
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (user_id),
+                FOREIGN KEY (business_id) REFERENCES businesses (business_id)
+            )
+        ''')
+        
+        # Сообщения (логи чата)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER,
+                user_message TEXT,
+                bot_response TEXT,
+                message_type TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES conversation_sessions (session_id)
+            )
+        ''')
+        
+        self.conn.commit()
+    
+    # ===== НОВЫЕ МЕТОДЫ ДЛЯ МУЛЬТИ-БИЗНЕСОВ =====
+    
+    async def create_business(self, user_id: str, name: str, business_type: str = "general", industry: str = "other") -> int:
+        """Создание нового бизнеса"""
+        def _create():
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                INSERT INTO businesses (user_id, business_name, business_type, industry)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, name, business_type, industry))
+            self.conn.commit()
+            return cursor.lastrowid
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _create)
+    
+    async def get_user_businesses(self, user_id: str) -> List[Dict]:
+        """Получение всех бизнесов пользователя"""
+        def _get():
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT business_id, business_name, business_type, industry, created_at, is_active
+                FROM businesses 
+                WHERE user_id = ? AND is_active = TRUE
+                ORDER BY created_at DESC
+            ''', (user_id,))
+            rows = cursor.fetchall()
+            return [
+                {
+                    'business_id': row[0],
+                    'business_name': row[1],
+                    'business_type': row[2],
+                    'industry': row[3],
+                    'created_at': row[4],
+                    'is_active': row[5]
+                }
+                for row in rows
+            ]
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
+    
+    async def add_business_snapshot(self, business_id: int, raw_data: Dict, metrics: Dict, period_date: str = None) -> int:
+        """Добавление снимка бизнеса со всеми метриками"""
+        def _add():
+            cursor = self.conn.cursor()
+            # ФИКС: используем другое имя переменной
+            actual_period_date = period_date or datetime.now().strftime("%Y-%m-%d")
+            
+            cursor.execute('''
+                INSERT INTO business_snapshots (
+                    business_id, period_type, period_date,
+                    revenue, expenses, profit, clients, average_check, investments, marketing_costs, employees,
+                    profit_margin, break_even_clients, safety_margin, roi, profitability_index,
+                    ltv, cac, ltv_cac_ratio, customer_profit_margin, sgr, revenue_growth_rate,
+                    asset_turnover, roe, months_to_bankruptcy,
+                    financial_health_score, growth_health_score, efficiency_health_score, overall_health_score
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                business_id, 'monthly', actual_period_date,  # ← ВАЖНО: actual_period_date а не period_date
+                raw_data.get('revenue', 0), raw_data.get('expenses', 0), raw_data.get('profit', 0),
+                raw_data.get('clients', 0), raw_data.get('average_check', 0), raw_data.get('investments', 0),
+                raw_data.get('marketing_costs', 0), raw_data.get('employees', 0),
+                metrics.get('profit_margin', 0), metrics.get('break_even_clients', 0),
+                metrics.get('safety_margin', 0), metrics.get('roi', 0), metrics.get('profitability_index', 0),
+                metrics.get('ltv', 0), metrics.get('cac', 0), metrics.get('ltv_cac_ratio', 0),
+                metrics.get('customer_profit_margin', 0), metrics.get('sgr', 0), metrics.get('revenue_growth_rate', 0),
+                metrics.get('asset_turnover', 0), metrics.get('roe', 0), metrics.get('months_to_bankruptcy', 0),
+                metrics.get('financial_health_score', 0), metrics.get('growth_health_score', 0),
+                metrics.get('efficiency_health_score', 0), metrics.get('overall_health_score', 0)
+            ))
+            self.conn.commit()
+            return cursor.lastrowid
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _add)
+    
+    async def get_business_history(self, business_id: int, limit: int = 12) -> List[Dict]:
+        """Получение истории снимков бизнеса"""
+        def _get():
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT * FROM business_snapshots 
+                WHERE business_id = ? 
+                ORDER BY period_date DESC 
+                LIMIT ?
+            ''', (business_id, limit))
+            rows = cursor.fetchall()
+            
+            # Получаем названия колонок
+            columns = [description[0] for description in cursor.description]
+            
+            return [dict(zip(columns, row)) for row in rows]
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
 
@@ -294,10 +512,18 @@ class Database:
             cursor.execute(
                 """
                 UPDATE businesses SET is_active = FALSE
+<<<<<<< HEAD
                 WHERE business_id = %s AND user_id = %s
                 """,
                 (business_id, user_id)
             )
+=======
+                WHERE business_id = ? AND user_id = ?
+                """,
+                (business_id, user_id)
+            )
+            self.conn.commit()
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         await asyncio.get_event_loop().run_in_executor(self.executor, _del)
 
     # Удалено: отрасль больше не обновляется
@@ -310,9 +536,16 @@ class Database:
             cursor = self.conn.cursor()
             cursor.execute('''
                 INSERT INTO conversation_sessions (user_id, business_id, current_state, collected_data)
+<<<<<<< HEAD
                 VALUES (%s, %s, %s, %s) RETURNING session_id
             ''', (user_id, business_id, initial_state, json.dumps({})))
             return cursor.fetchone()['session_id']
+=======
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, business_id, initial_state, json.dumps({})))
+            self.conn.commit()
+            return cursor.lastrowid
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _create)
     
@@ -323,15 +556,27 @@ class Database:
             if new_data:
                 cursor.execute('''
                     UPDATE conversation_sessions 
+<<<<<<< HEAD
                     SET current_state = %s, collected_data = %s, updated_at = CURRENT_TIMESTAMP
                     WHERE session_id = %s
+=======
+                    SET current_state = ?, collected_data = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE session_id = ?
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 ''', (new_state, json.dumps(new_data), session_id))
             else:
                 cursor.execute('''
                     UPDATE conversation_sessions 
+<<<<<<< HEAD
                     SET current_state = %s, updated_at = CURRENT_TIMESTAMP
                     WHERE session_id = %s
                 ''', (new_state, session_id))
+=======
+                    SET current_state = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE session_id = ?
+                ''', (new_state, session_id))
+            self.conn.commit()
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         
         await asyncio.get_event_loop().run_in_executor(self.executor, _update)
     
@@ -342,17 +587,30 @@ class Database:
             cursor.execute('''
                 SELECT session_id, user_id, business_id, current_state, collected_data, created_at
                 FROM conversation_sessions 
+<<<<<<< HEAD
                 WHERE session_id = %s
+=======
+                WHERE session_id = ?
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             ''', (session_id,))
             row = cursor.fetchone()
             if row:
                 return {
+<<<<<<< HEAD
                     'session_id': row['session_id'],
                     'user_id': row['user_id'],
                     'business_id': row['business_id'],
                     'current_state': row['current_state'],
                     'collected_data': json.loads(row['collected_data']) if row['collected_data'] else {},
                     'created_at': row['created_at']
+=======
+                    'session_id': row[0],
+                    'user_id': row[1],
+                    'business_id': row[2],
+                    'current_state': row[3],
+                    'collected_data': json.loads(row[4]) if row[4] else {},
+                    'created_at': row[5]
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 }
             return None
         
@@ -365,6 +623,7 @@ class Database:
         def _save():
             cursor = self.conn.cursor()
             cursor.execute('''
+<<<<<<< HEAD
                 INSERT INTO users (user_id, username, first_name, last_name)
                 VALUES (%s, %s, %s, %s)
                 ON CONFLICT (user_id) DO UPDATE SET
@@ -443,6 +702,14 @@ class Database:
                 ]
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
+=======
+                INSERT OR REPLACE INTO users (user_id, username, first_name, last_name)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, username, first_name, last_name))
+            self.conn.commit()
+        
+        await asyncio.get_event_loop().run_in_executor(self.executor, _save)
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     
     async def save_message(self, user_id: str, message_text: str, message_type: str, response_text: str):
         """Сохранение сообщения (старый метод для обратной совместимости)"""
@@ -458,6 +725,7 @@ class Database:
             cursor = self.conn.cursor()
             cursor.execute('''
                 INSERT INTO messages (session_id, user_message, bot_response, message_type)
+<<<<<<< HEAD
                 VALUES (%s, %s, %s, %s)
             ''', (session_id, user_message, bot_response, message_type))
         
@@ -513,6 +781,13 @@ class Database:
             return cursor.fetchone()['session_id']
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _get_or_create)
+=======
+                VALUES (?, ?, ?, ?)
+            ''', (session_id, user_message, bot_response, message_type))
+            self.conn.commit()
+        
+        await asyncio.get_event_loop().run_in_executor(self.executor, _insert)
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     
     async def save_business_analysis(self, user_id: str, business_data: Dict):
         """Сохранение бизнес-анализа (старый метод для обратной совместимости)"""

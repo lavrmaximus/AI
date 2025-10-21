@@ -21,8 +21,13 @@ class BusinessConversation:
     }
     
     # Минимально необходимые поля для анализа
+<<<<<<< HEAD
     REQUIRED_FIELDS = ['revenue', 'expenses', 'clients']
     OPTIONAL_FIELDS = ['investments', 'marketing_costs', 'employees', 'new_clients_per_month', 'customer_retention_rate']
+=======
+    REQUIRED_FIELDS = ['revenue', 'expenses', 'clients', 'average_check']
+    OPTIONAL_FIELDS = ['investments', 'marketing_costs']
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     
     def __init__(self, session_id: int = None):
         self.session_id = session_id
@@ -76,6 +81,7 @@ class BusinessConversation:
         # Сохраняем ответ пользователя в контексте текущего состояния
         await self._save_user_response(user_message)
         
+<<<<<<< HEAD
         # Универсальная отмена без сохранения/анализа
         cancel_words = ['выйти', 'выход', 'отмена', 'cancel', 'exit', 'quit']
         if self.current_state in [self.STATES['COLLECTING_DATA'], self.STATES['READY_FOR_ANALYSIS']]:
@@ -87,6 +93,8 @@ class BusinessConversation:
                     'is_complete': True
                 }
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         # Обрабатываем в зависимости от текущего состояния
         if self.current_state == self.STATES['START']:
             return await self._handle_start()
@@ -149,6 +157,7 @@ class BusinessConversation:
             extracted_data = await extract_business_data(user_message)
             logger.info(f"🔍 Извлечено данных: {extracted_data}")
 
+<<<<<<< HEAD
             # Объединяем с уже собранными данными: мердж только "значимых" значений
             for key, value in extracted_data.items():
                 if value is None:
@@ -163,6 +172,16 @@ class BusinessConversation:
                     self.collected_data[key] = value
                 else:
                     self.collected_data[key] = value
+=======
+            # Объединяем с уже собранными данными, не перезаписывая, а дополняя
+            for key, value in extracted_data.items():
+                if value is not None:  # Не перезаписываем None
+                    # Если поле уже есть и новое значение != 0 или новое значение - строка
+                    # АИ может вернуть 0 если не нашел. Если предыдущее было числовым, оставляем его.
+                    if key in self.collected_data and self.collected_data[key] is not None and value == 0:
+                        continue
+                    self.collected_data[key] = value
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
             # Отрасль больше не используется
 
@@ -175,10 +194,13 @@ class BusinessConversation:
                 else:
                     collected_data_for_ai_prompt[field] = "НЕТ"
             
+<<<<<<< HEAD
             # Если monthly_costs отсутствует, но есть expenses — подставляем для полноты анализа
             if ('monthly_costs' not in self.collected_data or not self.collected_data.get('monthly_costs')) and self.collected_data.get('expenses'):
                 self.collected_data['monthly_costs'] = self.collected_data['expenses']
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             # Проверяем, сколько обязательных полей собрано
             required_fields_count = sum(1 for field in self.REQUIRED_FIELDS if field in self.collected_data and self.collected_data[field] is not None)
             
@@ -199,8 +221,12 @@ class BusinessConversation:
                 return {
                     'response': f"✅ Отлично! У меня есть все необходимые данные для анализа.\n\n"
                                 f"Подведем итог собранных данных:\n{summary}\n\n"
+<<<<<<< HEAD
                                 f"Все готово! Готовы провести полный анализ? (Да/Нет)\n\n"
                                 f"Чтобы отменить без изменений — напишите 'выйти'",
+=======
+                                f"Все готово! Готовы провести полный анализ? (Да/Нет)",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                     'next_action': 'await_analysis_confirm',
                     'is_complete': False
                 }
@@ -212,8 +238,12 @@ class BusinessConversation:
                         'response': f"📊 Базовые данные собраны.\nПодведем итог:\n{summary}\n\n"
                                    f"🤔 Для *расширенного* анализа нужно ещё немного информации:\n\n"
                                    f"{missing_questions_text}\n\n"
+<<<<<<< HEAD
                                    f"Поделитесь этими данными в свободной форме или напишите 'Да', чтобы начать анализ с текущими данными (без расширенных метрик).\n\n"
                                    f"Чтобы отменить без изменений — напишите 'выйти'",
+=======
+                                   f"Поделитесь этими данными в свободной форме или напишите 'Да', чтобы начать анализ с текущими данными (без расширенных метрик).",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                         'next_action': 'collect_data',
                         'is_complete': False
                     }
@@ -222,8 +252,12 @@ class BusinessConversation:
                         'response': f"📊 Текущие данные:\n{summary}\n\n"
                                    f"🤔 Мне нужно ещё немного информации для базового анализа:\n\n"
                                    f"{missing_questions_text}\n\n"
+<<<<<<< HEAD
                                    f"Расскажите подробнее в свободной форме.\n\n"
                                    f"Чтобы отменить без изменений — напишите 'выйти'",
+=======
+                                   f"Расскажите подробнее в свободной форме.",
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                         'next_action': 'collect_data',
                         'is_complete': False
                     }
@@ -358,9 +392,13 @@ class BusinessConversation:
         response += f"• Рентабельность: {key_metrics.get('profit_margin', 0):.1f}%\n"
         response += f"• ROI: {key_metrics.get('roi', 0):.1f}%\n"
         response += f"• LTV/CAC: {key_metrics.get('ltv_cac_ratio', 0):.2f}\n"
+<<<<<<< HEAD
         response += f"• Запас прочности: {key_metrics.get('safety_margin', 0):.1f}%\n"
         response += f"• Темп роста выручки: {key_metrics.get('revenue_growth_rate', 0):.1f}%\n"
         response += f"• До банкротства: {key_metrics.get('months_to_bankruptcy', 0):.0f} мес\n\n"
+=======
+        response += f"• Запас прочности: {key_metrics.get('safety_margin', 0):.1f}%\n\n"
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
         # Полный список рассчитанных метрик
         if detailed_metrics:
@@ -385,7 +423,11 @@ class BusinessConversation:
         
         if analysis_result.get('ai_advice'):
             response += "🎯 *РЕКОМЕНДАЦИИ:*\n"
+<<<<<<< HEAD
             for i, advice in enumerate(analysis_result['ai_advice'][:4], 1):
+=======
+            for i, advice in enumerate(analysis_result['ai_advice'][:3], 1):
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 response += f"{i}. {advice}\n"
             response += "\n"
         

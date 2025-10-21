@@ -56,7 +56,11 @@ class MetricsCalculator:
             metrics.update(self._calculate_growth_metrics(raw_data, previous_data))
             
             # 4. Health Score
+<<<<<<< HEAD
             metrics.update(self._calculate_health_scores(metrics))
+=======
+            metrics.update(self._calculate_health_scores(metrics, raw_data.get('industry', 'other')))
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             
             logger.info(f"✅ Рассчитано {len(metrics)} метрик")
             return metrics
@@ -72,6 +76,7 @@ class MetricsCalculator:
         try:
             revenue = data.get('revenue', 0)
             expenses = data.get('expenses', 0)
+<<<<<<< HEAD
             # Прибыль всегда рассчитывается как выручка минус расходы
             profit = revenue - expenses
             investments = data.get('investments', 0)
@@ -80,6 +85,12 @@ class MetricsCalculator:
             
             # Рассчитываем средний чек автоматически
             average_check = revenue / clients if clients > 0 else 0
+=======
+            profit = data.get('profit', 0) or (revenue - expenses)
+            investments = data.get('investments', 0)
+            marketing_costs = data.get('marketing_costs', 0)
+            average_check = data.get('average_check', 0)
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             
             # 1. Рентабельность продаж
             if revenue > 0:
@@ -127,9 +138,12 @@ class MetricsCalculator:
             else:
                 metrics['months_to_bankruptcy'] = 999  # неограниченно
             
+<<<<<<< HEAD
             # Добавляем рассчитанный средний чек в метрики
             metrics['average_check'] = average_check
             
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             return metrics
             
         except Exception as e:
@@ -214,10 +228,17 @@ class MetricsCalculator:
             logger.error(f"Ошибка метрик роста: {e}")
             return {}
     
+<<<<<<< HEAD
     def _calculate_health_scores(self, metrics: Dict) -> Dict:
         """Расчет Health Score по 100-балльной шкале"""
         
         benchmark = self.industry_benchmarks['other']  # Используем общий бенчмарк
+=======
+    def _calculate_health_scores(self, metrics: Dict, industry: str = 'other') -> Dict:
+        """Расчет Health Score по 100-балльной шкале"""
+        
+        benchmark = self.industry_benchmarks.get(industry, self.industry_benchmarks['other'])
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
         
         # 15-17. Компоненты Health Score
         financial_score = self._calculate_financial_health_score(metrics, benchmark)
@@ -374,12 +395,21 @@ class MetricsCalculator:
                 'color': 'red'
             }
     
+<<<<<<< HEAD
     def generate_benchmark_report(self, metrics: Dict) -> Dict:
         """Сравнение с бенчмарками индустрии"""
         benchmark = self.industry_benchmarks['other']  # Используем общий бенчмарк
         
         report = {
             'industry': 'other',  # Всегда используем общий бенчмарк
+=======
+    def generate_benchmark_report(self, metrics: Dict, industry: str = 'other') -> Dict:
+        """Сравнение с бенчмарками индустрии"""
+        benchmark = self.industry_benchmarks.get(industry, self.industry_benchmarks['other'])
+        
+        report = {
+            'industry': industry,
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             'comparisons': []
         }
         

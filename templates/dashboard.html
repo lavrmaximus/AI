@@ -65,7 +65,11 @@
                     <button class="range-btn" data-range="quarter" onclick="setTimeRange('quarter')">Квартал</button>
                     <button class="range-btn active" data-range="all" onclick="setTimeRange('all')">Все</button>
                 </div>
+<<<<<<< HEAD
                 <button class="export-btn" onclick="exportChart('financeChartCurrency')">📊 Экспорт графика PNG</button>
+=======
+                <button class="export-btn" onclick="exportChart('financeChartCurrency')">📊 Экспорт PNG</button>
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             </div>
         </div>
         
@@ -191,11 +195,18 @@
                     optDiv.className = 'custom-option';
                     optDiv.setAttribute('role','option');
                     optDiv.dataset.value = user.id;
+<<<<<<< HEAD
                     const displayName = (user && user.name) ? user.name : (`User ${user && user.id ? user.id : ''}`).trim();
                     optDiv.innerHTML = `<span class="option-text">${displayName}</span><span class="option-check">✔</span>`;
                     optDiv.addEventListener('click', () => {
                         userSelect.value = user.id;
                         userTrigger.textContent = displayName;
+=======
+                    optDiv.innerHTML = `<span class="option-text">${user.name}</span><span class="option-check">✔</span>`;
+                    optDiv.addEventListener('click', () => {
+                        userSelect.value = user.id;
+                        userTrigger.textContent = user.name;
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                         closeCustomSelect('userSelectCustom');
                         loadUserData();
                     });
@@ -226,27 +237,45 @@
         businessSelect.innerHTML = '<option value="">Выберите бизнес</option>';
         bizOptions.innerHTML = '';
         if (bizData.success && bizData.businesses.length) {
+<<<<<<< HEAD
                     bizData.businesses.forEach(b => {
                 const option = document.createElement('option');
                 option.value = b.business_id;
                         const bizName = (b && b.business_name) ? b.business_name : `Бизнес ${b && b.business_id ? b.business_id : ''}`;
                         option.textContent = bizName;
+=======
+            bizData.businesses.forEach(b => {
+                const option = document.createElement('option');
+                option.value = b.business_id;
+                option.textContent = b.business_name;
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 businessSelect.appendChild(option);
                 const optDiv = document.createElement('div');
                 optDiv.className = 'custom-option';
                 optDiv.setAttribute('role','option');
                 optDiv.dataset.value = b.business_id;
+<<<<<<< HEAD
                         optDiv.innerHTML = `<span class=\"option-text\">${bizName}</span><span class=\"option-check\">✔</span>`;
                 optDiv.addEventListener('click', () => {
                     businessSelect.value = b.business_id;
                             bizTrigger.textContent = bizName;
+=======
+                optDiv.innerHTML = `<span class=\"option-text\">${b.business_name}</span><span class=\"option-check\">✔</span>`;
+                optDiv.addEventListener('click', () => {
+                    businessSelect.value = b.business_id;
+                    bizTrigger.textContent = b.business_name;
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                     closeCustomSelect('businessSelectCustom');
                     loadBusinessData();
                 });
                 bizOptions.appendChild(optDiv);
             });
             businessSelect.value = bizData.businesses[0].business_id;
+<<<<<<< HEAD
             bizTrigger.textContent = (bizData.businesses[0] && bizData.businesses[0].business_name) ? bizData.businesses[0].business_name : `Бизнес ${bizData.businesses[0].business_id}`;
+=======
+            bizTrigger.textContent = bizData.businesses[0].business_name;
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             currentBusinessId = bizData.businesses[0].business_id;
             await loadBusinessData();
         } else {
@@ -380,15 +409,19 @@
             const trigger = cs.querySelector('.custom-select-trigger');
             if (trigger && trigger.contains(e.target)) {
                 cs.classList.toggle('is-open');
+<<<<<<< HEAD
                 if (cs.classList.contains('is-open')) {
                     positionDropdownPortal(cs);
                 }
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             } else if (!cs.contains(e.target)) {
                 cs.classList.remove('is-open');
             }
         });
     });
 
+<<<<<<< HEAD
     function positionDropdownPortal(customSelect) {
         const trigger = customSelect.querySelector('.custom-select-trigger');
         const options = customSelect.querySelector('.custom-options');
@@ -413,11 +446,14 @@
         options.style.width = `${Math.max(rect.width, 200)}px`;
     }
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     function closeCustomSelect(id) {
         const cs = document.getElementById(id);
         if (cs) cs.classList.remove('is-open');
     }
 
+<<<<<<< HEAD
     // Reposition dropdowns on window resize
     window.addEventListener('resize', function() {
         const userCustom = document.getElementById('userSelectCustom');
@@ -429,6 +465,8 @@
         });
     });
 
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
     // Функция экспорта графиков
     function exportChart(canvasId) {
         const canvas = document.getElementById(canvasId);

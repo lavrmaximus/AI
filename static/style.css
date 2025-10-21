@@ -481,9 +481,12 @@ body {
     margin-bottom: 1.5rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     text-align: center;
+<<<<<<< HEAD
     /* ensure dropdown container sits above KPI/cards */
     position: relative;
     z-index: 10010;
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 }
 
 .user-selector label {
@@ -503,7 +506,34 @@ body {
     z-index: 1000;
 }
 
+<<<<<<< HEAD
 /* Enhanced select z-index handled by portal behavior */
+=======
+.enhanced-select:nth-child(1) {
+    z-index: 1001;
+}
+
+.enhanced-select:nth-child(2) {
+    z-index: 1002;
+}
+
+.enhanced-select:nth-child(3) {
+    z-index: 1003;
+}
+
+/* Специальные правила для analytics страницы */
+.analytics-header .enhanced-select {
+    z-index: 99999 !important;
+}
+
+.analytics-header .enhanced-select:nth-child(1) {
+    z-index: 100000 !important;
+}
+
+.analytics-header .enhanced-select:nth-child(2) {
+    z-index: 100001 !important;
+}
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
 .enhanced-select select {
     width: 100%;
@@ -634,7 +664,14 @@ body {
     z-index: inherit;
 }
 
+<<<<<<< HEAD
 /* Analytics page dropdowns use same portal behavior */
+=======
+/* Специальные правила для analytics страницы */
+.analytics-header .custom-options {
+    z-index: 100002 !important;
+}
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
 
 .custom-option {
     padding: 10px 12px;
@@ -1924,6 +1961,7 @@ body {
 }
 
 /* Отключаем горизонтальную прокрутку для нового графика */
+<<<<<<< HEAD
 .chart-no-scroll .chart-scroll-area { overflow-x: hidden; }
 
 /* Order between the two top dropdowns on dashboard */
@@ -1956,3 +1994,6 @@ body {
     max-width: 90vw;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
+=======
+.chart-no-scroll .chart-scroll-area { overflow-x: hidden; }
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10

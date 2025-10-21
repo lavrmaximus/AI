@@ -33,7 +33,11 @@ class BusinessAnalyzer:
             ai_basic_analysis = await self._get_basic_ai_analysis(ai_description, user_id)
             
             # 3. Сохраняем в базу данных
+<<<<<<< HEAD
             snapshot_id = await db.add_business_snapshot(business_id, raw_data, metrics, advice_list=ai_basic_analysis.get('СОВЕТЫ', []))
+=======
+            snapshot_id = await db.add_business_snapshot(business_id, raw_data, metrics)
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             logger.info(f"✅ Снимок бизнеса сохранен: {snapshot_id}")
             
             # 4. Формирование ответа
@@ -85,7 +89,10 @@ class BusinessAnalyzer:
             СОВЕТ1: [совет]
             СОВЕТ2: [совет] 
             СОВЕТ3: [совет]
+<<<<<<< HEAD
             СОВЕТ4: [совет]
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             """
             
             response = await general_chat(prompt, user_id)
@@ -104,7 +111,11 @@ class BusinessAnalyzer:
             # Ищем метки вида "СОВЕТ1:", "СОВЕТ 2 -", и т.п.
             advice_pattern = r"СОВЕТ\s*\d*\s*[:\-]\s*(.+?)(?=\n\s*СОВЕТ|\Z)"
             matches = re.findall(advice_pattern, response, re.IGNORECASE | re.DOTALL)
+<<<<<<< HEAD
             result['СОВЕТЫ'] = [match.strip() for match in matches[:4]]
+=======
+            result['СОВЕТЫ'] = [match.strip() for match in matches[:3]]
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             
             # Если не найдено стандартных советов, ищем просто нумерованные списки
             if not result['СОВЕТЫ']:
@@ -112,7 +123,11 @@ class BusinessAnalyzer:
                 for line in lines:
                     if line.strip().startswith(('1.', '2.', '3.', '•', '-')):
                         result['СОВЕТЫ'].append(line.strip().lstrip('123.- ').strip())
+<<<<<<< HEAD
                     if len(result['СОВЕТЫ']) >= 4:
+=======
+                    if len(result['СОВЕТЫ']) >= 3:
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                         break
             
             return result
@@ -207,16 +222,20 @@ class BusinessAnalyzer:
         Генерация полного отчета для бизнеса
         """
         try:
+<<<<<<< HEAD
             # Инициализируем БД если нужно
             if db.conn is None:
                 await db.init_db()
             
+=======
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             history = await db.get_business_history(business_id)
             
             if not history:
                 return {'error': 'Бизнес не найден'}
             
             current_data = history[0]
+<<<<<<< HEAD
             
             # Извлекаем только рассчитанные метрики из БД
             metrics = {}
@@ -229,6 +248,9 @@ class BusinessAnalyzer:
             
             for field in metric_fields:
                 metrics[field] = current_data.get(field, 0)
+=======
+            metrics = current_data  # В истории уже есть рассчитанные метрики
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             
             # Health assessment
             health_assessment = self.calculator.get_health_assessment(
@@ -236,7 +258,14 @@ class BusinessAnalyzer:
             )
             
             # Benchmark report
+<<<<<<< HEAD
             benchmark_report = self.calculator.generate_benchmark_report(metrics)
+=======
+            benchmark_report = self.calculator.generate_benchmark_report(
+                metrics, 
+                'other'  # Можно добавить поле industry в бизнес
+            )
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
             
             # Рекомендации
             recommendations = self._generate_recommendations(metrics, health_assessment)
@@ -246,7 +275,12 @@ class BusinessAnalyzer:
                 'health_score': metrics.get('overall_health_score', 0),
                 'health_assessment': health_assessment,
                 'key_metrics': self._extract_key_metrics(metrics),
+<<<<<<< HEAD
                 'detailed_metrics': metrics,  # Переименовано для совместимости
+=======
+                'all_metrics': metrics,
+                'benchmark_report': benchmark_report,
+>>>>>>> af05edb342387241e2637791569c0d066bd31b10
                 'recommendations': recommendations,
                 'trends': self._calculate_trends(history)
             }
