@@ -14,7 +14,15 @@ load_dotenv()
 # Отключаем дублирование логов Flask
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
+
+# Проверяем наличие папок
+import os
+print(f"🌐 Текущая директория: {os.getcwd()}")
+print(f"🌐 Папка templates существует: {os.path.exists('templates')}")
+print(f"🌐 Папка static существует: {os.path.exists('static')}")
+if os.path.exists('templates'):
+    print(f"🌐 Файлы в templates: {os.listdir('templates')}")
 
 # Инициализируем новую БД (async) один раз при старте процесса
 _event_loop = asyncio.new_event_loop()
