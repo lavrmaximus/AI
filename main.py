@@ -19,6 +19,9 @@ async def run_bot():
 
 def run_web():
     port = int(os.environ.get('PORT', 5000))
+    print(f"🌐 Переменная PORT: {os.environ.get('PORT', 'НЕ УСТАНОВЛЕНА')}")
+    print(f"🌐 Запускаю веб-сайт на порту {port}")
+    print(f"🌐 URL: http://0.0.0.0:{port}")
     app.run(debug=False, host='0.0.0.0', port=port)
 
 if __name__ == "__main__":
