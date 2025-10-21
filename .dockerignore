@@ -54,8 +54,5 @@ README.md
 .env.development
 .env.test
 
-# Папка с шаблонами (если не используется)
-templates/
-
 # Файлы миграции (уже выполнены)
 migrate_sqlite_to_postgres.py
