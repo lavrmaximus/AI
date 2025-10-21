@@ -123,7 +123,6 @@ class BusinessBot:
         self.app.add_handler(CommandHandler("about", self.about_command))
         self.app.add_handler(CommandHandler("history", self.history_command))
         self.app.add_handler(CommandHandler("help_metrics", self.help_metrics_command))
-        self.app.add_handler(CommandHandler("admin_clear", self.admin_clear))
         self.app.add_handler(CommandHandler("new_business", self.new_business_command))
         self.app.add_handler(CommandHandler("edit_business", self.edit_business_command))
         self.app.add_handler(CommandHandler("delete_business", self.delete_business_command))
@@ -405,7 +404,6 @@ class BusinessBot:
 
         try:
             businesses = await db.get_user_businesses(user_id)
-
             if not businesses:
                 await update.message.reply_text(
                     safe_markdown_text("📝 *История анализов пуста*\n\n"
@@ -413,10 +411,7 @@ class BusinessBot:
                     parse_mode='MarkdownV2'
                 )
                 return
-
-            # Создаем inline кнопки для каждого бизнеса
             keyboard = []
-
             for i, business in enumerate(businesses[:10], 1):
                 business_name = business.get('business_name', f'Бизнес #{i}')
                 business_id = business.get('business_id')
@@ -429,8 +424,7 @@ class BusinessBot:
                         button_text = f"📊 {business_name}"
                 except Exception as e:
                     logger.warning(f"Ошибка получения Health Score для бизнеса {business_id}: {e}")
-                    button_text = f"📊 {business_name}" # Если ошибка, показываем только имя
-
+                    button_text = f"📊 {business_name}"
                 keyboard.append([InlineKeyboardButton(button_text, callback_data=f'business_{business_id}')])
 
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -441,7 +435,6 @@ class BusinessBot:
                 reply_markup=reply_markup,
                 parse_mode='MarkdownV2'
             )
-
         except Exception as e:
             logger.error(f"Ошибка получения истории: {e}")
             await update.message.reply_text(
@@ -644,66 +637,6 @@ class BusinessBot:
         except Exception as e:
             logger.error(f"Ошибка удаления бизнеса: {e}")
             await query.edit_message_text("❌ Не удалось удалить бизнес.")
-
-    async def admin_clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = str(update.effective_user.id)
-
-        if user_id not in ADMINS:
-            await update.message.reply_text("❌ Нет доступа")
-            return
-
-        if not context.args:
-            await update.message.reply_text(
-                "ℹ️ *Использование:*\n"
-                "`/admin_clear USER_ID` - очистить по ID\n"
-                "`/admin_clear @username` - очистить по username\n\n"
-                f"👑 *Текущие админы*: {', '.join(ADMINS)}",
-                parse_mode='MarkdownV2'
-            )
-            return
-
-        target = context.args[0]
-        deleted_count = 0
-
-        try:
-            cursor = db.conn.cursor()
-
-            if target.startswith('@'):
-                cursor.execute(
-                    "SELECT user_id FROM users WHERE username = ?",
-                    (target[1:],)
-                )
-                user_row = cursor.fetchone()
-                if not user_row:
-                    await update.message.reply_text("❌ Пользователь не найден")
-                    return
-                target_user_id = user_row[0]
-            else:
-                target_user_id = target
-
-            cursor.execute("DELETE FROM conversation_sessions WHERE user_id = ?", (target_user_id,))
-            deleted_count += cursor.rowcount
-
-            cursor.execute("DELETE FROM business_snapshots WHERE business_id IN (SELECT business_id FROM businesses WHERE user_id = ?)", (target_user_id,))
-            deleted_count += cursor.rowcount
-
-            cursor.execute("DELETE FROM businesses WHERE user_id = ?", (target_user_id,))
-            deleted_count += cursor.rowcount
-
-            cursor.execute("DELETE FROM users WHERE user_id = ?", (target_user_id,))
-            deleted_count += cursor.rowcount
-
-            db.conn.commit()
-
-            await update.message.reply_text(
-                f"✅ Данные пользователя `{target}` очищены!\n"
-                f"🗑️ Удалено записей: {deleted_count}",
-                parse_mode='MarkdownV2'
-            )
-
-        except Exception as e:
-            logger.error(f"Ошибка очистки: {e}")
-            await update.message.reply_text(f"❌ Ошибка: {e}")
 
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_text = update.message.text
