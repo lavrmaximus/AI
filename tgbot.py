@@ -743,7 +743,6 @@ class BusinessBot:
 
         try:
             # Сначала определяем тип сообщения
-            logger.info(f"🔍 Начинаю классификацию сообщения: '{user_text[:50]}...'")
             message_type = await classify_message_type(user_text)
             logger.info(f"🎯 Определен тип сообщения: {message_type}")
 
@@ -761,7 +760,6 @@ class BusinessBot:
             # Теперь показываем соответствующее сообщение
             if message_type == "general":
                 # Для общения показываем сначала "анализирую", потом "общаюсь"
-                logger.info("💬 Обновляю сообщение на 'общаюсь'")
                 import asyncio
                 await asyncio.sleep(0.1)  # Небольшая задержка
                 try:
@@ -769,18 +767,14 @@ class BusinessBot:
                         "💬 *Общаюсь\\.\\.\\.*\n_Всегда рад поболтать_",
                         parse_mode='MarkdownV2'
                     )
-                    logger.info("✅ Сообщение обновлено на 'общаюсь'")
                 except Exception as e:
                     logger.error(f"❌ Ошибка обновления на 'общаюсь': {e}")
             elif message_type == "question":
-                # Для вопросов показываем "обдумываю"
-                logger.info("💭 Обновляю сообщение на 'обдумываю'")
                 try:
                     await thinking_msg.edit_text(
                         "💭 *Обдумываю ответ\\.\\.\\.*\n_Ищу лучшие решения для вашего бизнеса_",
                         parse_mode='MarkdownV2'
                     )
-                    logger.info("✅ Сообщение обновлено на 'обдумываю'")
                 except Exception as e:
                     logger.error(f"❌ Ошибка обновления на 'обдумываю': {e}")
 
@@ -792,6 +786,7 @@ class BusinessBot:
                         # Привязываем к общей chat-сессии пользователя
                         session_id = await db.get_or_create_user_chat_session(user_id)
                     await db.log_message(
+                        user_id=user_id,
                         session_id=session_id,
                         user_message=user_text,
                         bot_response=response,
@@ -807,6 +802,7 @@ class BusinessBot:
                     if session_id is None:
                         session_id = await db.get_or_create_user_chat_session(user_id)
                     await db.log_message(
+                        user_id=user_id,
                         session_id=session_id,
                         user_message=user_text,
                         bot_response=response,
@@ -822,7 +818,7 @@ class BusinessBot:
             except Exception:
                 pass
 
-            logger.info(f"🤖 Ответ бота ({message_type}): {response[:100]}...")
+            logger.info(f"🤖 Ответ бота ({message_type}): {response[:20]}...")
 
         except Exception as e:
             error_msg = safe_markdown_text("❌ *Произошла ошибка при обработке запроса*. Попробуйте еще раз.")
@@ -879,6 +875,7 @@ class BusinessBot:
             
             try:
                 await db.log_message(
+                    user_id=user_id,
                     session_id=conversation.session_id,
                     user_message=user_text,
                     bot_response=response_data['response'],
@@ -1011,7 +1008,7 @@ class BusinessBot:
             return [text]
 
         parts = []
-        current_part = ""
+        current_part 
 
         paragraphs = text.split('\n\n')
 

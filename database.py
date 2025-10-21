@@ -151,11 +151,12 @@ class Database:
                     efficiency_health_score INTEGER DEFAULT 0,
                     overall_health_score INTEGER DEFAULT 0,
                     
-                    -- AI советы (4 штуки)
+                    -- AI советы и комментарий
                     advice1 TEXT DEFAULT '',
                     advice2 TEXT DEFAULT '',
                     advice3 TEXT DEFAULT '',
                     advice4 TEXT DEFAULT '',
+                    ai_commentary TEXT DEFAULT '',
                     
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (business_id) REFERENCES businesses(business_id)
@@ -181,6 +182,7 @@ class Database:
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS messages (
                     id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
                     session_id INTEGER,
                     user_message TEXT,
                     bot_response TEXT,
@@ -230,7 +232,7 @@ class Database:
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
     
-    async def add_business_snapshot(self, business_id: int, raw_data: Dict, metrics: Dict, period_date: str = None, advice_list: List[str] = None) -> int:
+    async def add_business_snapshot(self, business_id: int, raw_data: Dict, metrics: Dict, period_date: str = None, advice_list: List[str] = None, ai_commentary: str = '') -> int:
         """Добавление снимка бизнеса со всеми метриками"""
         def _add():
             cursor = self.conn.cursor()
@@ -256,8 +258,8 @@ class Database:
                     ltv, cac, ltv_cac_ratio, customer_profit_margin, sgr, revenue_growth_rate,
                     asset_turnover, roe, months_to_bankruptcy,
                     financial_health_score, growth_health_score, efficiency_health_score, overall_health_score,
-                    advice1, advice2, advice3, advice4, created_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING snapshot_id
+                    advice1, advice2, advice3, advice4, ai_commentary, created_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING snapshot_id
             ''', (
                 business_id, 'monthly', actual_period_date,
                 raw_data.get('revenue', 0), raw_data.get('expenses', 0), raw_data.get('profit', 0),
@@ -272,7 +274,7 @@ class Database:
                 metrics.get('financial_health_score', 0), metrics.get('growth_health_score', 0),
                 metrics.get('efficiency_health_score', 0), metrics.get('overall_health_score', 0),
                 advice_list_local[0], advice_list_local[1], advice_list_local[2], advice_list_local[3],
-                moscow_time_str
+                ai_commentary, moscow_time_str
             ))
             return cursor.fetchone()['snapshot_id']
         
@@ -389,14 +391,14 @@ class Database:
         
         await asyncio.get_event_loop().run_in_executor(self.executor, _save)
 
-    async def log_message(self, session_id: Optional[int], user_message: str, bot_response: str, message_type: str):
-        """Сохранение сообщения в новую таблицу messages (связь через session_id, может быть NULL)."""
+    async def log_message(self, user_id: str, session_id: Optional[int], user_message: str, bot_response: str, message_type: str):
+        """Сохранение сообщения в новую таблицу messages с обязательным user_id."""
         def _insert():
             cursor = self.conn.cursor()
             cursor.execute('''
-                INSERT INTO messages (session_id, user_message, bot_response, message_type)
-                VALUES (%s, %s, %s, %s)
-            ''', (session_id, user_message, bot_response, message_type))
+                INSERT INTO messages (user_id, session_id, user_message, bot_response, message_type)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, session_id, user_message, bot_response, message_type))
         
         await asyncio.get_event_loop().run_in_executor(self.executor, _insert)
     
@@ -410,7 +412,7 @@ class Database:
                 FROM messages m
                 JOIN conversation_sessions cs ON cs.session_id = m.session_id
                 WHERE cs.user_id = %s AND m.session_id IS NOT NULL
-                ORDER BY m.created_at DESC
+                ORDER BY m.id DESC
                 LIMIT %s
             ''', (user_id, limit))
             rows = cursor.fetchall()
