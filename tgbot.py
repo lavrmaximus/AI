@@ -1,6 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
-from ai import classify_message_type, general_chat, answer_question, extract_business_data, conversation_memory # Импортируем только нужные функции
+from ai import classify_message_type, general_chat, answer_question, extract_business_data, conversation_memory
 from conversation_manager import conv_manager
 from business_analyzer import business_analyzer
 from database import db
@@ -13,15 +13,14 @@ from typing import Dict, List
 from datetime import datetime
 from telegram.helpers import escape_markdown
 from env_utils import is_production, get_log_dir, should_create_files
+from report_formatter import format_business_report, get_health_assessment
 
 logging.getLogger('telegram').setLevel(logging.WARNING)
 logging.getLogger('httpx').setLevel(logging.WARNING)
 
-# Настройка логирования в зависимости от окружения
 import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Создаем директорию логов только локально
 if should_create_files():
     LOG_DIR = get_log_dir() or os.path.join(BASE_DIR, 'logs')
     os.makedirs(LOG_DIR, exist_ok=True)
@@ -54,18 +53,14 @@ class DailyFileHandler(logging.Handler):
             self._ensure_file()
             self.file_handler.emit(record)
         except Exception:
-            # Не роняем приложение из-за проблем с логами
             pass
 
-# Настройка обработчиков логирования в зависимости от окружения
 handlers = []
 
-# Всегда добавляем консольный вывод
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
 handlers.append(stream_handler)
 
-# Добавляем файловый обработчик только локально
 if should_create_files() and LOG_DIR:
     file_handler = DailyFileHandler(LOG_DIR)
     handlers.append(file_handler)
@@ -77,18 +72,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# BOT_TOKEN будет читаться в __init__
 ADMINS = [
-    "1287604685",  # Вставьте сюда ID админа
+    "1287604685",
 ]
 
 def safe_markdown_text(text: str) -> str:
     """
     Безопасное форматирование Markdown с сохранением жирного текста
     """
-    # Экранируем все спецсимволы
     safe_text = escape_markdown(text, version=2)
-    # Возвращаем звездочки для жирного текста
     safe_text = safe_text.replace(r'\*', '*')
     return safe_text
 
@@ -98,25 +90,12 @@ def clean_ai_text(text: str) -> str:
     """
     import re
     
-    # Убираем заголовки ###
     text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)
-    
-    # Убираем жирный текст **текст**
     text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
-    
-    # Убираем курсив __текст__
     text = re.sub(r'__([^_]+)__', r'\1', text)
-    
-    # Убираем курсив _текст_ (одиночные подчёркивания)
     text = re.sub(r'(?<!_)_([^_]+)_(?!_)', r'\1', text)
-    
-    # Убираем курсив *текст* (одиночные звёздочки)
     text = re.sub(r'(?<!\*)\*([^*]+)\*(?!\*)', r'\1', text)
-    
-    # Убираем код `текст`
     text = re.sub(r'`([^`]+)`', r'\1', text)
-    
-    # Убираем квадратные скобки с экранированием
     text = re.sub(r'\\\[', '[', text)
     text = re.sub(r'\\\]', ']', text)
     
@@ -126,7 +105,6 @@ print("Запуск бота....")
 
 class BusinessBot:
     def __init__(self):
-        # Читаем токен при инициализации (не при импорте модуля)
         token = (
             os.getenv("BOT_TOKEN")
             or os.getenv("TELEGRAM_BOT_TOKEN")
@@ -151,7 +129,6 @@ class BusinessBot:
         self.app.add_handler(CommandHandler("delete_business", self.delete_business_command))
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
         self.app.add_handler(CallbackQueryHandler(self.handle_inline_buttons))
-        # Короткий обработчик ошибок без traceback
         self.app.add_error_handler(self.on_error)
 
     async def on_error(self, update: object, context: ContextTypes.DEFAULT_TYPE):
@@ -165,7 +142,6 @@ class BusinessBot:
         user = update.effective_user
         user_id = str(user.id)
 
-        #logger.info(f"🆕 Новый пользователь: {user.first_name} (ID: {user_id}, @{user.username})")
         await db.save_user(user_id, user.username, user.first_name, user.last_name)
 
         text = safe_markdown_text(
@@ -338,7 +314,6 @@ class BusinessBot:
         
         await update.message.reply_text(text, parse_mode='MarkdownV2')
         
-        # Получаем сессию диалога и устанавливаем состояние ожидания данных
         conversation = await conv_manager.get_conversation(user_id)
         await conversation.update_state("awaiting_business_data")
 
@@ -360,7 +335,6 @@ class BusinessBot:
                 )
                 return
 
-            # Создаем inline кнопки для выбора бизнеса
             keyboard = []
             for i, business in enumerate(businesses[:10], 1):
                 business_name = business.get('business_name', f'Бизнес #{i}')
@@ -443,11 +417,9 @@ class BusinessBot:
             # Создаем inline кнопки для каждого бизнеса
             keyboard = []
 
-            for i, business in enumerate(businesses[:10], 1):  # Показываем до 10 бизнесов
+            for i, business in enumerate(businesses[:10], 1):
                 business_name = business.get('business_name', f'Бизнес #{i}')
                 business_id = business.get('business_id')
-
-                # Получаем последний Health Score
                 try:
                     history = await db.get_business_history(business_id, limit=1)
                     if history:
@@ -480,7 +452,7 @@ class BusinessBot:
     async def handle_inline_buttons(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обработка inline кнопок"""
         query = update.callback_query
-        await query.answer()  # Обязательно отвечаем на query
+        await query.answer()
 
         if query.data.startswith('business_'):
             business_id = int(query.data.split('_')[1])
@@ -550,7 +522,6 @@ class BusinessBot:
         try:
             description = get_metric_description(metric_id)
             
-            # Создаем кнопку "Назад"
             keyboard = InlineKeyboardMarkup([[
                 InlineKeyboardButton("◀️ Назад", callback_data="metrics_back")
             ]])
@@ -578,12 +549,21 @@ class BusinessBot:
             # Получаем метрики и рекомендации
             report = await business_analyzer.generate_business_report(business_id)
             metrics = report.get('detailed_metrics', {}) if 'error' not in report else {}
-            recommendations = report.get('recommendations', []) if 'error' not in report else []
+            recommendations = report.get('recommendations', []) if 'error' not in report else {}
+            raw_data = report.get('raw_data', current_data) if 'error' not in report else current_data
             
             # Используем единый формат отчета
-            response = self.format_business_report(current_data, metrics, recommendations)
+            response = format_business_report(raw_data, metrics, recommendations)
 
+            # Удаляем меню и отправляем отчет
+            await query.edit_message_text("✅ Загружаю отчет...")
             await self.send_long_message(query, response, parse_mode='MarkdownV2')
+            
+            # Удаляем сообщение "Загружаю отчет"
+            try:
+                await query.delete_message()
+            except Exception:
+                pass
 
         except Exception as e:
             logger.error(f"Ошибка показа деталей бизнеса: {e}")
@@ -629,7 +609,7 @@ class BusinessBot:
             
             # Используем единый формат отчета
             response = f"✏️ *РЕДАКТИРОВАНИЕ: {business_name}*\n\n"
-            response += self.format_business_report(current_data, metrics, recommendations)
+            response += format_business_report(current_data, metrics, recommendations)
             response += f"\n\nОтправьте новые данные в свободной форме или напишите 'да' для завершения.\n\n"
             response += f"Чтобы отменить без изменений — напишите 'выйти'"
             
@@ -668,7 +648,6 @@ class BusinessBot:
     async def admin_clear(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = str(update.effective_user.id)
 
-        # Проверяем что пользователь в списке админов
         if user_id not in ADMINS:
             await update.message.reply_text("❌ Нет доступа")
             return
@@ -687,7 +666,6 @@ class BusinessBot:
         deleted_count = 0
 
         try:
-            # SQLite версия
             cursor = db.conn.cursor()
 
             if target.startswith('@'):
@@ -703,7 +681,6 @@ class BusinessBot:
             else:
                 target_user_id = target
 
-            # Очищаем данные и считаем количество
             cursor.execute("DELETE FROM conversation_sessions WHERE user_id = ?", (target_user_id,))
             deleted_count += cursor.rowcount
 
@@ -737,7 +714,6 @@ class BusinessBot:
 
         await db.save_user(user_id, user.username, user.first_name, user.last_name)
 
-        # Гидратация памяти ИИ из БД при пустой памяти для пользователя
         try:
             from ai import conversation_memory as ai_memory
             if user_id not in ai_memory or len(ai_memory[user_id]) == 0:
@@ -753,12 +729,10 @@ class BusinessBot:
         except Exception as e:
             logger.warning(f"Не удалось гидрировать историю из БД: {e}")
 
-        # ПРОВЕРЯЕМ АКТИВНУЮ СЕССИЮ ДИАЛОГА
         if user_id in conv_manager.active_sessions:
             await self._handle_conversation_message(update, user_id, user_text)
             return
 
-        # Игнорируем команды на этом этапе, они обрабатываются CommandHandler
         if user_text.startswith('/'):
             return
 
@@ -768,6 +742,8 @@ class BusinessBot:
         )
 
         try:
+            # Сначала определяем тип сообщения
+            logger.info(f"🔍 Начинаю классификацию сообщения: '{user_text[:50]}...'")
             message_type = await classify_message_type(user_text)
             logger.info(f"🎯 Определен тип сообщения: {message_type}")
 
@@ -782,14 +758,31 @@ class BusinessBot:
                 # Продолжаем как свободный диалог
                 message_type = "general"
 
-            try:
-                await thinking_msg.edit_text(
-                    self.get_thinking_message(message_type),
-                    parse_mode='MarkdownV2'
-                )
-            except Exception:
-                # Игнорируем 'Message is not modified'
-                pass
+            # Теперь показываем соответствующее сообщение
+            if message_type == "general":
+                # Для общения показываем сначала "анализирую", потом "общаюсь"
+                logger.info("💬 Обновляю сообщение на 'общаюсь'")
+                import asyncio
+                await asyncio.sleep(0.1)  # Небольшая задержка
+                try:
+                    await thinking_msg.edit_text(
+                        "💬 *Общаюсь\\.\\.\\.*\n_Всегда рад поболтать_",
+                        parse_mode='MarkdownV2'
+                    )
+                    logger.info("✅ Сообщение обновлено на 'общаюсь'")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка обновления на 'общаюсь': {e}")
+            elif message_type == "question":
+                # Для вопросов показываем "обдумываю"
+                logger.info("💭 Обновляю сообщение на 'обдумываю'")
+                try:
+                    await thinking_msg.edit_text(
+                        "💭 *Обдумываю ответ\\.\\.\\.*\n_Ищу лучшие решения для вашего бизнеса_",
+                        parse_mode='MarkdownV2'
+                    )
+                    logger.info("✅ Сообщение обновлено на 'обдумываю'")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка обновления на 'обдумываю': {e}")
 
             if message_type == "question":
                 response = await self.handle_question(user_text, user_id)
@@ -822,128 +815,20 @@ class BusinessBot:
                 except Exception as e:
                     logger.warning(f"Не удалось записать общение в БД: {e}")
                 await self.send_long_message(update, response, None)
+            
+            # Удаляем прогресс-сообщение
+            try:
+                await thinking_msg.delete()
+            except Exception:
+                pass
 
             logger.info(f"🤖 Ответ бота ({message_type}): {response[:100]}...")
-
-            await thinking_msg.delete()
 
         except Exception as e:
             error_msg = safe_markdown_text("❌ *Произошла ошибка при обработке запроса*. Попробуйте еще раз.")
             logger.error(f"Ошибка обработки сообщения: {e}")
             await thinking_msg.edit_text(error_msg, parse_mode='MarkdownV2')
 
-    def format_business_report(self, business_data: Dict, metrics: Dict = None, recommendations: List[str] = None) -> str:
-        """Единый формат отчета о бизнесе"""
-        response = ""
-        
-        # Заголовок
-        business_name = business_data.get('business_name', 'Бизнес')
-        response += f"📊 *ДЕТАЛЬНЫЙ АНАЛИЗ БИЗНЕСА: {business_name}*\n\n"
-        
-        # Health Score если есть метрики
-        if metrics:
-            health_score = metrics.get('overall_health_score', 0)
-            health_assessment = self.get_health_assessment(health_score)
-            emoji = health_assessment.get('emoji', '⚪')
-            response += f"🏥 *БИЗНЕС-ЗДОРОВЬЕ: {health_score}/100* {emoji}\n"
-            response += f"*{health_assessment.get('message', '')}*\n\n"
-        
-        # Ключевые метрики
-        response += "💰 *КЛЮЧЕВЫЕ МЕТРИКИ:*\n"
-        if metrics:
-            response += f"• Рентабельность: {metrics.get('profit_margin', 0):.1f}%\n"
-            response += f"• ROI: {metrics.get('roi', 0):.1f}%\n"
-            response += f"• LTV/CAC: {metrics.get('ltv_cac_ratio', 0):.2f}\n"
-            response += f"• Запас прочности: {metrics.get('safety_margin', 0):.1f}%\n"
-            response += f"• Темп роста выручки: {metrics.get('revenue_growth_rate', 0):.1f}%\n"
-            response += f"• До банкротства: {metrics.get('months_to_bankruptcy', 0):.0f} мес\n\n"
-        else:
-            response += "• Рентабельность: _не рассчитано_\n"
-            response += "• ROI: _не рассчитано_\n"
-            response += "• LTV/CAC: _не рассчитано_\n"
-            response += "• Запас прочности: _не рассчитано_\n\n"
-        
-        # Все метрики (включая сырые данные)
-        response += "📊 *ВСЕ МЕТРИКИ:*\n"
-        
-        # Сырые данные
-        raw_fields = {
-            'revenue': '💰 Выручка',
-            'expenses': '📊 Расходы', 
-            'profit': '📈 Прибыль',
-            'clients': '👥 Клиенты',
-            'average_check': '💳 Средний чек',
-            'investments': '💼 Инвестиции',
-            'marketing_costs': '📢 Маркетинг',
-            'employees': '🧑‍🤝‍🧑 Сотрудники',
-            'new_clients_per_month': '🆕 Новые клиенты/мес',
-            'customer_retention_rate': '🔄 Удержание клиентов'
-        }
-        
-        for field, name in raw_fields.items():
-            value = business_data.get(field, 0)
-            if value and value != 0:
-                if field == 'customer_retention_rate':
-                    response += f"• {name}: {value:.1f}%\n"
-                elif field in ['clients', 'employees', 'new_clients_per_month']:
-                    response += f"• {name}: {value:,.0f}\n"
-                else:
-                    response += f"• {name}: {value:,.0f} руб\n"
-            else:
-                response += f"• {name}: _отсутствует_\n"
-        
-        # Рассчитанные метрики если есть
-        if metrics:
-            calculated_fields = {
-                'profit_margin': 'Рентабельность',
-                'break_even_clients': 'Точка безубыточности',
-                'safety_margin': 'Запас прочности',
-                'roi': 'ROI',
-                'profitability_index': 'Индекс прибыльности',
-                'ltv': 'LTV',
-                'cac': 'CAC',
-                'ltv_cac_ratio': 'LTV/CAC',
-                'customer_profit_margin': 'Маржа на клиента',
-                'sgr': 'SGR',
-                'revenue_growth_rate': 'Темп роста выручки',
-                'asset_turnover': 'Оборачиваемость активов',
-                'roe': 'ROE',
-                'months_to_bankruptcy': 'До банкротства',
-                'financial_health_score': 'Финансовое здоровье',
-                'growth_health_score': 'Здоровье роста',
-                'efficiency_health_score': 'Эффективность',
-                'overall_health_score': 'Общее здоровье'
-            }
-            
-            for field, name in calculated_fields.items():
-                value = metrics.get(field, 0)
-                if field in ['financial_health_score', 'growth_health_score', 'efficiency_health_score', 'overall_health_score']:
-                    response += f"• {name}: {value:.0f}\n"
-                elif field in ['months_to_bankruptcy']:
-                    response += f"• {name}: {value:.0f} мес\n"
-                elif field in ['profit_margin', 'safety_margin', 'roi', 'revenue_growth_rate', 'roe']:
-                    response += f"• {name}: {value:.1f}%\n"
-                else:
-                    response += f"• {name}: {value:.2f}\n"
-        
-        # Рекомендации
-        if recommendations:
-            response += "\n🎯 *РЕКОМЕНДАЦИИ:*\n"
-            for i, rec in enumerate(recommendations, 1):
-                response += f"{i}. {rec}\n"
-        
-        return response
-    
-    def get_health_assessment(self, score: int) -> Dict:
-        """Получение оценки здоровья бизнеса"""
-        if score >= 90:
-            return {'emoji': '🟢', 'message': 'Отличное состояние! Продолжайте в том же духе!'}
-        elif score >= 75:
-            return {'emoji': '🟡', 'message': 'Хорошее состояние. Есть куда расти!'}
-        elif score >= 60:
-            return {'emoji': '🟠', 'message': 'Среднее состояние. Требуются улучшения.'}
-        else:
-            return {'emoji': '🔴', 'message': 'Требуются срочные действия!'}
 
     def get_thinking_message(self, message_type: str) -> str:
         """Сообщение о процессе обработки"""
@@ -1036,15 +921,13 @@ class BusinessBot:
         Элегантное разделение длинного сообщения на части и отправка.
         Принимает update или query объект для отправки сообщения.
         """
-        MAX_LENGTH = 3800  # Максимальная длина сообщения Telegram с запасом
-
-        # Важно! Применяем safe_markdown_text до разделения и отправки
+        MAX_LENGTH = 3800
         final_text_to_send = safe_markdown_text(text) if parse_mode == 'MarkdownV2' else text
 
         if len(final_text_to_send) <= MAX_LENGTH:
             if hasattr(update_or_query_object, 'message'):
                 await update_or_query_object.message.reply_text(final_text_to_send, parse_mode=parse_mode)
-            else: # Это CallbackQuery
+            else:
                 await update_or_query_object.edit_message_text(final_text_to_send, parse_mode=parse_mode)
             return
 
@@ -1130,33 +1013,26 @@ class BusinessBot:
         parts = []
         current_part = ""
 
-        # Разделение по абзацам
         paragraphs = text.split('\n\n')
 
         for paragraph in paragraphs:
-            # Если абзац сам по себе слишком длинный, делим его на предложения
             if len(paragraph) > max_length:
                 sentences = self.split_by_sentences(paragraph)
                 for sentence in sentences:
-                    # Проверяем, поместится ли предложение в текущую часть
-                    if len(current_part) + len(sentence) + 2 <= max_length: # +2 для переноса строки
+                    if len(current_part) + len(sentence) + 2 <= max_length:
                         current_part += ("\n" if current_part else "") + sentence
                     else:
-                        # Если не помещается, завершаем текущую часть и начинаем новую
                         if current_part:
                             parts.append(current_part.strip())
                         current_part = sentence
             else:
-                # Если абзац помещается в текущую часть
-                if len(current_part) + len(paragraph) + 4 <= max_length: # +4 для двойного переноса
+                if len(current_part) + len(paragraph) + 4 <= max_length:
                     current_part += ("\n\n" if current_part else "") + paragraph
                 else:
-                    # Если не помещается, завершаем текущую часть и начинаем новую
                     if current_part:
                         parts.append(current_part.strip())
                     current_part = paragraph
 
-        # Добавляем последнюю часть
         if current_part:
             parts.append(current_part.strip())
 
@@ -1167,8 +1043,6 @@ class BusinessBot:
         Разделение текста на предложения.
         """
         import re
-        # Используем regex для разделения по точкам, восклицательным и вопросительным знакам
-        # (с учетом невидимых символов для русских текстов)
         sentences = re.split(r'(?<=[.!?…])\s+|(?<=[.!?…]["\'])', text)
         return [s.strip() for s in sentences if s.strip()]
 
@@ -1183,28 +1057,15 @@ class BusinessBot:
         """Асинхронный запуск бота"""
         print("Bot is starting...")
 
-        # Инициализация БД
         import sqlite3
         import os
-        # asyncio уже импортирован в начале файла, нет необходимости импортировать его снова
 
         db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot_v2.db')
         db.conn = sqlite3.connect(db_path, check_same_thread=False)
         await db.init_db()
-        print(f"Database connected: {db_path}")
 
-        print("Smart message classification enabled")
-        print("Advanced analytics with 22 metrics")
-        print("Activity logging enabled")
-        print("User context memory enabled")
-        print("Free-form dialog enabled")
-
-        # ПРАВИЛЬНЫЙ ЗАПУСК для версии 20.7
         await self.app.initialize()
         await self.app.start()
         await self.app.updater.start_polling()
 
-        # Бесконечный цикл
         await asyncio.Event().wait()
-
-# Убедитесь, что здесь нет "bot = BusinessBot()" или других вызовов экземпляра бота

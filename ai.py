@@ -1,6 +1,7 @@
 import g4f
 import re
 import logging
+import asyncio
 from typing import Dict, List, Tuple
 from database import db
 
@@ -133,10 +134,14 @@ async def classify_message_type(text: str) -> str:
             {"role": "user", "content": text}
         ]
 
-        response = g4f.ChatCompletion.create(
-            model=SIMPLE_MODEL,
-            messages=messages,
-            stream=False
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: g4f.ChatCompletion.create(
+                model=SIMPLE_MODEL,
+                messages=messages,
+                stream=False
+            )
         )
 
         logger.debug(f"Классификатор отработал для сообщения: '{text[:50]}...'")

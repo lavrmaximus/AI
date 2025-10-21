@@ -127,7 +127,8 @@ class MetricsCalculator:
             else:
                 metrics['months_to_bankruptcy'] = 999  # неограниченно
             
-            # Добавляем рассчитанный средний чек в метрики
+            # Добавляем рассчитанные значения в метрики
+            metrics['profit'] = profit
             metrics['average_check'] = average_check
             
             return metrics

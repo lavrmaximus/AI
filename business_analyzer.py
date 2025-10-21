@@ -28,12 +28,19 @@ class BusinessAnalyzer:
             previous_data = await self._get_previous_business_data(business_id)
             metrics = self.calculator.calculate_all_metrics(raw_data, previous_data)
             
+            # Создаем копию raw_data с рассчитанными значениями
+            enriched_data = raw_data.copy()
+            if 'profit' in metrics:
+                enriched_data['profit'] = metrics['profit']
+            if 'average_check' in metrics:
+                enriched_data['average_check'] = metrics['average_check']
+            
             # 2. Базовый AI-анализ текстового описания
             ai_description = self._format_data_for_ai(raw_data)
             ai_basic_analysis = await self._get_basic_ai_analysis(ai_description, user_id)
             
             # 3. Сохраняем в базу данных
-            snapshot_id = await db.add_business_snapshot(business_id, raw_data, metrics, advice_list=ai_basic_analysis.get('СОВЕТЫ', []))
+            snapshot_id = await db.add_business_snapshot(business_id, enriched_data, metrics, advice_list=ai_basic_analysis.get('СОВЕТЫ', []))
             logger.info(f"✅ Снимок бизнеса сохранен: {snapshot_id}")
             
             # 4. Формирование ответа
@@ -76,16 +83,19 @@ class BusinessAnalyzer:
             from ai import general_chat
             
             # Простой промпт для получения комментариев
-            prompt = f"""Проанализируй этот бизнес дай краткий комментарий и 3 рекомендации:
+            prompt = f"""Проанализируй этот бизнес дай краткий комментарий и 4 рекомендации:
             
             {description}
             
-            Формат ответа:
-            КOММЕНТАРИЙ: [tekст]
+            ВАЖНО! Строго следуй формату:
+            КОММЕНТАРИЙ: [текст]
             СОВЕТ1: [совет]
             СОВЕТ2: [совет] 
             СОВЕТ3: [совет]
             СОВЕТ4: [совет]
+            
+            Каждый совет должен быть отдельной строкой с меткой СОВЕТ1:, СОВЕТ2:, СОВЕТ3:, СОВЕТ4:
+            НЕ объединяй советы в один!
             """
             
             response = await general_chat(prompt, user_id)
@@ -157,7 +167,8 @@ class BusinessAnalyzer:
             'key_metrics': self._extract_key_metrics(metrics),
             'ai_commentary': ai_analysis.get('КОММЕНТАРИЙ', ''),
             'ai_advice': ai_analysis.get('СОВЕТЫ', []),
-            'detailed_metrics': metrics
+            'detailed_metrics': metrics,
+            'raw_data': raw_data  # Добавляем сырые данные
         }
         
         return response
@@ -238,15 +249,24 @@ class BusinessAnalyzer:
             # Benchmark report
             benchmark_report = self.calculator.generate_benchmark_report(metrics)
             
-            # Рекомендации
-            recommendations = self._generate_recommendations(metrics, health_assessment)
+            # Рекомендации из БД
+            recommendations = []
+            for i in range(1, 5):
+                advice = current_data.get(f'advice{i}', '')
+                if advice:
+                    recommendations.append(advice)
+            
+            # Если рекомендаций нет в БД, генерируем новые
+            if not recommendations:
+                recommendations = self._generate_recommendations(metrics, health_assessment)
             
             return {
                 'business_id': business_id,
                 'health_score': metrics.get('overall_health_score', 0),
                 'health_assessment': health_assessment,
                 'key_metrics': self._extract_key_metrics(metrics),
-                'detailed_metrics': metrics,  # Переименовано для совместимости
+                'detailed_metrics': metrics,  # Рассчитанные метрики
+                'raw_data': current_data,  # Сырые данные из БД
                 'recommendations': recommendations,
                 'trends': self._calculate_trends(history)
             }

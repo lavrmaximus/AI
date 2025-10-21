@@ -2,7 +2,8 @@ import asyncio
 from typing import Dict, List, Optional
 from database import db
 from business_analyzer import business_analyzer
-from ai import extract_business_data, analyze_missing_data  # ← НОВЫЕ ИМПОРТЫ
+from ai import extract_business_data, analyze_missing_data
+from report_formatter import format_business_report
 import logging
 
 logger = logging.getLogger(__name__)
@@ -343,53 +344,32 @@ class BusinessConversation:
         if 'error' in analysis_result:
             return f"❌ Ошибка анализа: {analysis_result['error']}"
         
-        health_score = analysis_result.get('health_score', 0)
-        health_assessment = analysis_result.get('health_assessment', {})
-        key_metrics = analysis_result.get('key_metrics', {})
-        detailed_metrics = analysis_result.get('detailed_metrics', {})
+        # Подготавливаем данные для единого формата
+        business_data = {
+            'business_name': 'Анализируемый бизнес',
+            'revenue': analysis_result.get('raw_data', {}).get('revenue', 0),
+            'expenses': analysis_result.get('raw_data', {}).get('expenses', 0),
+            'profit': analysis_result.get('raw_data', {}).get('profit', 0),
+            'clients': analysis_result.get('raw_data', {}).get('clients', 0),
+            'average_check': analysis_result.get('raw_data', {}).get('average_check', 0),
+            'investments': analysis_result.get('raw_data', {}).get('investments', 0),
+            'marketing_costs': analysis_result.get('raw_data', {}).get('marketing_costs', 0),
+            'employees': analysis_result.get('raw_data', {}).get('employees', 0),
+            'new_clients_per_month': analysis_result.get('raw_data', {}).get('new_clients_per_month', 0),
+            'customer_retention_rate': analysis_result.get('raw_data', {}).get('customer_retention_rate', 0)
+        }
         
-        # Заголовок с Health Score
-        emoji = health_assessment.get('emoji', '⚪')
-        response = f"🏥 *БИЗНЕС-ЗДОРОВЬЕ: {health_score}/100* {emoji}\n\n"
-        response += f"*{health_assessment.get('message', '')}*\n\n"
+        metrics = analysis_result.get('detailed_metrics', {})
+        recommendations = analysis_result.get('ai_advice', [])
         
-        # Ключевые метрики
-        response += "💰 *КЛЮЧЕВЫЕ МЕТРИКИ:*\n"
-        response += f"• Рентабельность: {key_metrics.get('profit_margin', 0):.1f}%\n"
-        response += f"• ROI: {key_metrics.get('roi', 0):.1f}%\n"
-        response += f"• LTV/CAC: {key_metrics.get('ltv_cac_ratio', 0):.2f}\n"
-        response += f"• Запас прочности: {key_metrics.get('safety_margin', 0):.1f}%\n"
-        response += f"• Темп роста выручки: {key_metrics.get('revenue_growth_rate', 0):.1f}%\n"
-        response += f"• До банкротства: {key_metrics.get('months_to_bankruptcy', 0):.0f} мес\n\n"
-
-        # Полный список рассчитанных метрик
-        if detailed_metrics:
-            response += "📊 *ВСЕ МЕТРИКИ:*\n"
-            metric_lines = []
-            def fmt(name, value):
-                try:
-                    if isinstance(value, (int, float)):
-                        return f"{name}: {value:.2f}"
-                    return f"{name}: {value}"
-                except Exception:
-                    return f"{name}: {value}"
-            for k, v in detailed_metrics.items():
-                if k in ['business_id','snapshot_id','period_type','period_date','created_at']:
-                    continue
-                metric_lines.append("• " + fmt(k, v))
-            response += "\n".join(metric_lines) + "\n\n"
+        # Используем единый формат
+        response = format_business_report(business_data, metrics, recommendations)
         
-        # AI комментарий и рекомендации
+        # Добавляем AI комментарий если есть
         if analysis_result.get('ai_commentary'):
-            response += f"💡 *КОММЕНТАРИЙ AI:*\n{analysis_result['ai_commentary']}\n\n"
+            response += f"\n💡 *КОММЕНТАРИЙ AI:*\n{analysis_result['ai_commentary']}\n"
         
-        if analysis_result.get('ai_advice'):
-            response += "🎯 *РЕКОМЕНДАЦИИ:*\n"
-            for i, advice in enumerate(analysis_result['ai_advice'][:4], 1):
-                response += f"{i}. {advice}\n"
-            response += "\n"
-        
-        response += "✅ *Анализ завершен! Использовано 22 метрики*\n"
+        response += "\n✅ *Анализ завершен! Использовано 22 метрики*\n"
         response += "📊 *Используйте /history для отслеживания динамики*"
         
         return response
