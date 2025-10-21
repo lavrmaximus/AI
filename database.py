@@ -504,5 +504,70 @@ class Database:
         
         return result
 
+    async def get_all_users(self) -> List[Dict]:
+        """Получение всех пользователей"""
+        def _get():
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT user_id, username, first_name, last_name
+                FROM users 
+                ORDER BY user_id DESC
+            ''')
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
+    
+    async def get_system_stats(self) -> Dict:
+        """Получение системной статистики"""
+        def _get():
+            cursor = self.conn.cursor()
+            
+            # Общее количество пользователей
+            cursor.execute('SELECT COUNT(*) as total_users FROM users')
+            total_users = cursor.fetchone()['total_users']
+            
+            # Общее количество анализов
+            cursor.execute('SELECT COUNT(*) as total_analyses FROM business_snapshots')
+            total_analyses = cursor.fetchone()['total_analyses']
+            
+            # Активные сегодня (пользователи с активностью за последние 24 часа)
+            cursor.execute('''
+                SELECT COUNT(DISTINCT user_id) as active_today 
+                FROM messages 
+                WHERE created_at >= NOW() - INTERVAL '1 day'
+            ''')
+            active_today = cursor.fetchone()['active_today']
+            
+            return {
+                'total_users': total_users,
+                'total_analyses': total_analyses,
+                'active_today': active_today
+            }
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
+    
+    async def get_advice(self) -> List[str]:
+        """Получение общих советов"""
+        def _get():
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT advice1, advice2, advice3, advice4 
+                FROM business_snapshots 
+                WHERE advice1 IS NOT NULL AND advice1 != ''
+                ORDER BY created_at DESC 
+                LIMIT 10
+            ''')
+            rows = cursor.fetchall()
+            advice = []
+            for row in rows:
+                for key in ['advice1', 'advice2', 'advice3', 'advice4']:
+                    val = row.get(key)
+                    if val and str(val).strip():
+                        advice.append(str(val).strip())
+            return advice[:5]  # Возвращаем максимум 5 советов
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
+
 # Глобальный экземпляр базы данных
 db = Database()
