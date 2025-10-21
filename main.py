@@ -25,10 +25,13 @@ def run_web():
     app.run(debug=False, host='0.0.0.0', port=port)
 
 if __name__ == "__main__":
+    print("🚀 Запускаю приложение...")
     # Запускаем веб-сайт в отдельном потоке
     web_thread = threading.Thread(target=run_web)
     web_thread.daemon = True
     web_thread.start()
+    print("🌐 Веб-сайт запущен в фоне")
     
     # Запускаем бота в основном потоке
+    print("🤖 Запускаю бота...")
     asyncio.run(run_bot())

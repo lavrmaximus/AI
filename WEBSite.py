@@ -6,6 +6,7 @@ import math
 import asyncio
 import os
 import logging
+import traceback
 from dotenv import load_dotenv
 from database import db as async_db
 load_dotenv()
@@ -112,12 +113,24 @@ def get_period_info(dates):
 # Главная страница
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        print("🌐 Запрос к главной странице")
+        return render_template('index.html')
+    except Exception as e:
+        print(f"❌ Ошибка на главной странице: {e}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        return f"Ошибка: {str(e)}", 500
 
 # Страница дашборда
 @app.route('/dashboard')
 def dashboard():
-    return render_template('dashboard.html')
+    try:
+        print("🌐 Запрос к дашборду")
+        return render_template('dashboard.html')
+    except Exception as e:
+        print(f"❌ Ошибка на дашборде: {e}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        return f"Ошибка: {str(e)}", 500
 
 # Страница аналитики
 @app.route('/analytics')
@@ -357,6 +370,13 @@ def debug_static():
     </body>
     </html>
     '''
+
+# Глобальная обработка ошибок
+@app.errorhandler(Exception)
+def handle_exception(e):
+    print(f"❌ Глобальная ошибка: {e}")
+    print(f"❌ Traceback: {traceback.format_exc()}")
+    return f"Внутренняя ошибка сервера: {str(e)}", 500
 
 if __name__ == '__main__':
     import os
