@@ -258,7 +258,7 @@ class BusinessBot:
         user = update.effective_user
         logger.info(f"ℹ️ Пользователь {user.first_name} запросил информацию о боте")
 
-        text = safe_markdown_text(
+        main_text = safe_markdown_text(
             "*💸 ФИНАНСОВЫЙ ЛУЧ 💸*\n\n"
             "*О проекте:*\n"
             "Финансовый Луч - это интеллектуальный помощник для анализа и управления бизнесом, разработанный в рамках проекта \"Инженеры будущего\".\n\n"
@@ -283,6 +283,10 @@ class BusinessBot:
             "/help_metrics - справочник метрик\n\n"
             "🚀 *Полный анализ вашего бизнеса!*"
         )
+        
+        license_text = ">Финансовый луч © 2025 by Lavrinov Maxim is licensed under CC BY\\-NC 4\\.0\\. To view a copy of this license, visit https://creativecommons\\.org/licenses/by\\-nc/4\\.0/"
+        
+        text = main_text + "\n\n" + license_text
         await update.message.reply_text(text, parse_mode='MarkdownV2')
 
     async def new_business_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -544,13 +548,14 @@ class BusinessBot:
             report = await business_analyzer.generate_business_report(business_id)
             metrics = report.get('detailed_metrics', {}) if 'error' not in report else {}
             recommendations = report.get('recommendations', []) if 'error' not in report else {}
-            raw_data = report.get('raw_data', current_data) if 'error' not in report else current_data
+            # Используем данные из БД, а не из отчета
+            raw_data = current_data
             
             # Используем единый формат отчета
             response = format_business_report(raw_data, metrics, recommendations)
 
             # Удаляем меню и отправляем отчет
-            await query.edit_message_text("✅ Загружаю отчет...")
+            await query.edit_message_text("📊 *Делаю отчет\\.\\.\\.*", parse_mode='MarkdownV2')
             await self.send_long_message(query, response, parse_mode='MarkdownV2')
             
             # Удаляем сообщение "Загружаю отчет"
@@ -771,7 +776,7 @@ class BusinessBot:
             progress_msg = None
             try:
                 progress_msg = await update.message.reply_text(
-                    "🛠 *Делаю отчёт...*",
+                    "🛠 *Делаю отчёт\\.\\.\\.*",
                     parse_mode='MarkdownV2'
                 )
             except Exception:

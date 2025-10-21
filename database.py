@@ -236,17 +236,14 @@ class Database:
         """Добавление снимка бизнеса со всеми метриками"""
         def _add():
             cursor = self.conn.cursor()
-            # ФИКС: используем московское время (UTC+3) - строго +3 часа
-            utc_now = datetime.utcnow()
-            moscow_time = utc_now + timedelta(hours=3)
+            utc_now = datetime.now(timezone.utc)
+            moscow_time = utc_now
             actual_period_date = period_date or moscow_time.strftime("%Y-%m-%d")
             
-            # Подготавливаем советы (до 4 штук)
             advice_list_local = (advice_list or [])[:4]
             while len(advice_list_local) < 4:
                 advice_list_local.append('')
             
-            # Используем московское время для created_at
             moscow_time_str = moscow_time.strftime("%Y-%m-%d %H:%M:%S")
             
             cursor.execute('''
