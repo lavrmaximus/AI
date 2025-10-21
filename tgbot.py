@@ -14,6 +14,7 @@ from datetime import datetime
 from telegram.helpers import escape_markdown
 from env_utils import is_production, get_log_dir, should_create_files
 from report_formatter import format_business_report, get_health_assessment
+import sys
 
 logging.getLogger('telegram').setLevel(logging.WARNING)
 logging.getLogger('httpx').setLevel(logging.WARNING)
@@ -57,7 +58,7 @@ class DailyFileHandler(logging.Handler):
 
 handlers = []
 
-stream_handler = logging.StreamHandler()
+stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setFormatter(logging.Formatter('[%(asctime)s] %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
 handlers.append(stream_handler)
 
@@ -675,26 +676,21 @@ class BusinessBot:
         )
 
         try:
-            # Сначала определяем тип сообщения
             message_type = await classify_message_type(user_text)
             logger.info(f"🎯 Определен тип сообщения: {message_type}")
 
             if message_type == "business_data":
-                # Ненавязчивая подсказка и продолжаем отвечать по сути сообщения
                 try:
                     await update.message.reply_text(
                         "ℹ️ Чтобы создать бизнес используйте команду: /new_business"
                     )
                 except Exception:
                     pass
-                # Продолжаем как свободный диалог
                 message_type = "general"
 
-            # Теперь показываем соответствующее сообщение
             if message_type == "general":
-                # Для общения показываем сначала "анализирую", потом "общаюсь"
                 import asyncio
-                await asyncio.sleep(0.1)  # Небольшая задержка
+                await asyncio.sleep(0.1)
                 try:
                     await thinking_msg.edit_text(
                         "💬 *Общаюсь\\.\\.\\.*\n_Всегда рад поболтать_",
@@ -716,7 +712,6 @@ class BusinessBot:
                 try:
                     session_id = None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id
                     if session_id is None:
-                        # Привязываем к общей chat-сессии пользователя
                         session_id = await db.get_or_create_user_chat_session(user_id)
                     await db.log_message(
                         user_id=user_id,
@@ -728,7 +723,7 @@ class BusinessBot:
                 except Exception as e:
                     logger.warning(f"Не удалось записать вопрос в БД: {e}")
                 await self.send_long_message(update, response)
-            else:  # general
+            else:
                 response = await self.handle_general_chat(user_text, user_id)
                 try:
                     session_id = None if user_id not in conv_manager.active_sessions else conv_manager.active_sessions[user_id].session_id
@@ -745,7 +740,6 @@ class BusinessBot:
                     logger.warning(f"Не удалось записать общение в БД: {e}")
                 await self.send_long_message(update, response, None)
             
-            # Удаляем прогресс-сообщение
             try:
                 await thinking_msg.delete()
             except Exception:
