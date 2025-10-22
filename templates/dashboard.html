@@ -324,7 +324,13 @@
         
         const change = data.change || 0;
         changeElement.textContent = (change > 0 ? '+' : '') + change + '%';
-        changeElement.className = `change ${change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral'}`;
+        
+        // Для расходов логика обратная: увеличение = плохо (красный), уменьшение = хорошо (зеленый)
+        if (type === 'expenses') {
+            changeElement.className = `change ${change > 0 ? 'negative' : change < 0 ? 'positive' : 'neutral'}`;
+        } else {
+            changeElement.className = `change ${change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral'}`;
+        }
     }
 
     function buildAllMetricCards(latest, data) {

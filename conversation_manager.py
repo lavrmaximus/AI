@@ -153,6 +153,15 @@ class BusinessConversation:
 
             # Отрасль больше не используется
 
+            # Если мы в режиме РЕДАКТИРОВАНИЯ (есть business_id) и название пустое — подтянем его из БД
+            if (not self.collected_data.get('business_name') or str(self.collected_data.get('business_name', '')).strip() == '') and self.business_id:
+                try:
+                    history = await db.get_business_history(self.business_id, limit=1)
+                    if history and history[0].get('business_name'):
+                        self.collected_data['business_name'] = history[0]['business_name']
+                except Exception:
+                    pass
+
             # Проверяем достаточно ли данных для начала минимального анализа (требуем business_name)
             # Формируем данные для промпта как строку, где указано наличие или отсутствие
             collected_data_for_ai_prompt = {}
@@ -162,9 +171,9 @@ class BusinessConversation:
                 else:
                     collected_data_for_ai_prompt[field] = "НЕТ"
             
-            # Если monthly_costs отсутствует, но есть expenses — подставляем для полноты анализа
-            if ('monthly_costs' not in self.collected_data or not self.collected_data.get('monthly_costs')) and self.collected_data.get('expenses'):
-                self.collected_data['monthly_costs'] = self.collected_data['expenses']
+            # monthly_costs и expenses - разные поля:
+            # expenses = общие расходы (аренда + зарплаты + материалы + маркетинг)
+            # monthly_costs = только постоянные расходы (аренда + зарплаты)
 
             # Проверяем, сколько обязательных полей собрано
             required_fields_count = sum(

@@ -312,8 +312,8 @@ def generate_ai_analysis(latest_data, history_data):
     avg_check = float(latest_data.get('average_check') or 0)
     rating = int((latest_data.get('overall_health_score') or 0) / 10)
     
-    # Анализ прибыльности
-    profitability = (profit / revenue * 100) if revenue > 0 else 0
+    # Анализ прибыльности - берем из БД (profit_margin)
+    profitability = float(latest_data.get('profit_margin') or 0)
     if profitability > 20:
         profit_status = "высокой"
     elif profitability > 10:
@@ -388,6 +388,6 @@ def handle_exception(e):
 
 if __name__ == '__main__':
     import os
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 8080))
     print(f"🌐 Flask запущен на порту {port}")
     app.run(debug=True, host='0.0.0.0', port=port)
