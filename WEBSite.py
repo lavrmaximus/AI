@@ -29,12 +29,18 @@ _event_loop = asyncio.new_event_loop()
 asyncio.set_event_loop(_event_loop)
 try:
     _event_loop.run_until_complete(async_db.init_db())
+    print("✅ База данных инициализирована успешно")
 except Exception as e:
-    print(f"Database initialization error: {e}")
+    print(f"⚠️ Предупреждение: База данных недоступна: {e}")
+    print("🌐 Приложение запустится в режиме без базы данных")
 
 def await_db(coro):
     """Выполнить async-вызов к БД в синхронном Flask обработчике."""
-    return _event_loop.run_until_complete(coro)
+    try:
+        return _event_loop.run_until_complete(coro)
+    except Exception as e:
+        print(f"⚠️ Ошибка базы данных: {e}")
+        return None
 
 # Подготовка данных для 22+ метрик на основе снимков новой БД
 def prepare_multi_metric_data(snapshots):
@@ -276,14 +282,12 @@ def get_system_stats():
 def get_advice():
     try:
         advice = await_db(async_db.get_advice())
+        if not advice:
+            # Если нет комментариев от ИИ в базе, возвращаем пустой список
+            advice = []
         return jsonify({'success': True, 'advice': advice})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e), 'advice': [
-            "Проанализируйте категории расходов в разделе аналитики",
-            "Отслеживайте динамику привлечения клиентов", 
-            "Получайте персональные советы для вашего бизнеса",
-            "Используйте AI-рекомендации для оптимизации процессов"
-        ]}), 500
+        return jsonify({'success': False, 'error': str(e), 'advice': []}), 500
 
 # API endpoint для советов по конкретному бизнесу (из последнего снимка)
 @app.route('/api/business-advice/<int:business_id>')
@@ -294,10 +298,13 @@ def get_business_advice(business_id):
             return jsonify({'success': True, 'advice': []})
         latest = snapshots[0]
         advice = []
+        
+        # Получаем советы от ИИ (advice1-4)
         for key in ['advice1','advice2','advice3','advice4']:
             val = latest.get(key)
             if val and str(val).strip():
                 advice.append(str(val).strip())
+        
         return jsonify({'success': True, 'advice': advice})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e), 'advice': []}), 500
@@ -344,6 +351,9 @@ def generate_ai_analysis(latest_data, history_data):
             if growth < 5:
                 recommendations.append("Разработать стратегию роста продаж")
     
+    # Получаем комментарий от ИИ из базы данных
+    ai_commentary = latest_data.get('ai_commentary', '')
+    
     return {
         'summary': f" Ваш бизнес показывает {profit_status} рентабельность ({profitability:.1f}%). Выручка: {revenue:,.0f} руб., Прибыль: {profit:,.0f} руб.",
         'metrics': {
@@ -354,7 +364,7 @@ def generate_ai_analysis(latest_data, history_data):
         'trends': efficiency_analysis if efficiency_analysis else ["Бизнес стабилен, продолжайте в том же духе!"],
         'recommendations': recommendations if recommendations else ["Продолжайте текущую стратегию"],
         'rating': rating,
-        'commentary': ''
+        'commentary': ai_commentary if ai_commentary and str(ai_commentary).strip() else ''
     }
 
 # Страница для отладки
