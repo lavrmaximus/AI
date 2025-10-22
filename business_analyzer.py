@@ -30,14 +30,31 @@ class BusinessAnalyzer:
             
             # Создаем копию raw_data с рассчитанными значениями
             enriched_data = raw_data.copy()
-            if 'profit' in metrics:
-                enriched_data['profit'] = metrics['profit']
-            if 'average_check' in metrics:
-                enriched_data['average_check'] = metrics['average_check']
+            # Надежно прокидываем рассчитанные поля в данные для отчета
+            calc_profit = metrics.get('profit')
+            if calc_profit is None and raw_data.get('revenue') is not None and raw_data.get('expenses') is not None:
+                try:
+                    calc_profit = float(raw_data.get('revenue', 0)) - float(raw_data.get('expenses', 0))
+                except Exception:
+                    calc_profit = None
+            if calc_profit is not None:
+                enriched_data['profit'] = calc_profit
+
+            avg_check = metrics.get('average_check')
+            if avg_check is None and raw_data.get('revenue') and raw_data.get('clients'):
+                try:
+                    c = float(raw_data.get('clients', 0))
+                    avg_check = float(raw_data.get('revenue', 0)) / c if c > 0 else None
+                except Exception:
+                    avg_check = None
+            if avg_check is not None:
+                enriched_data['average_check'] = avg_check
             
             # 2. Базовый AI-анализ текстового описания
             ai_description = self._format_data_for_ai(raw_data)
+            logger.info("🧠 Генерация базового AI-анализа (описание)")
             ai_basic_analysis = await self._get_basic_ai_analysis(ai_description, user_id)
+            logger.info(f"🧠 Комментарий AI: {ai_basic_analysis.get('КОММЕНТАРИЙ','')[:200]}")
             
             # 3. Сохраняем в базу данных
             snapshot_id = await db.add_business_snapshot(
@@ -49,8 +66,8 @@ class BusinessAnalyzer:
             )
             logger.info(f"✅ Снимок бизнеса сохранен: {snapshot_id}")
             
-            # 4. Формирование ответа
-            response = self._format_analysis_response(raw_data, metrics, ai_basic_analysis)
+            # 4. Формирование ответа (передаем обогащенные данные, чтобы в отчете были прибыль и средний чек)
+            response = self._format_analysis_response(enriched_data, metrics, ai_basic_analysis)
             
             return response
             
@@ -174,7 +191,8 @@ class BusinessAnalyzer:
             'ai_commentary': ai_analysis.get('КОММЕНТАРИЙ', ''),
             'ai_advice': ai_analysis.get('СОВЕТЫ', []),
             'detailed_metrics': metrics,
-            'raw_data': raw_data  # Добавляем сырые данные
+            # В raw_data кладем обогащенные данные, чтобы форматтер видел рассчитанные profit/average_check
+            'raw_data': raw_data
         }
         
         return response

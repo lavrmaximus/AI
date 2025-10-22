@@ -318,8 +318,10 @@ class BusinessBot:
         
         await update.message.reply_text(text, parse_mode='MarkdownV2')
         
-        conversation = await conv_manager.get_conversation(user_id)
-        await conversation.update_state("awaiting_business_data")
+        # Ставим флаг: следующее сообщение пользователя будет обработано как свободный ввод данных
+        if not hasattr(self, 'awaiting_business_data'):
+            self.awaiting_business_data = set()
+        self.awaiting_business_data.add(user_id)
 
     async def edit_business_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Команда для редактирования существующего бизнеса"""
@@ -653,6 +655,38 @@ class BusinessBot:
 
         await db.save_user(user_id, user.username, user.first_name, user.last_name)
 
+        # Если ждём первое сообщение для нового бизнеса – сразу собираем данные без стартового промпта
+        if hasattr(self, 'awaiting_business_data') and user_id in self.awaiting_business_data:
+            try:
+                conversation = await conv_manager.get_conversation(user_id)
+                await conversation._update_state(conversation.STATES['COLLECTING_DATA'])
+                progress_msg = None
+                try:
+                    progress_msg = await update.message.reply_text(
+                        "🛠 *Делаю отчёт\\.\\.\\.*",
+                        parse_mode='MarkdownV2'
+                    )
+                except Exception:
+                    pass
+                response_data = await conversation._handle_data_collection(user_text)
+                if progress_msg:
+                    try:
+                        await progress_msg.edit_text(
+                            safe_markdown_text(response_data['response']),
+                            parse_mode='MarkdownV2'
+                        )
+                    except Exception:
+                        try:
+                            await progress_msg.delete()
+                        except Exception:
+                            pass
+                        await self.send_long_message(update, response_data['response'], 'Markdown')
+                else:
+                    await self.send_long_message(update, response_data['response'], 'Markdown')
+            finally:
+                self.awaiting_business_data.discard(user_id)
+            return
+
         try:
             from ai import conversation_memory as ai_memory
             if user_id not in ai_memory or len(ai_memory[user_id]) == 0:
@@ -801,9 +835,9 @@ class BusinessBot:
                     except Exception:
                         pass
                     # Отправляем новое сообщение
-                    await self.send_long_message(update, response_data['response'], 'MarkdownV2')
+                    await self.send_long_message(update, response_data['response'], 'Markdown')
             else:
-                await self.send_long_message(update, response_data['response'], 'MarkdownV2')
+                await self.send_long_message(update, response_data['response'], 'Markdown')
             
             try:
                 await db.log_message(

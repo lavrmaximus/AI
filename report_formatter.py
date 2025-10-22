@@ -47,9 +47,16 @@ def format_business_report(business_data: Dict, metrics: Dict = None, recommenda
         'customer_retention_rate': '🔄 Удержание клиентов'
     }
     
+    numeric_fields = {'revenue','expenses','profit','clients','average_check','investments','marketing_costs','employees','new_clients_per_month','customer_retention_rate'}
     for field, name in raw_fields.items():
         value = business_data.get(field, 0)
-        if value and value != 0:
+        # Нормализуем числовые значения, если они пришли строками
+        if field in numeric_fields and isinstance(value, str):
+            try:
+                value = float(value.replace(' ', '').replace(',', '.'))
+            except Exception:
+                value = 0
+        if value is not None and value != 0:
             if field == 'customer_retention_rate':
                 response += f"• {name}: {value:.1f}%\n"
             elif field in ['clients', 'employees', 'new_clients_per_month']:

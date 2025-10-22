@@ -21,8 +21,8 @@ class BusinessConversation:
         'COMPLETED': 'completed'
     }
     
-    # Минимально необходимые поля для анализа
-    REQUIRED_FIELDS = ['revenue', 'expenses', 'clients']
+    # Минимально необходимые поля для анализа (включая название бизнеса)
+    REQUIRED_FIELDS = ['business_name', 'revenue', 'expenses', 'clients']
     OPTIONAL_FIELDS = ['investments', 'marketing_costs', 'employees', 'new_clients_per_month', 'customer_retention_rate']
     
     def __init__(self, session_id: int = None):
@@ -105,34 +105,20 @@ class BusinessConversation:
             return await self._handle_unknown_state()
     
     async def _handle_start(self) -> Dict:
-        """Начало диалога - спрашиваем название бизнеса"""
-        await self._update_state(self.STATES['AWAITING_BUSINESS_NAME'])
-        
+        """Начало диалога - сразу переходим к свободному вводу данных"""
+        await self._update_state(self.STATES['COLLECTING_DATA'])
         return {
-            'response': "👋 Отлично! Давайте разберем ваш бизнес.\n\nКак называется ваш бизнес?",
-            'next_action': 'await_business_name',
+            'response': "📝 Расскажите о вашем бизнесе в свободной форме: название, выручка, расходы, клиенты и т.д.",
+            'next_action': 'collect_data',
             'is_complete': False
         }
     
     async def _handle_business_name(self, business_name: str) -> Dict:
-        """Обработка названия бизнеса"""
+        """Обработка названия бизнеса (поддержка старого шага)"""
         self.collected_data['business_name'] = business_name.strip()
-        
-        # Создаем бизнес в базе данных
-        self.business_id = await db.create_business(
-            user_id=self.user_id,
-            name=business_name
-        )
-        
         await self._update_state(self.STATES['COLLECTING_DATA'])
-        
         return {
-            'response': f"📝 Записал: {business_name}\n\n"
-                       "Теперь расскажите о своем бизнесе в свободной форме.\n\n"
-                       "💡 *Пример:*\n"
-                       "Кофейня в центре города, выручка 500к в месяц, расходы на аренду и зарплаты 300к, "
-                       "приходит около 1000 клиентов, средний чек 500 рублей, "
-                       "инвестиции 1 млн рублей на открытие.",
+            'response': "📝 Принял название. Теперь опишите остальные данные: выручка, расходы, клиенты и т.д.",
             'next_action': 'collect_data',
             'is_complete': False
         }
@@ -146,7 +132,7 @@ class BusinessConversation:
             if user_message.strip().lower() in ['да', 'yes', 'готово', 'готов'] and self._has_required_data():
                 return await self._handle_analysis('да')
 
-            # Извлекаем данные из текста с помощью AI
+            # Извлекаем данные из текста с помощью AI (включая business_name)
             extracted_data = await extract_business_data(user_message)
             logger.info(f"🔍 Извлечено данных: {extracted_data}")
 
@@ -167,7 +153,7 @@ class BusinessConversation:
 
             # Отрасль больше не используется
 
-            # Проверяем достаточно ли данных для начала минимального анализа
+            # Проверяем достаточно ли данных для начала минимального анализа (требуем business_name)
             # Формируем данные для промпта как строку, где указано наличие или отсутствие
             collected_data_for_ai_prompt = {}
             for field in self.REQUIRED_FIELDS + self.OPTIONAL_FIELDS:
@@ -181,16 +167,26 @@ class BusinessConversation:
                 self.collected_data['monthly_costs'] = self.collected_data['expenses']
 
             # Проверяем, сколько обязательных полей собрано
-            required_fields_count = sum(1 for field in self.REQUIRED_FIELDS if field in self.collected_data and self.collected_data[field] is not None)
+            required_fields_count = sum(
+                1 for field in self.REQUIRED_FIELDS
+                if field in self.collected_data and (
+                    (isinstance(self.collected_data[field], (int, float)) and self.collected_data[field] is not None and self.collected_data[field] > 0)
+                    or (isinstance(self.collected_data[field], str) and self.collected_data[field].strip() != '')
+                )
+            )
             
             # Если собраны все обязательные поля, переходим к сбору дополнительных
             if required_fields_count == len(self.REQUIRED_FIELDS):
+                logger.info("🧠 Запрос недостающих данных у AI (полный набор полей)")
                 missing_questions_text = await analyze_missing_data(self.collected_data) # Отдаем AI полные данные
+                logger.info(f"🧠 Ответ AI по недостающим данным: {missing_questions_text[:20]}")
             else:
                 # Если не хватает обязательных, то AI должен сфокусироваться только на них
                 # Создаем временный словарь, чтобы AI не видел дополнительные, пока не соберет основные
                 temp_collected_data = {k: v for k, v in self.collected_data.items() if k in self.REQUIRED_FIELDS}
+                logger.info("🧠 Запрос недостающих данных у AI (только обязательные)")
                 missing_questions_text = await analyze_missing_data(temp_collected_data)
+                logger.info(f"🧠 Ответ AI по недостающим данным: {missing_questions_text[:20]}")
 
 
             if missing_questions_text.strip().upper() == "ENOUGH_DATA":
@@ -275,7 +271,7 @@ class BusinessConversation:
                     summary_lines.append(f"*{name}*: {val}")
             else:
                 name = field_names.get(field, field)
-                summary_lines.append(f"*{name}*: _отсутствует_") # Четко указываем, что отсутствует
+                summary_lines.append(f"*{name}*: _отсутствует_")
 
         if not summary_lines:
             return "Пока нет собранных данных."
@@ -288,6 +284,7 @@ class BusinessConversation:
         if user_response.lower() in ['да', 'yes', 'конечно', 'проведи', 'анализ', 'готов', 'готово']:
             
             # Запускаем полный анализ через business_analyzer
+            # Создаём бизнес и snapshot ТОЛЬКО после подтверждения
             analysis_result = await business_analyzer.analyze_business_data(
                 self.collected_data, 
                 self.user_id, 
@@ -331,12 +328,21 @@ class BusinessConversation:
     
     def _has_required_data(self) -> bool:
         """Проверка наличия обязательных данных"""
-        return all(
-            field in self.collected_data and 
-            self.collected_data[field] is not None and 
-            self.collected_data[field] > 0 
-            for field in self.REQUIRED_FIELDS
-        )
+        for field in self.REQUIRED_FIELDS:
+            value = self.collected_data.get(field)
+            if value is None:
+                return False
+            if field == 'business_name':
+                if not isinstance(value, str) or not value.strip():
+                    return False
+            else:
+                try:
+                    number_value = float(value)
+                except (TypeError, ValueError):
+                    return False
+                if number_value <= 0:
+                    return False
+        return True
     
     
     def _format_analysis_response(self, analysis_result: Dict) -> str:
@@ -349,9 +355,9 @@ class BusinessConversation:
             'business_name': 'Анализируемый бизнес',
             'revenue': analysis_result.get('raw_data', {}).get('revenue', 0),
             'expenses': analysis_result.get('raw_data', {}).get('expenses', 0),
-            'profit': analysis_result.get('raw_data', {}).get('profit', 0),
+            'profit': analysis_result.get('raw_data', {}).get('profit', 0),  # enriched
             'clients': analysis_result.get('raw_data', {}).get('clients', 0),
-            'average_check': analysis_result.get('raw_data', {}).get('average_check', 0),
+            'average_check': analysis_result.get('raw_data', {}).get('average_check', 0),  # enriched
             'investments': analysis_result.get('raw_data', {}).get('investments', 0),
             'marketing_costs': analysis_result.get('raw_data', {}).get('marketing_costs', 0),
             'employees': analysis_result.get('raw_data', {}).get('employees', 0),
