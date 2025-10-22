@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Бизнес Аналитик{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Основной контент -->
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <a href="/" class="nav-btn {% if request.path == '/' %}active{% endif %}">
+            <div class="nav-icon">🏠</div>
+            <span class="nav-label">Главная</span>
+        </a>
+        <a href="/dashboard" class="nav-btn {% if request.path == '/dashboard' %}active{% endif %}">
+            <div class="nav-icon">📊</div>
+            <span class="nav-label">Дашборд</span>
+        </a>
+        <a href="/analytics" class="nav-btn {% if request.path == '/analytics' %}active{% endif %}">
+            <div class="nav-icon">📈</div>
+            <span class="nav-label">Аналитика</span>
+        </a>
+    </nav>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <!-- Анимированный фон -->
+    <div class="animated-background">
+        <div class="gradient-sphere sphere-1"></div>
+        <div class="gradient-sphere sphere-2"></div>
+        <div class="gradient-sphere sphere-3"></div>
+        <div class="gradient-sphere sphere-4"></div>
+        <div class="gradient-sphere sphere-5"></div>
+        <div class="wireframe-grid"></div>
+    </div>
+    <div class="background-overlay"></div>
+</body>
+</html>
