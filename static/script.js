@@ -46,32 +46,172 @@ let currentRange = 'all';
 let cursorX = null; // текущее положение курсора (px внутри графика)
 
 function setTimeRange(range) {
+    // Проверяем, не отключена ли кнопка
+    const btn = document.querySelector(`[data-range="${range}"]`);
+    if (btn && btn.disabled) {
+        return; // Не обрабатываем клик по отключенной кнопке
+    }
+    
     currentRange = range;
     const btns = document.querySelectorAll('.range-btn');
     btns.forEach(b => b.classList.toggle('active', b.dataset.range === range));
+    
+    // Обновляем состояние кнопок на основе доступности данных
+    updateTimeRangeButtons();
+    
     if (window.currentChartData) {
         renderFinanceChart(window.currentChartData);
     }
 }
 
+function updateTimeRangeButtons() {
+    if (!window.currentChartData || !window.currentChartData.dates || window.currentChartData.dates.length === 0) {
+        // Если нет данных, отключаем все кнопки кроме "Все"
+        const btns = document.querySelectorAll('.range-btn');
+        btns.forEach(btn => {
+            if (btn.dataset.range === 'all') {
+                btn.disabled = false;
+                btn.classList.remove('disabled');
+            } else {
+                btn.disabled = true;
+                btn.classList.add('disabled');
+            }
+        });
+        return;
+    }
+    
+    const dates = window.currentChartData.dates;
+    const now = new Date();
+    
+    // Проверяем доступность данных для каждого периода
+    const ranges = {
+        'day': 1,
+        'week': 7,
+        'month': 30,
+        'quarter': 90
+    };
+    
+    const btns = document.querySelectorAll('.range-btn');
+    btns.forEach(btn => {
+        const range = btn.dataset.range;
+        
+        if (range === 'all') {
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+            return;
+        }
+        
+        const daysBack = ranges[range];
+        if (!daysBack) {
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+            return;
+        }
+        
+        const cutoffDate = new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000);
+        let hasDataInRange = false;
+        
+        // Проверяем, есть ли данные в указанном диапазоне
+        for (let i = 0; i < dates.length; i++) {
+            const dateStr = dates[i];
+            try {
+                let recordDate;
+                if (dateStr.includes('T')) {
+                    recordDate = new Date(dateStr.replace('Z', '+00:00'));
+                } else if (dateStr.includes(':')) {
+                    recordDate = new Date(dateStr);
+                } else {
+                    recordDate = new Date(dateStr + ' 00:00:00');
+                }
+                
+                if (recordDate >= cutoffDate) {
+                    hasDataInRange = true;
+                    break;
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+        
+        if (hasDataInRange) {
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+        } else {
+            btn.disabled = true;
+            btn.classList.add('disabled');
+        }
+    });
+}
+
 function sliceDataByRange(data) {
     // data: { dates: [], series: {key: [..]} } или старый формат
     const dates = data.dates || [];
-    const total = dates.length;
-    const map = { day: 1, week: 7, month: 30, quarter: 90, all: total };
-    const count = map[currentRange] || total;
-    const start = Math.max(0, total - count);
-    const sliced = { dates: dates.slice(start) };
+    if (dates.length === 0) return { dates: [], series: {} };
+    
+    // Если выбран "all", возвращаем все данные
+    if (currentRange === 'all') {
+        return data;
+    }
+    
+    // Получаем текущую дату и вычисляем границу периода
+    const now = new Date();
+    let cutoffDate;
+    
+    switch (currentRange) {
+        case 'day':
+            cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 1 день назад
+            break;
+        case 'week':
+            cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 7 дней назад
+            break;
+        case 'month':
+            cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 дней назад
+            break;
+        case 'quarter':
+            cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // 90 дней назад
+            break;
+        default:
+            return data;
+    }
+    
+    // Находим индекс, с которого начинать фильтрацию
+    let startIndex = 0;
+    for (let i = 0; i < dates.length; i++) {
+        const dateStr = dates[i];
+        let recordDate;
+        
+        try {
+            // Парсим дату из строки
+            if (dateStr.includes('T')) {
+                recordDate = new Date(dateStr.replace('Z', '+00:00'));
+            } else if (dateStr.includes(':')) {
+                recordDate = new Date(dateStr);
+            } else {
+                recordDate = new Date(dateStr + ' 00:00:00');
+            }
+            
+            // Если запись новее cutoffDate, начинаем с неё
+            if (recordDate >= cutoffDate) {
+                startIndex = i;
+                break;
+            }
+        } catch (e) {
+            // Если не удалось распарсить дату, пропускаем
+            continue;
+        }
+    }
+    
+    const sliced = { dates: dates.slice(startIndex) };
     if (data.series) {
         sliced.series = {};
         Object.keys(data.series).forEach(k => {
-            sliced.series[k] = (data.series[k] || []).slice(start);
+            sliced.series[k] = (data.series[k] || []).slice(startIndex);
         });
     } else {
         // старый формат
         ['revenue','expenses','profit'].forEach(k => {
             if (data[k]) {
-                sliced[k] = data[k].slice(start);
+                sliced[k] = data[k].slice(startIndex);
             }
         });
     }
@@ -87,6 +227,10 @@ function renderFinanceChart(data) {
 	const canvasPercent = document.getElementById('financeChartPercent');
 	const ctxPercent = canvasPercent.getContext('2d');
 	window.currentChartData = data;
+	
+	// Обновляем состояние кнопок фильтрации времени
+	updateTimeRangeButtons();
+	
 	if (!data || !data.dates || data.dates.length === 0) {
 		canvasCurrency.style.display = 'none';
 		canvasCounts.style.display = 'none';

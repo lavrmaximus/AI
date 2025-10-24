@@ -214,8 +214,30 @@ body {
 }
 
 .responsive-title {
-    font-size: clamp(1.4em, 6vw, 2.5em);
-    white-space: nowrap;
+    font-size: clamp(1.2em, 4vw, 2.5em);
+    line-height: 1.2;
+    text-align: center;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    -moz-hyphens: auto;
+    -ms-hyphens: auto;
+}
+
+/* Дополнительные медиа-запросы для очень узких экранов */
+@media (max-width: 320px) {
+    .responsive-title {
+        font-size: 1.1em;
+        line-height: 1.1;
+    }
+}
+
+@media (max-width: 280px) {
+    .responsive-title {
+        font-size: 1em;
+        line-height: 1;
+    }
 }
 
 .subtitle {
@@ -494,6 +516,46 @@ body {
     text-align: center;
     display: block;
     margin-bottom: 0.5rem;
+}
+
+/* Стили для отображения информации о пользователе */
+.user-display {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.user-display h3 {
+    color: var(--text-light);
+    margin: 0;
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+.user-display span {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.user-display p {
+    color: var(--text-muted);
+    margin: 8px 0 0 0;
+    font-size: 0.9em;
+}
+
+/* Стили для предупреждающего сообщения */
+.user-display h3:contains("⚠️") {
+    color: var(--warning-color);
+}
+
+/* Скрытие селектора пользователей когда не нужен */
+.user-selector.hidden {
+    display: none;
 }
 
 .enhanced-select {
@@ -1914,6 +1976,19 @@ body {
 .range-btn.active {
     background: linear-gradient(135deg, #d400ff, #9400b3);
     border-color: transparent;
+}
+
+.range-btn.disabled {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
+    border-color: rgba(74, 85, 104, 0.2);
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.range-btn.disabled:hover {
+    background: rgba(255, 255, 255, 0.03);
+    transform: none;
 }
 
 /* Отображение значений под курсором */

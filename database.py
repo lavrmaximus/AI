@@ -518,6 +518,22 @@ class Database:
         
         return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
     
+    async def get_user_info(self, user_id: str) -> Optional[Dict]:
+        """Получение информации о конкретном пользователе"""
+        def _get():
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT user_id, username, first_name, last_name
+                FROM users 
+                WHERE user_id = %s
+            ''', (user_id,))
+            row = cursor.fetchone()
+            if row:
+                return dict(row)
+            return None
+        
+        return await asyncio.get_event_loop().run_in_executor(self.executor, _get)
+    
     async def get_system_stats(self) -> Dict:
         """Получение системной статистики"""
         def _get():

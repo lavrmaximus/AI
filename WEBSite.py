@@ -18,28 +18,28 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Проверяем наличие папок
 import os
-print(f"🌐 Текущая директория: {os.getcwd()}")
-print(f"🌐 Папка templates существует: {os.path.exists('templates')}")
-print(f"🌐 Папка static существует: {os.path.exists('static')}")
+print(f"Current directory: {os.getcwd()}")
+print(f"Templates folder exists: {os.path.exists('templates')}")
+print(f"Static folder exists: {os.path.exists('static')}")
 if os.path.exists('templates'):
-    print(f"🌐 Файлы в templates: {os.listdir('templates')}")
+    print(f"Files in templates: {os.listdir('templates')}")
 
 # Инициализируем новую БД (async) один раз при старте процесса
 _event_loop = asyncio.new_event_loop()
 asyncio.set_event_loop(_event_loop)
 try:
     _event_loop.run_until_complete(async_db.init_db())
-    print("✅ База данных инициализирована успешно")
+    print("Database initialized successfully")
 except Exception as e:
-    print(f"⚠️ Предупреждение: База данных недоступна: {e}")
-    print("🌐 Приложение запустится в режиме без базы данных")
+    print(f"Warning: Database unavailable: {e}")
+    print("Application will start without database")
 
 def await_db(coro):
     """Выполнить async-вызов к БД в синхронном Flask обработчике."""
     try:
         return _event_loop.run_until_complete(coro)
     except Exception as e:
-        print(f"⚠️ Ошибка базы данных: {e}")
+        print(f"Database error: {e}")
         return None
 
 # Подготовка данных для 22+ метрик на основе снимков новой БД
@@ -128,28 +128,32 @@ def get_period_info(dates):
 @app.route('/')
 def index():
     try:
-        print("🌐 Запрос к главной странице")
+        print("Request to main page")
         return render_template('index.html')
     except Exception as e:
-        print(f"❌ Ошибка на главной странице: {e}")
-        print(f"❌ Traceback: {traceback.format_exc()}")
+        print(f"Error on main page: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
         return f"Ошибка: {str(e)}", 500
 
 # Страница дашборда
 @app.route('/dashboard')
 def dashboard():
     try:
-        print("🌐 Запрос к дашборду")
-        return render_template('dashboard.html')
+        print("Request to dashboard")
+        # Получаем user_id из URL параметров
+        user_id = request.args.get('user_id')
+        return render_template('dashboard.html', user_id=user_id)
     except Exception as e:
-        print(f"❌ Ошибка на дашборде: {e}")
-        print(f"❌ Traceback: {traceback.format_exc()}")
+        print(f"Error on dashboard: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
         return f"Ошибка: {str(e)}", 500
 
 # Страница аналитики
 @app.route('/analytics')
 def analytics():
-    return render_template('analytics.html')
+    # Получаем user_id из URL параметров
+    user_id = request.args.get('user_id')
+    return render_template('analytics.html', user_id=user_id)
 
 # Новый API: список бизнесов пользователя
 @app.route('/api/businesses/<user_id>')
@@ -268,6 +272,18 @@ def get_users():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+# API endpoint для получения информации о текущем пользователе
+@app.route('/api/current-user/<user_id>')
+def get_current_user(user_id):
+    try:
+        user_info = await_db(async_db.get_user_info(user_id))
+        if user_info:
+            return jsonify({'success': True, 'user': user_info})
+        else:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # API endpoint для системной статистики (простая версия по новой схеме)
 @app.route('/api/system-stats')
 def get_system_stats():
@@ -322,11 +338,11 @@ def generate_ai_analysis(latest_data, history_data):
     # Анализ прибыльности - берем из БД (profit_margin)
     profitability = float(latest_data.get('profit_margin') or 0)
     if profitability > 20:
-        profit_status = "высокой"
+        profit_status = "высокую"
     elif profitability > 10:
-        profit_status = "средней"
+        profit_status = "среднюю"
     else:
-        profit_status = "низкой"
+        profit_status = "низкую"
     
     # Анализ эффективности
     efficiency_analysis = []
@@ -392,12 +408,12 @@ def debug_static():
 # Глобальная обработка ошибок
 @app.errorhandler(Exception)
 def handle_exception(e):
-    print(f"❌ Глобальная ошибка: {e}")
-    print(f"❌ Traceback: {traceback.format_exc()}")
+    print(f"Global error: {e}")
+    print(f"Traceback: {traceback.format_exc()}")
     return f"Внутренняя ошибка сервера: {str(e)}", 500
 
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 8080))
-    print(f"🌐 Flask запущен на порту {port}")
+    print(f"Flask running on port {port}")
     app.run(debug=True, host='0.0.0.0', port=port)
