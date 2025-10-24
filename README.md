@@ -1,13 +1,1 @@
-## 🚀 О проекте
-
-Финансовый луч - AI-помощник для бизнес-аналитики в Telegram
-
-## 👥 Команда
-
-- **Maxim Lavrinov** ([@lavrmaximus](https://github.com/lavrmaximus)) - архитектура, AI, бэкенд
-- **Artemiy Khrupov** ([username]) - фронтенд, UI/UX, тестирование
-
-## 📄 Лицензия
-
-© 2025 Lavrinov Maxim, Khrupov Artemiy  
-Лицензия: [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
+Финансовый луч  © 2025 by Lavrinov Maxim is licensed under CC BY-NC 4.0. To view a copy of this license, visit https://creativecommons.org/licenses/by-nc/4.0/
