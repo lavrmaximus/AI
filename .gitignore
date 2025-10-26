@@ -26,3 +26,6 @@ logs/
 # Системные
 .DS_Store
 Thumbs.db
+
+# Gemini
+GEMINI.md

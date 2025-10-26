@@ -3,11 +3,17 @@
 {% block title %}Дашборд - BusinessAI{% endblock %}
 
 {% block content %}
-<!-- Автоматическое определение пользователя -->
-<div id="user-info" style="display: none;">
-    <div class="user-display">
-        <h3>Профиль: <span id="current-user-name">Загрузка...</span></h3>
+<!-- Выбор пользователя -->
+<div class="enhanced-select" style="margin-top:10px;">
+    <div class="dropdown-container" id="userSelectCustom">
+        <button type="button" class="dropdown-button" id="userSelectTrigger">
+            Выберите пользователя
+        </button>
+        <div class="dropdown-menu" id="userOptions"></div>
     </div>
+    <select id="userSelect" onchange="loadUserData()" style="display:none;">
+        <option value="">Выберите пользователя</option>
+    </select>
 </div>
 
 <div class="enhanced-select" style="margin-top:10px;">
@@ -164,104 +170,10 @@
     let currentUserId = null;
     window.selectedMetrics = selectedMetrics;
 
-    // Получаем user_id из URL параметров или из серверного шаблона
-    function getUserIdFromUrl() {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('user_id');
-    }
-
     // Загрузка информации о текущем пользователе при открытии страницы
     document.addEventListener('DOMContentLoaded', function() {
-        const userIdFromUrl = getUserIdFromUrl();
-        const userIdFromTemplate = '{{ user_id }}' || null;
-        currentUserId = userIdFromUrl || userIdFromTemplate;
-        
-        // Проверяем, является ли пользователь админом
-        if (isAdmin(currentUserId)) {
-            loadCurrentUser(currentUserId);
-            showAdminUserSelector();
-        } else if (currentUserId && currentUserId !== 'null' && currentUserId !== '') {
-            loadCurrentUser(currentUserId);
-        } else {
-            showNoUserMessage();
-        }
+        loadUsers();
     });
-
-    function isAdmin(userId) {
-        const adminIds = ['1287604685', '6149421072'];
-        return adminIds.includes(userId);
-    }
-
-    function showNoUserMessage() {
-        const userInfo = document.getElementById('user-info');
-        userInfo.innerHTML = `
-            <div class="user-display">
-                <h3>⚠️ Пользователь не выбран</h3>
-                <p>Для просмотра дашборда необходимо выбрать пользователя через Telegram-бота</p>
-            </div>
-        `;
-        userInfo.style.display = 'block';
-    }
-
-    function showAdminUserSelector() {
-        // Создаем отдельное окно для админов
-        const adminSelector = document.createElement('div');
-        adminSelector.id = 'admin-user-selector';
-        adminSelector.innerHTML = `
-            <div style="position: fixed; top: 10px; right: 10px; background: #2d3748; border: 2px solid #4a5568; border-radius: 8px; padding: 15px; z-index: 10000; max-width: 300px;">
-                <h4 style="color: #f7fafc; margin: 0 0 10px 0; font-size: 14px;">🔧 Админ: Выбор пользователя</h4>
-                <select id="adminUserSelect" style="width: 100%; padding: 5px; margin-bottom: 10px; background: #4a5568; color: #f7fafc; border: 1px solid #718096; border-radius: 4px;">
-                    <option value="">Загрузка...</option>
-                </select>
-                <button onclick="switchToAdminUser()" style="width: 100%; padding: 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">Переключить</button>
-                <button onclick="closeAdminSelector()" style="width: 100%; padding: 5px; background: #e53e3e; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; font-size: 12px;">Закрыть</button>
-            </div>
-        `;
-        document.body.appendChild(adminSelector);
-        loadAdminUsers();
-    }
-
-    function closeAdminSelector() {
-        const selector = document.getElementById('admin-user-selector');
-        if (selector) {
-            selector.remove();
-        }
-    }
-
-    async function loadAdminUsers() {
-        try {
-            const response = await fetch('/api/users');
-            const data = await response.json();
-            
-            if (data.success) {
-                const select = document.getElementById('adminUserSelect');
-                select.innerHTML = '<option value="">Выберите пользователя</option>';
-                
-                data.users.forEach(user => {
-                    const option = document.createElement('option');
-                    option.value = user.user_id;
-                    const displayName = user.first_name && user.last_name ? 
-                        `${user.first_name} ${user.last_name}` : 
-                        (user.first_name || user.username || `User ${user.user_id}`);
-                    option.textContent = displayName;
-                    select.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки пользователей для админа:', error);
-        }
-    }
-
-    async function switchToAdminUser() {
-        const select = document.getElementById('adminUserSelect');
-        const selectedUserId = select.value;
-        
-        if (selectedUserId) {
-            currentUserId = selectedUserId;
-            await loadCurrentUser(selectedUserId);
-            closeAdminSelector();
-        }
-    }
 
     async function loadCurrentUser(userId) {
         try {
@@ -281,11 +193,9 @@
                 await loadUserBusinesses(userId);
             } else {
                 console.error('User not found:', data.error);
-                showNoUserMessage();
             }
         } catch (error) {
             console.error('Error loading current user:', error);
-            showNoUserMessage();
         }
     }
 
@@ -336,12 +246,6 @@
         } catch (error) {
             console.error('Error loading user businesses:', error);
         }
-    }
-
-    function showUserSelector() {
-        // Показываем старый селектор пользователей как fallback
-        document.getElementById('user-info').style.display = 'none';
-        loadUsers();
     }
 
     async function loadUsers() {

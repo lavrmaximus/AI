@@ -140,9 +140,7 @@ def index():
 def dashboard():
     try:
         print("Request to dashboard")
-        # Получаем user_id из URL параметров
-        user_id = request.args.get('user_id')
-        return render_template('dashboard.html', user_id=user_id)
+        return render_template('dashboard.html')
     except Exception as e:
         print(f"Error on dashboard: {e}")
         print(f"Traceback: {traceback.format_exc()}")
@@ -151,9 +149,7 @@ def dashboard():
 # Страница аналитики
 @app.route('/analytics')
 def analytics():
-    # Получаем user_id из URL параметров
-    user_id = request.args.get('user_id')
-    return render_template('analytics.html', user_id=user_id)
+    return render_template('analytics.html')
 
 # Новый API: список бизнесов пользователя
 @app.route('/api/businesses/<user_id>')
@@ -273,11 +269,22 @@ def get_users():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # API endpoint для получения информации о текущем пользователе
+import logging
+
+# Configure logging
+log_formatter = logging.Formatter('%(asctime)s - %(message)s')
+log_handler = logging.FileHandler('user_access.log')
+log_handler.setFormatter(log_formatter)
+user_logger = logging.getLogger('user_logger')
+user_logger.addHandler(log_handler)
+user_logger.setLevel(logging.INFO)
+
 @app.route('/api/current-user/<user_id>')
 def get_current_user(user_id):
     try:
         user_info = await_db(async_db.get_user_info(user_id))
         if user_info:
+            user_logger.info(f"User accessed: {user_info}")
             return jsonify({'success': True, 'user': user_info})
         else:
             return jsonify({'success': False, 'error': 'User not found'}), 404
