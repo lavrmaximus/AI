@@ -6,6 +6,7 @@ import math
 import asyncio
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 import traceback
 from dotenv import load_dotenv
 from database import db as async_db
@@ -15,6 +16,14 @@ load_dotenv()
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+
+# Configure logging
+log_formatter = logging.Formatter('%(asctime)s - %(message)s')
+log_handler = RotatingFileHandler('user_access.log', maxBytes=10000, backupCount=1)
+log_handler.setFormatter(log_formatter)
+app.logger.addHandler(log_handler)
+app.logger.setLevel(logging.INFO)
+
 
 # Проверяем наличие папок
 import os
@@ -140,7 +149,8 @@ def index():
 def dashboard():
     try:
         print("Request to dashboard")
-        return render_template('dashboard.html')
+        user_id = request.args.get('user_id')
+        return render_template('dashboard.html', user_id=user_id)
     except Exception as e:
         print(f"Error on dashboard: {e}")
         print(f"Traceback: {traceback.format_exc()}")
@@ -149,7 +159,8 @@ def dashboard():
 # Страница аналитики
 @app.route('/analytics')
 def analytics():
-    return render_template('analytics.html')
+    user_id = request.args.get('user_id')
+    return render_template('analytics.html', user_id=user_id)
 
 # Новый API: список бизнесов пользователя
 @app.route('/api/businesses/<user_id>')
@@ -284,7 +295,7 @@ def get_current_user(user_id):
     try:
         user_info = await_db(async_db.get_user_info(user_id))
         if user_info:
-            user_logger.info(f"User accessed: {user_info}")
+            app.logger.info(f"User accessed: {user_info}")
             return jsonify({'success': True, 'user': user_info})
         else:
             return jsonify({'success': False, 'error': 'User not found'}), 404
@@ -382,7 +393,7 @@ def generate_ai_analysis(latest_data, history_data):
         'metrics': {
             'profitability': round(profitability, 1),
             'client_value': avg_check * clients if clients > 0 else 0,
-            'efficiency_score': min(100, max(0, rating * 10 + profitability))
+            'efficiency_score': latest_data.get('efficiency_health_score', 0)
         },
         'trends': efficiency_analysis if efficiency_analysis else ["Бизнес стабилен, продолжайте в том же духе!"],
         'recommendations': recommendations if recommendations else ["Продолжайте текущую стратегию"],

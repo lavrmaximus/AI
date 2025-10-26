@@ -145,6 +145,8 @@
         { key: 'investments', label: 'Инвестиции', unit: '₽' },
         { key: 'marketing_costs', label: 'Маркетинг', unit: '₽' },
         { key: 'employees', label: 'Сотрудники', unit: '' },
+        { key: 'new_clients_per_month', label: 'Новые клиенты в месяц', unit: '' },
+        { key: 'customer_retention_rate', label: 'Удержание клиентов, %', unit: '%' },
         { key: 'profit_margin', label: 'Маржа прибыли, %', unit: '%' },
         { key: 'break_even_clients', label: 'Точка безуб., клиенты', unit: '' },
         { key: 'safety_margin', label: 'Запас прочности, %', unit: '%' },
@@ -172,7 +174,8 @@
 
     // Загрузка информации о текущем пользователе при открытии страницы
     document.addEventListener('DOMContentLoaded', function() {
-        loadUsers();
+        const userIdFromUrl = '{{ user_id }}';
+        loadUsers(userIdFromUrl);
     });
 
     async function loadCurrentUser(userId) {
@@ -248,7 +251,7 @@
         }
     }
 
-    async function loadUsers() {
+    async function loadUsers(userIdToSelect) {
         try {
             const response = await fetch('/api/users');
             const data = await response.json();
@@ -283,7 +286,19 @@
                     });
                     userOptions.appendChild(optDiv);
                 });
-                if (data.users.length > 0) {
+
+                if (userIdToSelect) {
+                    const userExists = data.users.some(user => user.user_id === userIdToSelect);
+                    if (userExists) {
+                        userSelect.value = userIdToSelect;
+                        const selectedUser = data.users.find(user => user.user_id === userIdToSelect);
+                        const displayName = selectedUser.first_name && selectedUser.last_name ? 
+                            `${selectedUser.first_name} ${selectedUser.last_name}` : 
+                            (selectedUser.first_name || selectedUser.username || `User ${selectedUser.user_id}`);
+                        userTrigger.textContent = displayName;
+                        loadUserData();
+                    }
+                } else if (data.users.length > 0) {
                     userSelect.value = data.users[0].user_id;
                     const firstUser = data.users[0];
                     const displayName = firstUser.first_name && firstUser.last_name ? 
