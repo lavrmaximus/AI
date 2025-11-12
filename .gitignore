@@ -12,6 +12,7 @@ env/
 venv/
 .venv/
 .env
+.roo/
 
 # Логи
 *.log
@@ -26,3 +27,6 @@ logs/
 # Системные
 .DS_Store
 Thumbs.db
+
+# Gemini
+GEMINI.md
