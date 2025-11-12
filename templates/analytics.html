@@ -5,30 +5,28 @@
 {% block content %}
 <div class="analytics-header">
     <h1>Глубокая Аналитика</h1>
-    <div class="user-selector">
-        <label for="userSelect">🔍 Выберите профиль:</label>
-        <div class="enhanced-select">
-            <div class="dropdown-container" id="userSelectCustom">
-                <button type="button" class="dropdown-button" id="userSelectTrigger">
-                    Загрузка...
-                </button>
-                <div class="dropdown-menu" id="userOptions"></div>
-            </div>
-            <select id="userSelect" onchange="loadUserData()" style="display:none;">
-                <option value="">Загрузка...</option>
-            </select>
+    <div class="enhanced-select" style="margin-top:10px;">
+        <div class="dropdown-container" id="userSelectCustom">
+            <button type="button" class="dropdown-button" id="userSelectTrigger">
+                Выберите пользователя
+            </button>
+            <div class="dropdown-menu" id="userOptions"></div>
         </div>
-        <div class="enhanced-select" style="margin-top:10px;">
-            <div class="dropdown-container" id="businessSelectCustom">
-                <button type="button" class="dropdown-button" id="businessSelectTrigger">
-                    Выберите бизнес
-                </button>
-                <div class="dropdown-menu" id="businessOptions"></div>
-            </div>
-            <select id="businessSelect" onchange="loadBusinessData()" style="display:none;">
-                <option value="">Выберите бизнес</option>
-            </select>
+        <select id="userSelect" onchange="loadUserData()" style="display:none;">
+            <option value="">Выберите пользователя</option>
+        </select>
+    </div>
+    
+    <div class="enhanced-select" style="margin-top:10px;">
+        <div class="dropdown-container" id="businessSelectCustom">
+            <button type="button" class="dropdown-button" id="businessSelectTrigger">
+                Выберите бизнес
+            </button>
+            <div class="dropdown-menu" id="businessOptions"></div>
         </div>
+        <select id="businessSelect" onchange="loadBusinessData()" style="display:none;">
+            <option value="">Выберите бизнес</option>
+        </select>
     </div>
 </div>
 
@@ -57,13 +55,89 @@
 </div>
 
 <script>
+    let currentBusinessId = null;
+    let currentUserId = null;
+
+    // Загрузка информации о текущем пользователе при открытии страницы
     document.addEventListener('DOMContentLoaded', function() {
-        loadUsers();
+        const userIdFromUrl = '{{ user_id }}';
+        loadUsers(userIdFromUrl);
     });
 
-    let currentBusinessId = null;
+    async function loadCurrentUser(userId) {
+        try {
+            const response = await fetch(`/api/current-user/${userId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                const user = data.user;
+                const displayName = user.first_name && user.last_name ? 
+                    `${user.first_name} ${user.last_name}` : 
+                    (user.first_name || user.username || `User ${user.user_id}`);
+                
+                document.getElementById('current-user-name').textContent = displayName;
+                document.getElementById('user-info').style.display = 'block';
+                
+                // Загружаем бизнесы пользователя
+                await loadUserBusinesses(userId);
+            } else {
+                console.error('User not found:', data.error);
+            }
+        } catch (error) {
+            console.error('Error loading current user:', error);
+        }
+    }
 
-    async function loadUsers() {
+    async function loadUserBusinesses(userId) {
+        try {
+            const response = await fetch(`/api/businesses/${userId}`);
+            const data = await response.json();
+            
+            if (data.success && data.businesses.length > 0) {
+                const businessSelect = document.getElementById('businessSelect');
+                const bizTrigger = document.getElementById('businessSelectTrigger');
+                const bizOptions = document.getElementById('businessOptions');
+                
+                businessSelect.innerHTML = '<option value="">Выберите бизнес</option>';
+                while (bizOptions.firstChild) {
+                    bizOptions.removeChild(bizOptions.firstChild);
+                }
+                
+                data.businesses.forEach(b => {
+                    const option = document.createElement('option');
+                    option.value = b.business_id;
+                    const bizName = (b && b.business_name) ? b.business_name : `Бизнес ${b && b.business_id ? b.business_id : ''}`;
+                    option.textContent = bizName;
+                    businessSelect.appendChild(option);
+                    
+                    const optDiv = document.createElement('div');
+                    optDiv.className = 'dropdown-option';
+                    optDiv.dataset.value = b.business_id;
+                    optDiv.textContent = bizName;
+                    optDiv.addEventListener('click', () => {
+                        businessSelect.value = b.business_id;
+                        bizTrigger.textContent = bizName;
+                        closeCustomSelect('businessSelectCustom');
+                        loadBusinessData();
+                    });
+                    bizOptions.appendChild(optDiv);
+                });
+                
+                // Автоматически выбираем первый бизнес
+                businessSelect.value = data.businesses[0].business_id;
+                bizTrigger.textContent = (data.businesses[0] && data.businesses[0].business_name) ? 
+                    data.businesses[0].business_name : `Бизнес ${data.businesses[0].business_id}`;
+                currentBusinessId = data.businesses[0].business_id;
+                await loadBusinessData();
+            } else {
+                bizTrigger.textContent = 'Нет бизнесов';
+            }
+        } catch (error) {
+            console.error('Error loading user businesses:', error);
+        }
+    }
+
+    async function loadUsers(userIdToSelect) {
         try {
             const response = await fetch('/api/users');
             const data = await response.json();
@@ -72,8 +146,15 @@
                 const userSelect = document.getElementById('userSelect');
                 const userTrigger = document.getElementById('userSelectTrigger');
                 const userOptions = document.getElementById('userOptions');
+                
+                if (!userSelect || !userTrigger || !userOptions) {
+                    console.error('User selector elements not found');
+                    return;
+                }
+                
                 userSelect.innerHTML = '<option value="">Выберите профиль</option>';
                 userOptions.innerHTML = '';
+                
                 data.users.forEach(user => {
                     const option = document.createElement('option');
                     option.value = user.user_id;
@@ -82,6 +163,7 @@
                         (user.first_name || user.username || `User ${user.user_id}`);
                     option.textContent = displayName;
                     userSelect.appendChild(option);
+                    
                     const optDiv = document.createElement('div');
                     optDiv.className = 'dropdown-option';
                     optDiv.dataset.value = user.user_id;
@@ -94,7 +176,19 @@
                     });
                     userOptions.appendChild(optDiv);
                 });
-                if (data.users.length > 0) {
+                
+                if (userIdToSelect) {
+                    const userExists = data.users.some(user => user.user_id === userIdToSelect);
+                    if (userExists) {
+                        userSelect.value = userIdToSelect;
+                        const selectedUser = data.users.find(user => user.user_id === userIdToSelect);
+                        const displayName = selectedUser.first_name && selectedUser.last_name ? 
+                            `${selectedUser.first_name} ${selectedUser.last_name}` : 
+                            (selectedUser.first_name || selectedUser.username || `User ${selectedUser.user_id}`);
+                        userTrigger.textContent = displayName;
+                        loadUserData();
+                    }
+                } else if (data.users.length > 0) {
                     userSelect.value = data.users[0].user_id;
                     const firstUser = data.users[0];
                     const displayName = firstUser.first_name && firstUser.last_name ? 
@@ -114,40 +208,8 @@
     async function loadUserData() {
         const userId = document.getElementById('userSelect').value;
         if (!userId) return;
-        // Загрузим бизнесы пользователя и выберем первый
-        const bizResp = await fetch(`/api/businesses/${userId}`);
-        const bizData = await bizResp.json();
-        const businessSelect = document.getElementById('businessSelect');
-        const bizTrigger = document.getElementById('businessSelectTrigger');
-        const bizOptions = document.getElementById('businessOptions');
-        businessSelect.innerHTML = '<option value="">Выберите бизнес</option>';
-        bizOptions.innerHTML = '';
-        if (bizData.success && bizData.businesses.length) {
-            bizData.businesses.forEach(b => {
-                const option = document.createElement('option');
-                option.value = b.business_id;
-                option.textContent = b.business_name;
-                businessSelect.appendChild(option);
-                const optDiv = document.createElement('div');
-                optDiv.className = 'dropdown-option';
-                optDiv.dataset.value = b.business_id;
-                optDiv.textContent = b.business_name;
-                optDiv.addEventListener('click', () => {
-                    businessSelect.value = b.business_id;
-                    bizTrigger.textContent = b.business_name;
-                    closeCustomSelect('businessSelectCustom');
-                    loadBusinessData();
-                });
-                bizOptions.appendChild(optDiv);
-            });
-            businessSelect.value = bizData.businesses[0].business_id;
-            bizTrigger.textContent = bizData.businesses[0].business_name;
-            currentBusinessId = bizData.businesses[0].business_id;
-            await loadBusinessData();
-        } else {
-            currentBusinessId = null;
-            bizTrigger.textContent = 'Нет бизнесов';
-        }
+        currentUserId = userId;
+        await loadUserBusinesses(userId);
     }
 
     async function loadBusinessData() {
