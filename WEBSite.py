@@ -48,9 +48,27 @@ asyncio.set_event_loop(_event_loop)
 try:
     _event_loop.run_until_complete(async_db.init_db())
     print("Database initialized successfully")
+    
+    # Инициализируем бота для работы через вебхуки
+    if bot_instance:
+        print("🤖 Инициализация бота...")
+        _event_loop.run_until_complete(bot_instance.app.initialize())
+        _event_loop.run_until_complete(bot_instance.app.start())
+        print("✅ Бот инициализирован")
+
+        # Установка вебхука в продакшене
+        if is_production():
+            domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+            if domain:
+                webhook_url = f"https://{domain}/webhook"
+                print(f"🔗 Настройка вебхука на: {webhook_url}")
+                _event_loop.run_until_complete(bot_instance.set_webhook(webhook_url))
+            else:
+                print("⚠️ RAILWAY_PUBLIC_DOMAIN не найден, вебхук не установлен")
+
 except Exception as e:
-    print(f"Warning: Database unavailable: {e}")
-    print("Application will start without database")
+    print(f"Warning: Database or Bot initialization failed: {e}")
+    print(f"Traceback: {traceback.format_exc()}")
 
 def await_db(coro):
     """Выполнить async-вызов к БД в синхронном Flask обработчике."""
@@ -251,7 +269,7 @@ def get_user_ai_analysis(user_id):
             return jsonify({
                 'success': False,
                 'error': 'Данные не найдены. Выберите профиль с данными.'
-            }), 404
+            })
         business_id = businesses[0]['business_id']
         snapshots = await_db(async_db.get_business_history(business_id, limit=12))
         if not snapshots:

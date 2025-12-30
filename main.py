@@ -30,21 +30,7 @@ def run_web():
     print(f"🌐 Запускаю веб-сайт на порту {port}")
     print(f"🌐 URL: http://0.0.0.0:{port}")
     
-    # В продакшене Flask запускает бота через вебхуки
-    if is_production():
-        # Устанавливаем вебхук при старте
-        webhook_url = f"https://{os.environ.get('RAILWAY_PUBLIC_DOMAIN')}/webhook"
-        print(f"🔗 Настройка вебхука на: {webhook_url}")
-        
-        # Инициализируем бота для установки вебхука
-        async def init_webhook():
-            bot = BusinessBot()
-            await bot.set_webhook(webhook_url)
-            
-        try:
-            asyncio.run(init_webhook())
-        except Exception as e:
-            print(f"❌ Ошибка установки вебхука: {e}")
+    # Вебхук теперь устанавливается внутри WEBSite.py при импорте
 
     app.run(debug=False, host='0.0.0.0', port=port)
 
