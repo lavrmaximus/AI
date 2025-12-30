@@ -1016,19 +1016,41 @@ class BusinessBot:
             text = text.replace(char, '\\' + char)
         return text
 
+    async def set_webhook(self, url: str):
+        """Установка вебхука для продакшена"""
+        await self.app.bot.set_webhook(url=url)
+        logger.info(f"✅ Webhook установлен на: {url}")
+
+    async def process_update(self, update_json: Dict):
+        """Обработка входящего обновления от Telegram"""
+        # Update.de_json требует Application.bot
+        update = Update.de_json(update_json, self.app.bot)
+        await self.app.process_update(update)
+
     async def run_async(self):
-        """Асинхронный запуск бота"""
+        """Асинхронный запуск бота (для локальной разработки или инициализации)"""
         print("Bot is starting...")
 
         import sqlite3
         import os
 
+        # Инициализация БД (для локального запуска)
         db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'business_bot_v2.db')
         db.conn = sqlite3.connect(db_path, check_same_thread=False)
         await db.init_db()
 
         await self.app.initialize()
         await self.app.start()
-        await self.app.updater.start_polling()
-
-        await asyncio.Event().wait()
+        
+        if is_production():
+            # В продакшене бот запускается через Flask, здесь просто инициализация
+            logger.info("🚀 Запуск в продакшене (Webhook mode)")
+            # Сбрасываем старые вебхуки, если они были
+            await self.app.bot.set_webhook(url=None)
+            # Не запускаем polling, просто ждем
+            await asyncio.Event().wait()
+        else:
+            # Локальный запуск - используем polling
+            logger.info("💻 Запуск локально (Polling mode)")
+            await self.app.updater.start_polling()
+            await asyncio.Event().wait()

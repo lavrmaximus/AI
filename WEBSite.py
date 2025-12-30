@@ -10,12 +10,21 @@ from logging.handlers import RotatingFileHandler
 import traceback
 from dotenv import load_dotenv
 from database import db as async_db
+from tgbot import BusinessBot # Импортируем бота
+from env_utils import is_production # Импортируем утилиту окружения
 load_dotenv()
 
 # Отключаем дублирование логов Flask
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+
+# Инициализация бота
+try:
+    bot_instance = BusinessBot()
+except ValueError as e:
+    print(f"Warning: Bot token not found: {e}")
+    bot_instance = None
 
 # Configure logging
 log_formatter = logging.Formatter('%(asctime)s - %(message)s')
@@ -143,6 +152,20 @@ def index():
         print(f"Error on main page: {e}")
         print(f"Traceback: {traceback.format_exc()}")
         return f"Ошибка: {str(e)}", 500
+
+# Webhook для Telegram
+@app.route('/webhook', methods=['POST'])
+def telegram_webhook():
+    if bot_instance and is_production():
+        # Запускаем обработку обновления в асинхронном цикле
+        try:
+            # _event_loop определен на строке 37
+            _event_loop.run_until_complete(bot_instance.process_update(request.get_json()))
+            return jsonify({'status': 'ok'})
+        except Exception as e:
+            app.logger.error(f"Error processing webhook: {e}")
+            return jsonify({'status': 'error', 'message': str(e)}), 500
+    return jsonify({'status': 'ignored'}), 200
 
 # Страница дашборда
 @app.route('/dashboard')
