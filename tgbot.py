@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 from ai import classify_message_type, general_chat, answer_question, extract_business_data, conversation_memory
 from conversation_manager import conv_manager
@@ -157,7 +157,20 @@ class BusinessBot:
             "Полный список команд: /help"
         )
 
-        await update.message.reply_text(text, parse_mode='MarkdownV2')
+        # Определяем URL веб-приложения
+        domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+        if domain:
+            web_app_url = f"https://{domain}/"
+        else:
+            # Fallback для локальной разработки (нужен https туннель для реальной работы)
+            web_app_url = "https://127.0.0.1:8080/"
+
+        keyboard = [
+            [InlineKeyboardButton("🚀 Открыть Дашборд", web_app=WebAppInfo(url=web_app_url))]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await update.message.reply_text(text, parse_mode='MarkdownV2', reply_markup=reply_markup)
 
     async def help_metrics_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Справочник по метрикам"""

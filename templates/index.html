@@ -3,84 +3,52 @@
 {% block title %}BusinessAI - Главная{% endblock %}
 
 {% block content %}
-<div class="hero-section">
-    <div class="welcome-card">
-        <h1 class="responsive-title">✨ Финансовый луч ✨</h1>
-        <p class="subtitle">Ваш персональный бизнес-аналитик в кармане</p>
-        
-        <!-- Интерактивный выбор действия -->
-        <div class="action-selector">
-            <h3>Что вы хотите сделать?</h3>
-            <div class="action-grid">
-                <div class="action-item" onclick="quickAction('dashboard')">
-                    <div class="action-icon">📊</div>
-                    <h4>Быстрый обзор</h4>
-                    <p>Посмотреть текущие метрики</p>
-                </div>
-                <div class="action-item" onclick="quickAction('analytics')">
-                    <div class="action-icon">📈</div>
-                    <h4>Глубокий анализ</h4>
-                    <p>Детальная аналитика и тренды</p>
-                </div>
-            </div>
+<div class="flex flex-col items-center justify-center min-h-[80vh] space-y-8 text-center">
+    
+    <!-- Hero -->
+    <div class="space-y-4">
+        <div class="inline-block p-3 rounded-full bg-blue-500/10 mb-2">
+            <span class="text-4xl">✨</span>
         </div>
+        <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+            Финансовый Луч
+        </h1>
+        <p class="text-slate-400 max-w-xs mx-auto">
+            Ваш персональный AI-аналитик для бизнеса в кармане
+        </p>
+    </div>
 
-        <!-- Статистика системы (уникальный контент) -->
-        <div class="system-stats" id="systemStats">
-            <h3>📈 Статистика системы</h3>
-            <div class="stats-grid">
-                <div class="stat-badge">
-                    <div class="stat-number" id="totalUsers">-</div>
-                    <div class="stat-label">профиля</div>
-                </div>
-                <div class="stat-badge">
-                    <div class="stat-number" id="totalAnalyses">-</div>
-                    <div class="stat-label">анализов</div>
-                </div>
-                <div class="stat-badge">
-                    <div class="stat-number" id="activeToday">-</div>
-                    <div class="stat-label">активных сегодня</div>
-                </div>
+    <!-- Actions -->
+    <div class="grid grid-cols-2 gap-4 w-full">
+        <a href="/dashboard" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-2xl transition-all transform hover:scale-105 shadow-lg flex flex-col items-center">
+            <span class="text-3xl mb-3">📊</span>
+            <h3 class="font-bold text-white mb-1">Дашборд</h3>
+            <p class="text-xs text-slate-400">Текущие метрики</p>
+        </a>
+        <a href="/analytics" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-2xl transition-all transform hover:scale-105 shadow-lg flex flex-col items-center">
+            <span class="text-3xl mb-3">📈</span>
+            <h3 class="font-bold text-white mb-1">Аналитика</h3>
+            <p class="text-xs text-slate-400">AI анализ и тренды</p>
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="w-full bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 backdrop-blur-sm">
+        <h3 class="text-sm font-bold text-slate-300 mb-4 uppercase tracking-wider">Статистика системы</h3>
+        <div class="grid grid-cols-3 gap-4 divide-x divide-slate-700">
+            <div>
+                <div class="text-2xl font-bold text-blue-400" id="totalUsers">-</div>
+                <div class="text-[10px] text-slate-500 uppercase mt-1">Профилей</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-purple-400" id="totalAnalyses">-</div>
+                <div class="text-[10px] text-slate-500 uppercase mt-1">Анализов</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-green-400" id="activeToday">-</div>
+                <div class="text-[10px] text-slate-500 uppercase mt-1">Онлайн</div>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    loadSystemStats();
-});
-
-// Уникальная функция для главной страницы
-async function loadSystemStats() {
-    try {
-        const response = await fetch('/api/system-stats');
-        const data = await response.json();
-        
-        if (data.success) {
-            document.getElementById('totalUsers').textContent = data.stats.total_users;
-            document.getElementById('totalAnalyses').textContent = data.stats.total_analyses;
-            document.getElementById('activeToday').textContent = data.stats.active_today;
-        }
-    } catch (error) {
-        console.error('Ошибка загрузки статистики:', error);
-        // Fallback данные
-        document.getElementById('totalUsers').textContent = '3';
-        document.getElementById('totalAnalyses').textContent = '15';
-        document.getElementById('activeToday').textContent = '2';
-    }
-}
-
-// Быстрые действия
-function quickAction(action) {
-    switch(action) {
-        case 'dashboard':
-            window.location.href = '/dashboard';
-            break;
-        case 'analytics':
-            window.location.href = '/analytics';
-            break;
-    }
-}
-</script>
 {% endblock %}

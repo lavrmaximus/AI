@@ -3,525 +3,83 @@
 {% block title %}Дашборд - BusinessAI{% endblock %}
 
 {% block content %}
-<!-- Выбор пользователя -->
-<div class="enhanced-select" style="margin-top:10px;">
-    <div class="dropdown-container" id="userSelectCustom">
-        <button type="button" class="dropdown-button" id="userSelectTrigger">
-            Выберите пользователя
-        </button>
-        <div class="dropdown-menu" id="userOptions"></div>
-    </div>
-    <select id="userSelect" onchange="loadUserData()" style="display:none;">
-        <option value="">Выберите пользователя</option>
-    </select>
-</div>
-
-<div class="enhanced-select" style="margin-top:10px;">
-    <div class="dropdown-container" id="businessSelectCustom">
-        <button type="button" class="dropdown-button" id="businessSelectTrigger">
-            Выберите бизнес
-        </button>
-        <div class="dropdown-menu" id="businessOptions"></div>
-    </div>
-    <select id="businessSelect" onchange="loadBusinessData()" style="display:none;">
-        <option value="">Выберите бизнес</option>
-    </select>
-</div>
-
-<!-- KPI Cards -->
-<div class="kpi-section">
-    <h2>Ключевые метрики</h2>
-    <div class="kpi-grid" id="kpiGrid">
-        <div class="kpi-card">
-            <h3>Выручка</h3>
-            <div class="value" id="revenue-value">0 ₽</div>
-            <div class="change" id="revenue-change">+0%</div>
-        </div>
-        <div class="kpi-card">
-            <h3>Расходы</h3>
-            <div class="value" id="expenses-value">0 ₽</div>
-            <div class="change" id="expenses-change">+0%</div>
-        </div>
-        <div class="kpi-card">
-            <h3>Прибыль</h3>
-            <div class="value" id="profit-value">0 ₽</div>
-            <div class="change" id="profit-change">+0%</div>
-        </div>
-        <div class="kpi-card">
-            <h3>Клиенты</h3>
-            <div class="value" id="clients-value">0</div>
-            <div class="change" id="clients-change">+0%</div>
+<div class="space-y-6 pb-20">
+    <!-- Header & Business Select -->
+    <div class="flex flex-col space-y-4">
+        <h1 class="text-2xl font-bold text-white">Дашборд</h1>
+        
+        <div class="relative">
+            <select id="businessSelect" class="w-full appearance-none bg-slate-800 border border-slate-700 text-white py-3 px-4 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                <option>Загрузка...</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Charts Section -->
-<div class="charts-section">
-    <div class="chart-container">
-        <div class="chart-header">
-            <h3>Финансовая динамика (₽)</h3>
-            <div class="chart-actions">
-                <div class="time-range">
-                    <button class="range-btn" data-range="day" onclick="setTimeRange('day')">День</button>
-                    <button class="range-btn" data-range="week" onclick="setTimeRange('week')">Неделя</button>
-                    <button class="range-btn" data-range="month" onclick="setTimeRange('month')">Месяц</button>
-                    <button class="range-btn" data-range="quarter" onclick="setTimeRange('quarter')">Квартал</button>
-                    <button class="range-btn active" data-range="all" onclick="setTimeRange('all')">Все</button>
+    <!-- KPI Grid -->
+    <div class="grid grid-cols-2 gap-3" id="kpiGrid">
+        <!-- Revenue -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
+            <div class="text-slate-400 text-xs font-medium mb-1">Выручка</div>
+            <div class="text-lg font-bold text-white mb-1" id="revenue-value">0 ₽</div>
+            <div class="text-xs font-medium text-green-400" id="revenue-change">+0%</div>
+        </div>
+        <!-- Expenses -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
+            <div class="text-slate-400 text-xs font-medium mb-1">Расходы</div>
+            <div class="text-lg font-bold text-white mb-1" id="expenses-value">0 ₽</div>
+            <div class="text-xs font-medium text-red-400" id="expenses-change">+0%</div>
+        </div>
+        <!-- Profit -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg col-span-2 bg-gradient-to-br from-slate-800 to-slate-700">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="text-slate-400 text-xs font-medium mb-1">Чистая прибыль</div>
+                    <div class="text-2xl font-bold text-white mb-1" id="profit-value">0 ₽</div>
                 </div>
-                <button class="export-btn" onclick="exportChart('financeChartCurrency')">📊 Экспорт графика PNG</button>
+                <div class="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs font-bold" id="profit-change">+0%</div>
             </div>
         </div>
-        
-        <div class="scrollable-chart-container chart-no-scroll">
-            <div class="chart-wrapper">
+        <!-- Clients -->
+        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
+            <div class="text-slate-400 text-xs font-medium mb-1">Клиенты</div>
+            <div class="text-lg font-bold text-white mb-1" id="clients-value">0</div>
+            <div class="text-xs font-medium text-blue-400" id="clients-change">+0%</div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="space-y-4">
+        <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
+            <h3 class="text-sm font-bold text-slate-300 mb-4">Финансы (₽)</h3>
+            <div class="h-48 relative">
                 <canvas id="financeChartCurrency"></canvas>
-                <div id="cursorLineCurrency" class="cursor-line" style="display:none;"></div>
             </div>
-            <div id="chartReadoutCurrency" class="chart-readout" aria-hidden="true"></div>
         </div>
-    </div>
 
-    <div class="chart-container" style="margin-top: 16px;">
-        <div class="chart-header">
-            <h3>Динамика показателей (штуки)</h3>
-            <div class="chart-actions">
-                <button class="export-btn" onclick="exportChart('financeChartCounts')">📊 Экспорт PNG</button>
-            </div>
-        </div>
-        <div class="scrollable-chart-container chart-no-scroll">
-            <div class="chart-wrapper">
+        <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
+            <h3 class="text-sm font-bold text-slate-300 mb-4">Количественные показатели</h3>
+            <div class="h-48 relative">
                 <canvas id="financeChartCounts"></canvas>
-                <div id="cursorLineCounts" class="cursor-line" style="display:none;"></div>
             </div>
-            <div id="chartReadoutCounts" class="chart-readout" aria-hidden="true"></div>
+        </div>
+
+        <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
+            <h3 class="text-sm font-bold text-slate-300 mb-4">Эффективность (%)</h3>
+            <div class="h-48 relative">
+                <canvas id="financeChartPercent"></canvas>
+            </div>
         </div>
     </div>
 
-    <div class="chart-container" style="margin-top: 16px;">
-        <div class="chart-header">
-            <h3>Динамика показателей (%)</h3>
-            <div class="chart-actions">
-                <button class="export-btn" onclick="exportChart('financeChartPercent')">📊 Экспорт PNG</button>
-            </div>
+    <!-- Metrics Toggle -->
+    <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
+        <h3 class="text-sm font-bold text-slate-300 mb-4">Управление метриками</h3>
+        <div class="grid grid-cols-1 gap-2" id="allMetricsGrid">
+            <!-- Populated by JS -->
         </div>
-        <div class="scrollable-chart-container chart-no-scroll">
-            <div class="chart-wrapper">
-                <canvas id="financeChartPercent"></canvas>
-                <div id="cursorLinePercent" class="cursor-line" style="display:none;"></div>
-            </div>
-            <div id="chartReadoutPercent" class="chart-readout" aria-hidden="true"></div>
-        </div>
-    </div>
-    
-    <div class="metrics-container">
-        <div style="display:flex; align-items:center; gap:12px; justify-content:space-between;">
-            <h3>Все метрики (вкл/выкл для графика)</h3>
-            <div>
-                <button class="range-btn" onclick="selectAllMetrics(true)">Включить все</button>
-                <button class="range-btn" onclick="selectAllMetrics(false)">Выключить все</button>
-            </div>
-        </div>
-        <div class="kpi-grid" id="allMetricsGrid"></div>
     </div>
 </div>
-
-
-
-
-
-<script>
-    // Глобальная переменная для хранения экземпляра графика
-    let financeChart = null; // не используется, оставлено для совместимости
-    let financeChartCurrency = null;
-    let financeChartCounts = null;
-    let financeChartPercent = null;
-    // Определение всех метрик и локализаций
-    const METRICS = [
-        { key: 'revenue', label: 'Выручка', unit: '₽' },
-        { key: 'expenses', label: 'Расходы', unit: '₽' },
-        { key: 'profit', label: 'Прибыль', unit: '₽' },
-        { key: 'clients', label: 'Клиенты', unit: '' },
-        { key: 'average_check', label: 'Средний чек', unit: '₽' },
-        { key: 'investments', label: 'Инвестиции', unit: '₽' },
-        { key: 'marketing_costs', label: 'Маркетинг', unit: '₽' },
-        { key: 'employees', label: 'Сотрудники', unit: '' },
-        { key: 'new_clients_per_month', label: 'Новые клиенты в месяц', unit: '' },
-        { key: 'customer_retention_rate', label: 'Удержание клиентов, %', unit: '%' },
-        { key: 'profit_margin', label: 'Маржа прибыли, %', unit: '%' },
-        { key: 'break_even_clients', label: 'Точка безуб., клиенты', unit: '' },
-        { key: 'safety_margin', label: 'Запас прочности, %', unit: '%' },
-        { key: 'roi', label: 'ROI, %', unit: '%' },
-        { key: 'profitability_index', label: 'Индекс прибыльности', unit: '' },
-        { key: 'ltv', label: 'LTV', unit: '₽' },
-        { key: 'cac', label: 'CAC', unit: '₽' },
-        { key: 'ltv_cac_ratio', label: 'LTV/CAC', unit: '' },
-        { key: 'customer_profit_margin', label: 'Маржа клиента, %', unit: '%' },
-        { key: 'sgr', label: 'Sustainable Growth, %', unit: '%' },
-        { key: 'revenue_growth_rate', label: 'Рост выручки, %', unit: '%' },
-        { key: 'asset_turnover', label: 'Оборачиваемость активов', unit: '' },
-        { key: 'roe', label: 'ROE, %', unit: '%' },
-        { key: 'months_to_bankruptcy', label: 'Мес. до банкр.', unit: '' },
-        { key: 'financial_health_score', label: 'Фин. здоровье', unit: '' },
-        { key: 'growth_health_score', label: 'Рост здоровье', unit: '' },
-        { key: 'efficiency_health_score', label: 'Эфф. здоровье', unit: '' },
-        { key: 'overall_health_score', label: 'Итоговый Health', unit: '' }
-    ];
-    // По умолчанию включим базовые 3 серии
-    let selectedMetrics = new Set(['revenue','expenses','profit']);
-    let currentBusinessId = null;
-    let currentUserId = null;
-    window.selectedMetrics = selectedMetrics;
-
-    // Загрузка информации о текущем пользователе при открытии страницы
-    document.addEventListener('DOMContentLoaded', function() {
-        const userIdFromUrl = '{{ user_id }}';
-        loadUsers(userIdFromUrl);
-    });
-
-    async function loadCurrentUser(userId) {
-        try {
-            const response = await fetch(`/api/current-user/${userId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                const user = data.user;
-                const displayName = user.first_name && user.last_name ? 
-                    `${user.first_name} ${user.last_name}` : 
-                    (user.first_name || user.username || `User ${user.user_id}`);
-                
-                document.getElementById('current-user-name').textContent = displayName;
-                document.getElementById('user-info').style.display = 'block';
-                
-                // Загружаем бизнесы пользователя
-                await loadUserBusinesses(userId);
-            } else {
-                console.error('User not found:', data.error);
-            }
-        } catch (error) {
-            console.error('Error loading current user:', error);
-        }
-    }
-
-    async function loadUserBusinesses(userId) {
-        try {
-            const response = await fetch(`/api/businesses/${userId}`);
-            const data = await response.json();
-            
-            if (data.success && data.businesses.length > 0) {
-                const businessSelect = document.getElementById('businessSelect');
-                const bizTrigger = document.getElementById('businessSelectTrigger');
-                const bizOptions = document.getElementById('businessOptions');
-                
-                businessSelect.innerHTML = '<option value="">Выберите бизнес</option>';
-                while (bizOptions.firstChild) {
-                    bizOptions.removeChild(bizOptions.firstChild);
-                }
-                
-                data.businesses.forEach(b => {
-                    const option = document.createElement('option');
-                    option.value = b.business_id;
-                    const bizName = (b && b.business_name) ? b.business_name : `Бизнес ${b && b.business_id ? b.business_id : ''}`;
-                    option.textContent = bizName;
-                    businessSelect.appendChild(option);
-                    
-                    const optDiv = document.createElement('div');
-                    optDiv.className = 'dropdown-option';
-                    optDiv.dataset.value = b.business_id;
-                    optDiv.textContent = bizName;
-                    optDiv.addEventListener('click', () => {
-                        businessSelect.value = b.business_id;
-                        bizTrigger.textContent = bizName;
-                        closeCustomSelect('businessSelectCustom');
-                        loadBusinessData();
-                    });
-                    bizOptions.appendChild(optDiv);
-                });
-                
-                // Автоматически выбираем первый бизнес
-                businessSelect.value = data.businesses[0].business_id;
-                bizTrigger.textContent = (data.businesses[0] && data.businesses[0].business_name) ? 
-                    data.businesses[0].business_name : `Бизнес ${data.businesses[0].business_id}`;
-                currentBusinessId = data.businesses[0].business_id;
-                await loadBusinessData();
-            } else {
-                bizTrigger.textContent = 'Нет бизнесов';
-            }
-        } catch (error) {
-            console.error('Error loading user businesses:', error);
-        }
-    }
-
-    async function loadUsers(userIdToSelect) {
-        try {
-            const response = await fetch('/api/users');
-            const data = await response.json();
-            
-            if (data.success) {
-                const userSelect = document.getElementById('userSelect');
-                const userTrigger = document.getElementById('userSelectTrigger');
-                const userOptions = document.getElementById('userOptions');
-                
-                userSelect.innerHTML = '<option value="">Выберите профиль</option>';
-                // Очищаем только содержимое, не удаляем сам элемент
-                while (userOptions.firstChild) {
-                    userOptions.removeChild(userOptions.firstChild);
-                }
-                data.users.forEach(user => {
-                    const option = document.createElement('option');
-                    option.value = user.user_id;
-                    const displayName = user.first_name && user.last_name ? 
-                        `${user.first_name} ${user.last_name}` : 
-                        (user.first_name || user.username || `User ${user.user_id}`);
-                    option.textContent = displayName;
-                    userSelect.appendChild(option);
-                    const optDiv = document.createElement('div');
-                    optDiv.className = 'dropdown-option';
-                    optDiv.dataset.value = user.user_id;
-                    optDiv.textContent = displayName;
-                    optDiv.addEventListener('click', () => {
-                        userSelect.value = user.user_id;
-                        userTrigger.textContent = displayName;
-                        closeCustomSelect('userSelectCustom');
-                        loadUserData();
-                    });
-                    userOptions.appendChild(optDiv);
-                });
-
-                if (userIdToSelect) {
-                    const userExists = data.users.some(user => user.user_id === userIdToSelect);
-                    if (userExists) {
-                        userSelect.value = userIdToSelect;
-                        const selectedUser = data.users.find(user => user.user_id === userIdToSelect);
-                        const displayName = selectedUser.first_name && selectedUser.last_name ? 
-                            `${selectedUser.first_name} ${selectedUser.last_name}` : 
-                            (selectedUser.first_name || selectedUser.username || `User ${selectedUser.user_id}`);
-                        userTrigger.textContent = displayName;
-                        loadUserData();
-                    }
-                } else if (data.users.length > 0) {
-                    userSelect.value = data.users[0].user_id;
-                    const firstUser = data.users[0];
-                    const displayName = firstUser.first_name && firstUser.last_name ? 
-                        `${firstUser.first_name} ${firstUser.last_name}` : 
-                        (firstUser.first_name || firstUser.username || `User ${firstUser.user_id}`);
-                    userTrigger.textContent = displayName;
-                    loadUserData();
-                } else {
-                    userTrigger.textContent = 'Нет профилей';
-                }
-                
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки пользователей:', error);
-        }
-    }
-
-    async function loadUserData() {
-        const userId = document.getElementById('userSelect').value;
-        if (!userId) return;
-        currentUserId = userId;
-        await loadUserBusinesses(userId);
-    }
-
-    async function loadBusinessData() {
-        const businessId = document.getElementById('businessSelect').value;
-        if (!businessId) return;
-        currentBusinessId = businessId;
-        await loadKPIMetricsForBusiness(businessId);
-        await loadFinanceDataForBusiness(businessId);
-    }
-
-    async function loadKPIMetricsForBusiness(businessId) {
-        try {
-            const response = await fetch(`/api/business-kpi/${businessId}`);
-            const data = await response.json();
-            if (data.success) {
-                updateKPICards(data.kpi);
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки KPI:', error);
-        }
-    }
-
-    async function loadFinanceDataForBusiness(businessId) {
-        try {
-            const response = await fetch(`/api/business-history/${businessId}`);
-            const data = await response.json();
-            if (data.success) {
-                buildAllMetricCards(data.latest, data.data);
-                // Сохраним полный набор данных для script.js
-                window.currentChartData = data.data;
-                // Не пере-включаем метрики автоматически, уважаем пустой набор
-                renderFinanceChart(data.data);
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки данных бизнеса:', error);
-        }
-    }
-
-
-    function updateKPICards(kpi) {
-        updateKPICard('revenue', kpi.revenue, '₽');
-        updateKPICard('expenses', kpi.expenses, '₽');
-        updateKPICard('profit', kpi.profit, '₽');
-        updateKPICard('clients', kpi.clients, '');
-    }
-
-    function updateKPICard(type, data, suffix) {
-        const valueElement = document.getElementById(`${type}-value`);
-        const changeElement = document.getElementById(`${type}-change`);
-        
-        valueElement.textContent = formatNumber(data.current) + (suffix ? ' ' + suffix : '');
-        
-        const change = data.change || 0;
-        changeElement.textContent = (change > 0 ? '+' : '') + change + '%';
-        
-        // Для расходов логика обратная: увеличение = плохо (красный), уменьшение = хорошо (зеленый)
-        if (type === 'expenses') {
-            changeElement.className = `change ${change > 0 ? 'negative' : change < 0 ? 'positive' : 'neutral'}`;
-        } else {
-            changeElement.className = `change ${change > 0 ? 'positive' : change < 0 ? 'negative' : 'neutral'}`;
-        }
-    }
-
-    function buildAllMetricCards(latest, data) {
-        const grid = document.getElementById('allMetricsGrid');
-        grid.innerHTML = '';
-        METRICS.forEach(m => {
-            const card = document.createElement('div');
-            card.className = 'kpi-card';
-            const title = document.createElement('h3');
-            title.textContent = m.label;
-            const value = document.createElement('div');
-            value.className = 'value';
-            // Берем последнее (самое новое) значение из серии данных
-            const latestVal = (data.series[m.key] && data.series[m.key].length) ? 
-                data.series[m.key][data.series[m.key].length-1] : 
-                (latest && (latest[m.key] != null) ? latest[m.key] : 0);
-            value.textContent = formatNumber(latestVal) + (m.unit ? ' ' + m.unit : '');
-            const toggle = document.createElement('button');
-            toggle.className = 'range-btn';
-            const enabled = window.selectedMetrics.has(m.key);
-            toggle.classList.toggle('active', enabled);
-            toggle.textContent = enabled ? 'Показать: да' : 'Показать: нет';
-            toggle.onclick = () => {
-                if (window.selectedMetrics.has(m.key)) {
-                    window.selectedMetrics.delete(m.key);
-                } else {
-                    window.selectedMetrics.add(m.key);
-                }
-                toggle.classList.toggle('active', window.selectedMetrics.has(m.key));
-                toggle.textContent = window.selectedMetrics.has(m.key) ? 'Показать: да' : 'Показать: нет';
-                if (window.currentChartData) renderFinanceChart(window.currentChartData);
-            };
-            card.appendChild(title);
-            card.appendChild(value);
-            card.appendChild(toggle);
-            grid.appendChild(card);
-        });
-    }
-
-    function selectAllMetrics(enable) {
-        if (!window.selectedMetrics) window.selectedMetrics = new Set();
-        if (enable) {
-            // включаем все доступные ключи
-            window.selectedMetrics = new Set(METRICS.map(m => m.key));
-        } else {
-            window.selectedMetrics.clear();
-        }
-        // Обновим кнопки в карточках
-        const grid = document.getElementById('allMetricsGrid');
-        const buttons = grid.querySelectorAll('button.range-btn');
-        buttons.forEach((btn, idx) => {
-            const m = METRICS[idx];
-            const on = window.selectedMetrics.has(m.key);
-            btn.classList.toggle('active', on);
-            btn.textContent = on ? 'Показать: да' : 'Показать: нет';
-        });
-        if (window.currentChartData) renderFinanceChart(window.currentChartData);
-    }
-
-    // renderFinanceChart используется из static/script.js
-    // AI анализ перенесён на вкладку Аналитика
-
-    function formatNumber(num) {
-        return new Intl.NumberFormat('ru-RU').format(Math.round(num));
-    }
-
-    // Логика открытия/закрытия выпадающих меню
-    document.addEventListener('click', function(e) {
-        const userCustom = document.getElementById('userSelectCustom');
-        const bizCustom = document.getElementById('businessSelectCustom');
-        
-        [userCustom, bizCustom].forEach((container, index) => {
-            if (!container) return;
-            
-            const button = container.querySelector('.dropdown-button');
-            const menu = container.querySelector('.dropdown-menu');
-            
-            if (!button || !menu) return;
-            
-            // Проверяем, что клик именно по кнопке, но не по меню внутри
-            if (button.contains(e.target) && !menu.contains(e.target)) {
-                container.classList.toggle('open');
-            } else if (!container.contains(e.target)) {
-                container.classList.remove('open');
-            }
-        });
-    });
-
-    function positionDropdownPortal(customSelect) {
-        // Убираем JavaScript позиционирование - используем только CSS
-        // CSS уже правильно позиционирует меню относительно родителя
-    }
-
-    function closeCustomSelect(id) {
-        const container = document.getElementById(id);
-        if (container) container.classList.remove('open');
-    }
-
-    // Reposition dropdowns on window resize
-    window.addEventListener('resize', function() {
-        const userCustom = document.getElementById('userSelectCustom');
-        const bizCustom = document.getElementById('businessSelectCustom');
-        [userCustom, bizCustom].forEach(cs => {
-            if (cs && cs.classList.contains('is-open')) {
-                positionDropdownPortal(cs);
-            }
-        });
-    });
-
-    // Функция экспорта графиков
-    function exportChart(canvasId) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) {
-            alert('График не найден');
-            return;
-        }
-        
-        // Проверяем, есть ли данные на графике
-        const ctx = canvas.getContext('2d');
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        let hasContent = false;
-        
-        // Проверяем, есть ли непустые пиксели (не прозрачные)
-        for (let i = 3; i < data.length; i += 4) {
-            if (data[i] > 0) { // alpha channel
-                hasContent = true;
-                break;
-            }
-        }
-        
-        if (!hasContent) {
-            alert('Сначала загрузите данные графика');
-            return;
-        }
-        
-        const link = document.createElement('a');
-        link.download = `chart-${canvasId}-${new Date().toISOString().split('T')[0]}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    }
-</script>
 {% endblock %}

@@ -1,45 +1,75 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}Бизнес Аналитик{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            text: '#f8fafc',
+                            muted: '#94a3b8'
+                        },
+                        primary: '#3b82f6',
+                        accent: '#8b5cf6'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        body { -webkit-tap-highlight-color: transparent; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
 </head>
-<body>
-    <!-- Основной контент -->
-    <div class="container">
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 select-none">
+    
+    <!-- Access Denied Overlay -->
+    <div id="access-denied" class="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center p-6 text-center hidden">
+        <div class="text-6xl mb-4">⛔</div>
+        <h1 class="text-2xl font-bold mb-2">Доступ запрещен</h1>
+        <p class="text-slate-400 mb-6">Пожалуйста, откройте это приложение через Telegram бота.</p>
+        <a href="https://t.me/FinancialRayBot" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+            Перейти в бота
+        </a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-4 max-w-md" id="main-app">
         {% block content %}{% endblock %}
     </div>
 
-    <!-- Bottom Navigation Bar -->
-    <nav class="bottom-nav">
-        <a href="/" class="nav-btn {% if request.path == '/' %}active{% endif %}">
-            <div class="nav-icon">🏠</div>
-            <span class="nav-label">Главная</span>
-        </a>
-        <a href="/dashboard" class="nav-btn {% if request.path == '/dashboard' %}active{% endif %}">
-            <div class="nav-icon">📊</div>
-            <span class="nav-label">Дашборд</span>
-        </a>
-        <a href="/analytics" class="nav-btn {% if request.path == '/analytics' %}active{% endif %}">
-            <div class="nav-icon">📈</div>
-            <span class="nav-label">Аналитика</span>
-        </a>
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-800/90 backdrop-blur-md border-t border-slate-700 pb-safe z-40">
+        <div class="flex justify-around items-center h-16 max-w-md mx-auto">
+            <a href="/" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-400 transition-colors {% if request.path == '/' %}text-blue-500{% endif %}">
+                <span class="text-2xl mb-1">🏠</span>
+                <span class="text-xs font-medium">Главная</span>
+            </a>
+            <a href="/dashboard" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-400 transition-colors {% if request.path == '/dashboard' %}text-blue-500{% endif %}">
+                <span class="text-2xl mb-1">📊</span>
+                <span class="text-xs font-medium">Дашборд</span>
+            </a>
+            <a href="/analytics" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-400 transition-colors {% if request.path == '/analytics' %}text-blue-500{% endif %}">
+                <span class="text-2xl mb-1">📈</span>
+                <span class="text-xs font-medium">Аналитика</span>
+            </a>
+        </div>
     </nav>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-
-    <!-- Анимированный фон -->
-    <div class="animated-background">
-        <div class="gradient-sphere sphere-1"></div>
-        <div class="gradient-sphere sphere-2"></div>
-        <div class="gradient-sphere sphere-3"></div>
-        <div class="gradient-sphere sphere-4"></div>
-        <div class="gradient-sphere sphere-5"></div>
-        <div class="wireframe-grid"></div>
-    </div>
-    <div class="background-overlay"></div>
 </body>
 </html>
