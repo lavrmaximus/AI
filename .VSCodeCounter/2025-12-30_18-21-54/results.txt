@@ -1,0 +1,59 @@
+Date : 2025-12-30 18:21:54
+Directory : c:\Users\lavrm\OneDrive\Документы\SuperAIbot
+Total : 24 files,  4225 codes, 609 comments, 750 blanks, all 5584 lines
+
+Languages
++------------------+------------+------------+------------+------------+------------+
+| language         | files      | code       | comment    | blank      | total      |
++------------------+------------+------------+------------+------------+------------+
+| Python           |         12 |      3,310 |        547 |        571 |      4,428 |
+| JavaScript       |          1 |        369 |         23 |         30 |        422 |
+| Markdown         |          2 |        286 |          0 |        108 |        394 |
+| HTML             |          4 |        205 |         18 |         21 |        244 |
+| Ignore           |          1 |         35 |         12 |         12 |         59 |
+| Docker           |          1 |         11 |          5 |          7 |         23 |
+| pip requirements |          1 |          6 |          0 |          0 |          6 |
+| Batch            |          1 |          3 |          0 |          0 |          3 |
+| PostCSS          |          1 |          0 |          4 |          1 |          5 |
++------------------+------------+------------+------------+------------+------------+
+
+Directories
++-----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                  | files      | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                     |         24 |      4,225 |        609 |        750 |      5,584 |
+| . (Files)                                                             |         18 |      3,651 |        564 |        698 |      4,913 |
+| static                                                                |          2 |        369 |         27 |         31 |        427 |
+| templates                                                             |          4 |        205 |         18 |         21 |        244 |
++-----------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++-----------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| filename                                                              | language         | code       | comment    | blank      | total      |
++-----------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\.dockerignore            | Ignore           |         35 |         12 |         12 |         59 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\AUTO.py                  | Python           |         63 |         46 |         14 |        123 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\Dockerfile               | Docker           |         11 |          5 |          7 |         23 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\README.md                | Markdown         |        246 |          0 |         93 |        339 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\WEBSite.py               | Python           |        380 |         44 |         55 |        479 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\ai.py                    | Python           |        294 |         27 |         52 |        373 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\auto.md                  | Markdown         |         40 |          0 |         15 |         55 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\business_analyzer.py     | Python           |        196 |        143 |         19 |        358 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\conversation_manager.py  | Python           |        317 |         55 |         63 |        435 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\database.py              | Python           |        462 |         51 |         76 |        589 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\env_utils.py             | Python           |         68 |         21 |         14 |        103 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\main.py                  | Python           |         34 |          9 |         10 |         53 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\metrics_calculator.py    | Python           |        295 |         49 |         68 |        412 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\metrics_help.py          | Python           |        259 |         17 |         36 |        312 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\report_formatter.py      | Python           |         99 |          9 |         13 |        121 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\requirements.txt         | pip requirements |          6 |          0 |          0 |          6 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\start.bat                | Batch            |          3 |          0 |          0 |          3 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\static\script.js         | JavaScript       |        369 |         23 |         30 |        422 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\static\style.css         | PostCSS          |          0 |          4 |          1 |          5 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\templates\analytics.html | HTML             |         23 |          3 |          4 |         30 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\templates\base.html      | HTML             |         68 |          3 |          4 |         75 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\templates\dashboard.html | HTML             |         68 |          9 |          8 |         85 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\templates\index.html     | HTML             |         46 |          3 |          5 |         54 |
+| c:\Users\lavrm\OneDrive\Документы\SuperAIbot\tgbot.py                 | Python           |        843 |         76 |        151 |      1,070 |
+| Total                                                                 |                  |      4,225 |        609 |        750 |      5,584 |
++-----------------------------------------------------------------------+------------------+------------+------------+------------+------------+

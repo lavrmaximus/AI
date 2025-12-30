@@ -5,11 +5,11 @@
 {% block content %}
 <div class="space-y-6 pb-20">
     <!-- Header & Business Select -->
-    <div class="flex flex-col space-y-4">
-        <h1 class="text-2xl font-bold text-white">Дашборд</h1>
+    <div class="flex flex-col space-y-4 animate-fade-in">
+        <h1 class="text-2xl font-bold text-white drop-shadow-md">Дашборд</h1>
         
         <div class="relative">
-            <select id="businessSelect" class="w-full appearance-none bg-slate-800 border border-slate-700 text-white py-3 px-4 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+            <select id="businessSelect" class="w-full appearance-none glass-card text-white py-3 px-4 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
                 <option>Загрузка...</option>
             </select>
             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
@@ -19,55 +19,55 @@
     </div>
 
     <!-- KPI Grid -->
-    <div class="grid grid-cols-2 gap-3" id="kpiGrid">
+    <div class="grid grid-cols-2 gap-3 animate-fade-in delay-100" id="kpiGrid">
         <!-- Revenue -->
-        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
-            <div class="text-slate-400 text-xs font-medium mb-1">Выручка</div>
+        <div class="glass-card p-4 rounded-2xl">
+            <div class="text-slate-300 text-xs font-medium mb-1">Выручка</div>
             <div class="text-lg font-bold text-white mb-1" id="revenue-value">0 ₽</div>
             <div class="text-xs font-medium text-green-400" id="revenue-change">+0%</div>
         </div>
         <!-- Expenses -->
-        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
-            <div class="text-slate-400 text-xs font-medium mb-1">Расходы</div>
+        <div class="glass-card p-4 rounded-2xl">
+            <div class="text-slate-300 text-xs font-medium mb-1">Расходы</div>
             <div class="text-lg font-bold text-white mb-1" id="expenses-value">0 ₽</div>
             <div class="text-xs font-medium text-red-400" id="expenses-change">+0%</div>
         </div>
         <!-- Profit -->
-        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg col-span-2 bg-gradient-to-br from-slate-800 to-slate-700">
+        <div class="glass-card p-4 rounded-2xl col-span-2 bg-gradient-to-br from-blue-900/40 to-purple-900/40">
             <div class="flex justify-between items-start">
                 <div>
-                    <div class="text-slate-400 text-xs font-medium mb-1">Чистая прибыль</div>
+                    <div class="text-slate-300 text-xs font-medium mb-1">Чистая прибыль</div>
                     <div class="text-2xl font-bold text-white mb-1" id="profit-value">0 ₽</div>
                 </div>
                 <div class="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs font-bold" id="profit-change">+0%</div>
             </div>
         </div>
         <!-- Clients -->
-        <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
-            <div class="text-slate-400 text-xs font-medium mb-1">Клиенты</div>
+        <div class="glass-card p-4 rounded-2xl">
+            <div class="text-slate-300 text-xs font-medium mb-1">Клиенты</div>
             <div class="text-lg font-bold text-white mb-1" id="clients-value">0</div>
             <div class="text-xs font-medium text-blue-400" id="clients-change">+0%</div>
         </div>
     </div>
 
     <!-- Charts -->
-    <div class="space-y-4">
-        <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
-            <h3 class="text-sm font-bold text-slate-300 mb-4">Финансы (₽)</h3>
+    <div class="space-y-4 animate-fade-in delay-200">
+        <div class="glass-card rounded-2xl p-4">
+            <h3 class="text-sm font-bold text-slate-200 mb-4">Финансы (₽)</h3>
             <div class="h-48 relative">
                 <canvas id="financeChartCurrency"></canvas>
             </div>
         </div>
 
-        <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
-            <h3 class="text-sm font-bold text-slate-300 mb-4">Количественные показатели</h3>
+        <div class="glass-card rounded-2xl p-4">
+            <h3 class="text-sm font-bold text-slate-200 mb-4">Количественные показатели</h3>
             <div class="h-48 relative">
                 <canvas id="financeChartCounts"></canvas>
             </div>
         </div>
 
-        <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
-            <h3 class="text-sm font-bold text-slate-300 mb-4">Эффективность (%)</h3>
+        <div class="glass-card rounded-2xl p-4">
+            <h3 class="text-sm font-bold text-slate-200 mb-4">Эффективность (%)</h3>
             <div class="h-48 relative">
                 <canvas id="financeChartPercent"></canvas>
             </div>
@@ -75,8 +75,8 @@
     </div>
 
     <!-- Metrics Toggle -->
-    <div class="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-lg">
-        <h3 class="text-sm font-bold text-slate-300 mb-4">Управление метриками</h3>
+    <div class="glass-card rounded-2xl p-4 animate-fade-in delay-300">
+        <h3 class="text-sm font-bold text-slate-200 mb-4">Управление метриками</h3>
         <div class="grid grid-cols-1 gap-2" id="allMetricsGrid">
             <!-- Populated by JS -->
         </div>

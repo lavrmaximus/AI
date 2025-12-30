@@ -1,0 +1,26 @@
+"filename", "language", "Python", "Markdown", "HTML", "PostCSS", "pip requirements", "Docker", "Batch", "Ignore", "JavaScript", "comment", "blank", "total"
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\.dockerignore", "Ignore", 0, 0, 0, 0, 0, 0, 0, 35, 0, 12, 12, 59
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\AUTO.py", "Python", 63, 0, 0, 0, 0, 0, 0, 0, 0, 46, 14, 123
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\Dockerfile", "Docker", 0, 0, 0, 0, 0, 11, 0, 0, 0, 5, 7, 23
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\README.md", "Markdown", 0, 246, 0, 0, 0, 0, 0, 0, 0, 0, 93, 339
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\WEBSite.py", "Python", 380, 0, 0, 0, 0, 0, 0, 0, 0, 44, 55, 479
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\ai.py", "Python", 294, 0, 0, 0, 0, 0, 0, 0, 0, 27, 52, 373
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\auto.md", "Markdown", 0, 40, 0, 0, 0, 0, 0, 0, 0, 0, 15, 55
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\business_analyzer.py", "Python", 196, 0, 0, 0, 0, 0, 0, 0, 0, 143, 19, 358
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\conversation_manager.py", "Python", 317, 0, 0, 0, 0, 0, 0, 0, 0, 55, 63, 435
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\database.py", "Python", 462, 0, 0, 0, 0, 0, 0, 0, 0, 51, 76, 589
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\env_utils.py", "Python", 68, 0, 0, 0, 0, 0, 0, 0, 0, 21, 14, 103
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\main.py", "Python", 34, 0, 0, 0, 0, 0, 0, 0, 0, 9, 10, 53
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\metrics_calculator.py", "Python", 295, 0, 0, 0, 0, 0, 0, 0, 0, 49, 68, 412
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\metrics_help.py", "Python", 259, 0, 0, 0, 0, 0, 0, 0, 0, 17, 36, 312
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\report_formatter.py", "Python", 99, 0, 0, 0, 0, 0, 0, 0, 0, 9, 13, 121
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\requirements.txt", "pip requirements", 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 6
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\start.bat", "Batch", 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 3
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\static\script.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 369, 23, 30, 422
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\static\style.css", "PostCSS", 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 1, 5
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\templates\analytics.html", "HTML", 0, 0, 23, 0, 0, 0, 0, 0, 0, 3, 4, 30
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\templates\base.html", "HTML", 0, 0, 68, 0, 0, 0, 0, 0, 0, 3, 4, 75
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\templates\dashboard.html", "HTML", 0, 0, 68, 0, 0, 0, 0, 0, 0, 9, 8, 85
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\templates\index.html", "HTML", 0, 0, 46, 0, 0, 0, 0, 0, 0, 3, 5, 54
+"c:\Users\lavrm\OneDrive\Документы\SuperAIbot\tgbot.py", "Python", 843, 0, 0, 0, 0, 0, 0, 0, 0, 76, 151, 1070
+"Total", "-", 3310, 286, 205, 0, 6, 11, 3, 35, 369, 609, 750, 5584

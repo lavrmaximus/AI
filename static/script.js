@@ -271,7 +271,7 @@ function renderFinanceCharts(data) {
         
         const datasets = [];
         const keys = Object.keys(data.series);
-        const palette = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
+        const palette = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
         let colorIdx = 0;
         
         keys.forEach(key => {
@@ -322,17 +322,19 @@ function renderFinanceCharts(data) {
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#1e293b',
+                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
                         titleColor: '#f8fafc',
                         bodyColor: '#cbd5e1',
-                        borderColor: '#334155',
-                        borderWidth: 1
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: true
                     }
                 },
                 scales: {
                     x: { display: false },
                     y: {
-                        grid: { color: '#334155' },
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
                         ticks: { color: '#94a3b8' }
                     }
                 }
@@ -350,33 +352,30 @@ function buildAllMetricCards(latest, data) {
     if (!grid) return;
     grid.innerHTML = '';
     
-    const METRICS = [
-        { key: 'revenue', label: 'Выручка', unit: '₽' },
-        { key: 'expenses', label: 'Расходы', unit: '₽' },
-        { key: 'profit', label: 'Прибыль', unit: '₽' },
-        { key: 'clients', label: 'Клиенты', unit: '' },
-        { key: 'average_check', label: 'Средний чек', unit: '₽' },
-        { key: 'profit_margin', label: 'Маржа', unit: '%' },
-        { key: 'roi', label: 'ROI', unit: '%' }
-    ];
+    const keys = Object.keys(data.series);
     
-    METRICS.forEach(m => {
-        const card = document.createElement('div');
-        card.className = 'bg-slate-800 p-3 rounded-lg border border-slate-700 flex justify-between items-center';
+    keys.forEach(key => {
+        const label = getMetricLabelRussian(key);
+        let unit = '';
+        if (['revenue','expenses','profit','average_check','investments','marketing_costs','ltv','cac'].includes(key)) unit = '₽';
+        if (['profit_margin','safety_margin','roi','profitability_index','ltv_cac_ratio','customer_profit_margin','sgr','revenue_growth_rate','roe'].includes(key)) unit = '%';
         
-        const isActive = selectedMetrics.has(m.key);
+        const card = document.createElement('div');
+        card.className = 'glass-card p-3 rounded-lg flex justify-between items-center';
+        
+        const isActive = selectedMetrics.has(key);
         
         // Get latest value
-        const val = (data.series[m.key] && data.series[m.key].length) ? 
-            data.series[m.key][data.series[m.key].length-1] : 0;
+        const val = (data.series[key] && data.series[key].length) ?
+            data.series[key][data.series[key].length-1] : 0;
             
         card.innerHTML = `
             <div>
-                <div class="text-xs text-slate-400">${m.label}</div>
-                <div class="text-sm font-bold text-slate-100">${formatNumber(val)} ${m.unit}</div>
+                <div class="text-xs text-slate-300">${label}</div>
+                <div class="text-sm font-bold text-white">${formatNumber(val)} ${unit}</div>
             </div>
-            <button class="w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-400'}"
-                onclick="toggleMetric('${m.key}')">
+            <button class="w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-400'}"
+                onclick="toggleMetric('${key}')">
                 ${isActive ? '✓' : '+'}
             </button>
         `;
@@ -416,7 +415,15 @@ function getMetricLabelRussian(key) {
     const map = {
         revenue: 'Выручка', expenses: 'Расходы', profit: 'Прибыль',
         clients: 'Клиенты', average_check: 'Ср. чек', investments: 'Инвестиции',
-        marketing_costs: 'Маркетинг', profit_margin: 'Маржа', roi: 'ROI'
+        marketing_costs: 'Маркетинг', profit_margin: 'Маржа', roi: 'ROI',
+        employees: 'Сотрудники', break_even_clients: 'Точка безубыточности',
+        safety_margin: 'Запас прочности', profitability_index: 'Индекс приб.',
+        ltv: 'LTV', cac: 'CAC', ltv_cac_ratio: 'LTV/CAC',
+        customer_profit_margin: 'Маржа клиента', sgr: 'SGR',
+        revenue_growth_rate: 'Рост выручки', asset_turnover: 'Оборот активов',
+        roe: 'ROE', months_to_bankruptcy: 'Мес. до банкротства',
+        financial_health_score: 'Фин. здоровье', growth_health_score: 'Рост',
+        efficiency_health_score: 'Эффективность', overall_health_score: 'Общий рейтинг'
     };
     return map[key] || key;
 }

@@ -25,17 +25,20 @@
             }
         }
     </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
-        /* Custom scrollbar for webkit */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
         body { -webkit-tap-highlight-color: transparent; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 select-none">
+<body class="min-h-screen pb-24 select-none overflow-x-hidden">
     
+    <!-- Background Particles -->
+    <ul class="particles">
+        <li></li><li></li><li></li><li></li><li></li>
+        <li></li><li></li><li></li><li></li><li></li>
+    </ul>
+
     <!-- Access Denied Overlay -->
     <div id="access-denied" class="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center p-6 text-center hidden">
         <div class="text-6xl mb-4">⛔</div>
@@ -52,7 +55,7 @@
     </div>
 
     <!-- Bottom Navigation -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-slate-800/90 backdrop-blur-md border-t border-slate-700 pb-safe z-40">
+    <nav class="fixed bottom-0 left-0 right-0 nav-glass pb-safe z-40">
         <div class="flex justify-around items-center h-16 max-w-md mx-auto">
             <a href="/" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-400 transition-colors {% if request.path == '/' %}text-blue-500{% endif %}">
                 <span class="text-2xl mb-1">🏠</span>
