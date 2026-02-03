@@ -1,52 +1,90 @@
 {% extends "base.html" %}
 
-{% block title %}BusinessAI - Главная{% endblock %}
+{% block title %}Executive Summary - BusinessAI{% endblock %}
 
 {% block content %}
-<div class="flex flex-col items-center justify-center min-h-[80vh] space-y-8 text-center">
+<div class="flex flex-col items-center min-h-[80vh] space-y-6 text-center pt-4">
     
-    <!-- Hero -->
-    <div class="space-y-4">
-        <div class="inline-block p-3 rounded-full bg-blue-500/10 mb-2">
-            <span class="text-4xl">✨</span>
+    <!-- Health Score Section -->
+    <div class="relative group mt-4">
+        <!-- Pulse Effect Layer -->
+        <div class="absolute inset-0 rounded-full animate-pulse-glow bg-primary/20 blur-xl"></div>
+        
+        <!-- Health Ring -->
+        <div class="health-ring w-40 h-40 mx-auto">
+            <div class="health-content flex flex-col items-center justify-center">
+                <span class="text-5xl font-bold text-white tracking-tighter">98<span class="text-2xl text-primary">%</span></span>
+                <span class="text-xs text-slate-400 uppercase tracking-widest mt-1">Health</span>
+            </div>
         </div>
-        <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-            Финансовый Луч
+    </div>
+
+    <!-- System Status Text -->
+    <div class="space-y-1 animate-fade-in delay-100">
+        <h1 class="text-2xl font-bold text-white">
+            System Active
         </h1>
-        <p class="text-slate-400 max-w-xs mx-auto">
-            Ваш персональный AI-аналитик для бизнеса в кармане
+        <p class="text-primary text-sm font-medium flex items-center justify-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            All systems operational
         </p>
     </div>
 
-    <!-- Actions -->
-    <div class="grid grid-cols-2 gap-4 w-full animate-fade-in delay-100">
-        <a href="/dashboard" class="glass-card p-6 rounded-2xl flex flex-col items-center">
-            <span class="text-3xl mb-3">📊</span>
-            <h3 class="font-bold text-white mb-1">Дашборд</h3>
-            <p class="text-xs text-slate-300">Текущие метрики</p>
+    <!-- Executive Summary Cards (Actions) -->
+    <div class="grid grid-cols-2 gap-4 w-full animate-fade-in delay-200">
+        <!-- Dashboard Summary -->
+        <a href="/dashboard" class="glass-card p-5 rounded-2xl flex flex-col items-start text-left relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <span class="text-4xl">📊</span>
+            </div>
+            <div class="p-2 rounded-lg bg-blue-500/20 text-blue-400 mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            </div>
+            <h3 class="font-bold text-white text-sm">Overview</h3>
+            <p class="text-xs text-slate-400 mt-1">Financial Metrics</p>
+            <div class="mt-3 flex items-center text-xs text-green-400">
+                <span>↗ Stable</span>
+            </div>
         </a>
-        <a href="/analytics" class="glass-card p-6 rounded-2xl flex flex-col items-center">
-            <span class="text-3xl mb-3">📈</span>
-            <h3 class="font-bold text-white mb-1">Аналитика</h3>
-            <p class="text-xs text-slate-300">AI анализ и тренды</p>
+
+        <!-- Analytics Summary -->
+        <a href="/analytics" class="glass-card p-5 rounded-2xl flex flex-col items-start text-left relative overflow-hidden group">
+            <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                <span class="text-4xl">✨</span>
+            </div>
+            <div class="p-2 rounded-lg bg-purple-500/20 text-purple-400 mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <h3 class="font-bold text-white text-sm">AI Insights</h3>
+            <p class="text-xs text-slate-400 mt-1">Deep Analysis</p>
+            <div class="mt-3 flex items-center text-xs text-primary">
+                <span>• Active</span>
+            </div>
         </a>
     </div>
 
-    <!-- Stats -->
-    <div class="w-full glass-card rounded-2xl p-6 animate-fade-in delay-200">
-        <h3 class="text-sm font-bold text-slate-300 mb-4 uppercase tracking-wider">Статистика системы</h3>
-        <div class="grid grid-cols-3 gap-4 divide-x divide-slate-700/50">
-            <div>
-                <div class="text-2xl font-bold text-blue-400" id="totalUsers">-</div>
-                <div class="text-[10px] text-slate-500 uppercase mt-1">Профилей</div>
+    <!-- System Stats (Compact) -->
+    <div class="w-full glass-card rounded-2xl p-5 animate-fade-in delay-300">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Platform Stats</h3>
+            <span class="text-[10px] px-2 py-1 rounded-full bg-slate-800 text-slate-400">Live</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+            <div class="text-center p-2 rounded-lg bg-slate-800/50">
+                <div class="text-lg font-bold text-blue-400" id="totalUsers">-</div>
+                <div class="text-[9px] text-slate-500 uppercase">Users</div>
             </div>
-            <div>
-                <div class="text-2xl font-bold text-purple-400" id="totalAnalyses">-</div>
-                <div class="text-[10px] text-slate-500 uppercase mt-1">Анализов</div>
+            <div class="text-center p-2 rounded-lg bg-slate-800/50">
+                <div class="text-lg font-bold text-purple-400" id="totalAnalyses">-</div>
+                <div class="text-[9px] text-slate-500 uppercase">Reports</div>
             </div>
-            <div>
-                <div class="text-2xl font-bold text-green-400" id="activeToday">-</div>
-                <div class="text-[10px] text-slate-500 uppercase mt-1">Онлайн</div>
+            <div class="text-center p-2 rounded-lg bg-slate-800/50">
+                <div class="text-lg font-bold text-green-400" id="activeToday">-</div>
+                <div class="text-[9px] text-slate-500 uppercase">Online</div>
             </div>
         </div>
     </div>

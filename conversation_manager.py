@@ -184,18 +184,11 @@ class BusinessConversation:
                 )
             )
             
-            # Если собраны все обязательные поля, переходим к сбору дополнительных
-            if required_fields_count == len(self.REQUIRED_FIELDS):
-                logger.info("🧠 Запрос недостающих данных у AI (полный набор полей)")
-                missing_questions_text = await analyze_missing_data(self.collected_data) # Отдаем AI полные данные
-                logger.info(f"🧠 Ответ AI по недостающим данным: {missing_questions_text[:20]}")
-            else:
-                # Если не хватает обязательных, то AI должен сфокусироваться только на них
-                # Создаем временный словарь, чтобы AI не видел дополнительные, пока не соберет основные
-                temp_collected_data = {k: v for k, v in self.collected_data.items() if k in self.REQUIRED_FIELDS}
-                logger.info("🧠 Запрос недостающих данных у AI (только обязательные)")
-                missing_questions_text = await analyze_missing_data(temp_collected_data)
-                logger.info(f"🧠 Ответ AI по недостающим данным: {missing_questions_text[:20]}")
+            # Всегда отправляем все собранные данные, чтобы AI знал, что уже есть
+            # Приоритезация вопросов управляется промптом в ai.py
+            logger.info("🧠 Запрос недостающих данных у AI")
+            missing_questions_text = await analyze_missing_data(self.collected_data)
+            logger.info(f"🧠 Ответ AI по недостающим данным: {missing_questions_text[:20]}")
 
 
             if missing_questions_text.strip().upper() == "ENOUGH_DATA":

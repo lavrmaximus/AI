@@ -3,14 +3,70 @@ let currentUserId = null;
 let currentBusinessId = null;
 let currentChartData = null;
 let selectedMetrics = new Set(['revenue', 'expenses', 'profit']);
-let financeChartCurrency = null;
-let financeChartCounts = null;
-let financeChartPercent = null;
+let mainChart = null;
+let currentFilter = 'all';
+
+const metricGroups = {
+    'finance': {
+        label: 'P&L и Маржинальность',
+        metrics: ['revenue', 'expenses', 'profit', 'profit_margin', 'customer_profit_margin']
+    },
+    'unit': {
+        label: 'Unit-экономика',
+        metrics: ['cac', 'ltv', 'average_check', 'ltv_cac_ratio']
+    },
+    'growth': {
+        label: 'Рост и Эффективность',
+        metrics: ['roi', 'roe', 'sgr', 'revenue_growth_rate', 'asset_turnover']
+    },
+    'health': {
+        label: 'Здоровье и Безопасность',
+        metrics: ['safety_margin', 'months_to_bankruptcy', 'financial_health_score', 'growth_health_score', 'efficiency_health_score', 'overall_health_score']
+    },
+    'other': {
+        label: 'Остальные показатели',
+        metrics: ['clients', 'investments', 'marketing_costs', 'employees', 'break_even_clients', 'profitability_index']
+    }
+};
 
 // Telegram WebApp Auth & Init
 document.addEventListener('DOMContentLoaded', function() {
     initTelegramAuth();
+    initFilters();
 });
+
+function initFilters() {
+    const filters = document.querySelectorAll('.filter-chip');
+    filters.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Update UI
+            filters.forEach(f => f.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Update Logic
+            const filter = btn.dataset.filter;
+            currentFilter = filter;
+            applyFilter(filter);
+        });
+    });
+}
+
+function applyFilter(filter) {
+    if (!currentChartData) return;
+
+    selectedMetrics.clear();
+    
+    if (filter === 'all') {
+        // Default set for 'All'
+        ['revenue', 'expenses', 'profit', 'clients'].forEach(m => selectedMetrics.add(m));
+    } else if (metricGroups[filter]) {
+        metricGroups[filter].metrics.forEach(m => selectedMetrics.add(m));
+    }
+
+    renderFinanceCharts(currentChartData);
+    buildAllMetricCards(currentChartData.latest, currentChartData);
+}
+
 
 function initTelegramAuth() {
     const tg = window.Telegram.WebApp;
@@ -203,9 +259,9 @@ function updateKPICards(kpi) {
             // Color logic
             let colorClass = 'text-slate-400';
             if (id === 'expenses') {
-                colorClass = change > 0 ? 'text-red-400' : (change < 0 ? 'text-green-400' : 'text-slate-400');
+                colorClass = change > 0 ? 'text-red-400' : (change < 0 ? 'text-accent' : 'text-slate-400');
             } else {
-                colorClass = change > 0 ? 'text-green-400' : (change < 0 ? 'text-red-400' : 'text-slate-400');
+                colorClass = change > 0 ? 'text-accent' : (change < 0 ? 'text-red-400' : 'text-slate-400');
             }
             elChange.className = `text-xs font-medium ${colorClass}`;
         }
@@ -222,22 +278,28 @@ function renderAIAnalysis(analysis) {
     if (!container) return;
     
     let html = `
-        <div class="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700">
-            <h3 class="text-lg font-bold text-blue-400 mb-2">🤖 AI Резюме</h3>
-            <p class="text-slate-300 text-sm leading-relaxed">${analysis.summary}</p>
+        <div class="glass-card insight-card rounded-xl p-6 mb-6">
+            <div class="mb-4">
+                <span class="neon-badge">AI Резюме</span>
+            </div>
+            <p class="text-slate-200 text-base leading-relaxed">${analysis.summary}</p>
         </div>
         
-        <div class="grid grid-cols-1 gap-4 mb-4">
-            <div class="bg-slate-800 rounded-xl p-4 border border-slate-700">
-                <h4 class="text-sm font-semibold text-slate-400 mb-2">Рекомендации</h4>
-                <ul class="space-y-2">
-                    ${analysis.recommendations.map(r => `<li class="flex items-start text-sm text-slate-300"><span class="mr-2 text-yellow-400">💡</span>${r}</li>`).join('')}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="glass-card insight-card rounded-xl p-6">
+                <div class="mb-4">
+                    <span class="neon-badge green">Рекомендации</span>
+                </div>
+                <ul class="space-y-3">
+                    ${analysis.recommendations.map(r => `<li class="flex items-start text-sm text-slate-300"><span class="mr-3 text-accent mt-0.5">💡</span><span class="leading-relaxed">${r}</span></li>`).join('')}
                 </ul>
             </div>
-            <div class="bg-slate-800 rounded-xl p-4 border border-slate-700">
-                <h4 class="text-sm font-semibold text-slate-400 mb-2">Тренды</h4>
-                <ul class="space-y-2">
-                    ${analysis.trends.map(t => `<li class="flex items-start text-sm text-slate-300"><span class="mr-2 text-blue-400">📈</span>${t}</li>`).join('')}
+            <div class="glass-card insight-card rounded-xl p-6">
+                <div class="mb-4">
+                    <span class="neon-badge purple">Тренды</span>
+                </div>
+                <ul class="space-y-3">
+                    ${analysis.trends.map(t => `<li class="flex items-start text-sm text-slate-300"><span class="mr-3 text-purple-400 mt-0.5">📈</span><span class="leading-relaxed">${t}</span></li>`).join('')}
                 </ul>
             </div>
         </div>
@@ -245,9 +307,14 @@ function renderAIAnalysis(analysis) {
     
     if (analysis.commentary) {
         html += `
-            <div class="bg-slate-800 rounded-xl p-4 border border-slate-700">
-                <h4 class="text-sm font-semibold text-slate-400 mb-2">Комментарий эксперта</h4>
-                <p class="text-slate-300 text-sm italic">"${analysis.commentary}"</p>
+            <div class="glass-card insight-card rounded-xl p-6">
+                <div class="mb-4">
+                    <span class="neon-badge">Комментарий эксперта</span>
+                </div>
+                <div class="flex items-start">
+                    <span class="text-4xl text-slate-600 mr-4 font-serif">"</span>
+                    <p class="text-slate-300 text-sm italic leading-relaxed pt-2">${analysis.commentary}</p>
+                </div>
             </div>
         `;
     }
@@ -257,129 +324,156 @@ function renderAIAnalysis(analysis) {
 
 // Chart Functions
 function renderFinanceCharts(data) {
-    // Helper to create chart
-    const createChart = (canvasId, type, labelSuffix) => {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return null;
+    const canvas = document.getElementById('mainChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Destroy existing
+    if (mainChart instanceof Chart) {
+        mainChart.destroy();
+    }
+    
+    const datasets = [];
+    // Neon Fintech Palette
+    const palette = ['#00E5FF', '#FF1744', '#00FF94', '#FFD600', '#D500F9', '#FF00E5', '#651FFF', '#1DE9B6'];
+    let colorIdx = 0;
+    
+    // Determine which metrics to show
+    // We iterate through selectedMetrics
+    selectedMetrics.forEach(key => {
+        if (!data.series[key]) return;
+
+        const color = palette[colorIdx % palette.length];
+        const isPercent = ['profit_margin','safety_margin','roi','profitability_index','ltv_cac_ratio','customer_profit_margin','sgr','revenue_growth_rate','roe'].includes(key);
         
-        const ctx = canvas.getContext('2d');
-        
-        // Destroy existing
-        if (window[canvasId] instanceof Chart) {
-            window[canvasId].destroy();
-        }
-        
-        const datasets = [];
-        const keys = Object.keys(data.series);
-        const palette = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
-        let colorIdx = 0;
-        
-        keys.forEach(key => {
-            // Filter based on type
-            const isCurrency = ['revenue','expenses','profit','average_check','investments','marketing_costs','ltv','cac'].includes(key);
-            const isPercent = ['profit_margin','safety_margin','roi','profitability_index','ltv_cac_ratio','customer_profit_margin','sgr','revenue_growth_rate','roe'].includes(key);
-            
-            let shouldInclude = false;
-            if (type === 'currency' && isCurrency) shouldInclude = true;
-            if (type === 'counts' && !isCurrency && !isPercent) shouldInclude = true;
-            if (type === 'percent' && isPercent) shouldInclude = true;
-            
-            if (shouldInclude && selectedMetrics.has(key)) {
-                const color = palette[colorIdx % palette.length];
-                datasets.push({
-                    label: getMetricLabelRussian(key),
-                    data: data.series[key],
-                    borderColor: color,
-                    backgroundColor: hexToRgba(color, 0.1),
-                    borderWidth: 2,
-                    tension: 0.4,
-                    pointRadius: 0,
-                    fill: true
-                });
-                colorIdx++;
-            }
+        datasets.push({
+            label: getMetricLabelRussian(key),
+            data: data.series[key],
+            borderColor: color,
+            backgroundColor: hexToRgba(color, 0.1),
+            borderWidth: 2,
+            tension: 0.4,
+            pointRadius: 0,
+            fill: true,
+            yAxisID: isPercent ? 'y1' : 'y'
         });
-        
-        if (datasets.length === 0) {
-            canvas.style.display = 'none';
-            return null;
-        }
-        canvas.style.display = 'block';
-        
-        return new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: data.dates,
-                datasets: datasets
+        colorIdx++;
+    });
+    
+    if (datasets.length === 0) {
+        return;
+    }
+    canvas.style.display = 'block';
+    
+    mainChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.dates,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
+            plugins: {
+                legend: { 
+                    display: true,
+                    labels: { color: '#94a3b8', font: { size: 10 } }
                 },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
-                        titleColor: '#f8fafc',
-                        bodyColor: '#cbd5e1',
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        borderWidth: 1,
-                        padding: 10,
-                        displayColors: true
-                    }
+                tooltip: {
+                    backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                    titleColor: '#f8fafc',
+                    bodyColor: '#cbd5e1',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    padding: 10,
+                    displayColors: true
+                }
+            },
+            scales: {
+                x: { display: false },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8' }
                 },
-                scales: {
-                    x: { display: false },
-                    y: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: { color: '#94a3b8' }
-                    }
+                y1: {
+                    type: 'linear',
+                    display: false,
+                    position: 'right',
+                    grid: { drawOnChartArea: false }
                 }
             }
-        });
-    };
-    
-    window.financeChartCurrency = createChart('financeChartCurrency', 'currency', '₽');
-    window.financeChartCounts = createChart('financeChartCounts', 'counts', '');
-    window.financeChartPercent = createChart('financeChartPercent', 'percent', '%');
+        }
+    });
 }
 
 function buildAllMetricCards(latest, data) {
-    const grid = document.getElementById('allMetricsGrid');
-    if (!grid) return;
-    grid.innerHTML = '';
+    const container = document.getElementById('metricsAccordion');
+    if (!container) return;
+    container.innerHTML = '';
     
-    const keys = Object.keys(data.series);
-    
-    keys.forEach(key => {
+    // Helper to create a metric row
+    const createMetricRow = (key) => {
         const label = getMetricLabelRussian(key);
         let unit = '';
         if (['revenue','expenses','profit','average_check','investments','marketing_costs','ltv','cac'].includes(key)) unit = '₽';
         if (['profit_margin','safety_margin','roi','profitability_index','ltv_cac_ratio','customer_profit_margin','sgr','revenue_growth_rate','roe'].includes(key)) unit = '%';
         
-        const card = document.createElement('div');
-        card.className = 'glass-card p-3 rounded-lg flex justify-between items-center';
-        
         const isActive = selectedMetrics.has(key);
-        
-        // Get latest value
         const val = (data.series[key] && data.series[key].length) ?
             data.series[key][data.series[key].length-1] : 0;
-            
-        card.innerHTML = `
-            <div>
-                <div class="text-xs text-slate-300">${label}</div>
-                <div class="text-sm font-bold text-white">${formatNumber(val)} ${unit}</div>
+
+        return `
+            <div class="flex justify-between items-center p-3 hover:bg-white/5 rounded-lg transition-colors">
+                <div>
+                    <div class="text-xs text-slate-300">${label}</div>
+                    <div class="text-sm font-bold text-white">${formatNumber(val)} ${unit}</div>
+                </div>
+                <button class="w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isActive ? 'bg-primary text-black shadow-[0_0_10px_rgba(0,229,255,0.5)]' : 'bg-slate-700/50 text-slate-400'}"
+                    onclick="toggleMetric('${key}')">
+                    ${isActive ? '✓' : '+'}
+                </button>
             </div>
-            <button class="w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-400'}"
-                onclick="toggleMetric('${key}')">
-                ${isActive ? '✓' : '+'}
-            </button>
         `;
-        grid.appendChild(card);
+    };
+
+    // Iterate groups
+    Object.entries(metricGroups).forEach(([groupId, group]) => {
+        const details = document.createElement('details');
+        details.className = 'glass-card rounded-xl overflow-hidden group';
+        // Open by default if current filter matches
+        if (currentFilter === groupId) details.open = true;
+
+        const summary = document.createElement('summary');
+        summary.className = 'p-4 flex justify-between items-center bg-white/5 accordion-header select-none';
+        summary.innerHTML = `
+            <span class="font-bold text-slate-200">${group.label}</span>
+            <span class="text-slate-400 accordion-arrow">▼</span>
+        `;
+
+        const content = document.createElement('div');
+        content.className = 'p-2 space-y-1 bg-black/20';
+        
+        let hasMetrics = false;
+        group.metrics.forEach(key => {
+            if (data.series[key]) {
+                content.innerHTML += createMetricRow(key);
+                hasMetrics = true;
+            }
+        });
+
+        if (hasMetrics) {
+            details.appendChild(summary);
+            details.appendChild(content);
+            container.appendChild(details);
+        }
     });
 }
 
@@ -392,9 +486,29 @@ function toggleMetric(key) {
     // Re-render charts
     if (currentChartData) {
         renderFinanceCharts(currentChartData);
-        // Re-render buttons
-        buildAllMetricCards(null, { series: currentChartData.series, dates: currentChartData.dates });
+        // Re-render buttons (to update checkmarks)
+        // Note: This re-renders the whole accordion which closes it. 
+        // Better to just update the button class.
+        updateMetricButton(key);
     }
+}
+
+function updateMetricButton(key) {
+    // Find all buttons for this key (in case of duplicates, though unlikely)
+    // Since we rebuild, we can't easily find the button without ID.
+    // But wait, buildAllMetricCards rebuilds everything.
+    // To prevent closing accordions, we should save open states or just toggle class.
+    
+    // Let's just rebuild for now, but restore open states.
+    const openDetails = Array.from(document.querySelectorAll('details[open]')).map(d => d.querySelector('summary span').textContent);
+    
+    buildAllMetricCards(null, currentChartData);
+    
+    // Restore open
+    document.querySelectorAll('details').forEach(d => {
+        const title = d.querySelector('summary span').textContent;
+        if (openDetails.includes(title)) d.open = true;
+    });
 }
 
 // Utilities

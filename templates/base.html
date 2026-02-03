@@ -13,13 +13,16 @@
                 extend: {
                     colors: {
                         dark: {
-                            bg: '#0f172a',
-                            card: '#1e293b',
+                            bg: '#0B0E14',
+                            card: '#151a23',
                             text: '#f8fafc',
                             muted: '#94a3b8'
                         },
-                        primary: '#3b82f6',
-                        accent: '#8b5cf6'
+                        primary: '#00E5FF',
+                        accent: '#00FF94'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
                     }
                 }
             }
@@ -29,9 +32,11 @@
     <style>
         body { -webkit-tap-highlight-color: transparent; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .pt-safe { padding-top: env(safe-area-inset-top); }
+        .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
-<body class="min-h-screen pb-24 select-none overflow-x-hidden">
+<body class="min-h-screen pb-24 pt-safe select-none overflow-x-hidden bg-dark-bg text-dark-text">
     
     <!-- Background Particles -->
     <ul class="particles">
@@ -40,11 +45,11 @@
     </ul>
 
     <!-- Access Denied Overlay -->
-    <div id="access-denied" class="fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center p-6 text-center hidden">
+    <div id="access-denied" class="fixed inset-0 z-50 bg-dark-bg flex flex-col items-center justify-center p-6 text-center hidden">
         <div class="text-6xl mb-4">⛔</div>
         <h1 class="text-2xl font-bold mb-2">Доступ запрещен</h1>
         <p class="text-slate-400 mb-6">Пожалуйста, откройте это приложение через Telegram бота.</p>
-        <a href="https://t.me/FinancialRayBot" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
+        <a href="https://t.me/BusinessLavr_bot" class="bg-primary hover:bg-cyan-400 text-black font-bold py-3 px-6 rounded-lg transition-colors shadow-[0_0_15px_rgba(0,229,255,0.4)]">
             Перейти в бота
         </a>
     </div>
@@ -55,17 +60,17 @@
     </div>
 
     <!-- Bottom Navigation -->
-    <nav class="fixed bottom-0 left-0 right-0 nav-glass pb-safe z-40">
-        <div class="flex justify-around items-center h-16 max-w-md mx-auto">
-            <a href="/" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-400 transition-colors {% if request.path == '/' %}text-blue-500{% endif %}">
+    <nav class="fixed bottom-4 left-4 right-4 z-50 mb-safe">
+        <div class="glass-card rounded-2xl flex justify-around items-center h-16 max-w-md mx-auto px-2 shadow-lg shadow-primary/10 border border-white/10">
+            <a href="/" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors {% if request.path == '/' %}text-primary{% endif %}">
                 <span class="text-2xl mb-1">🏠</span>
                 <span class="text-xs font-medium">Главная</span>
             </a>
-            <a href="/dashboard" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-400 transition-colors {% if request.path == '/dashboard' %}text-blue-500{% endif %}">
+            <a href="/dashboard" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors {% if request.path == '/dashboard' %}text-primary{% endif %}">
                 <span class="text-2xl mb-1">📊</span>
                 <span class="text-xs font-medium">Дашборд</span>
             </a>
-            <a href="/analytics" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-400 transition-colors {% if request.path == '/analytics' %}text-blue-500{% endif %}">
+            <a href="/analytics" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors {% if request.path == '/analytics' %}text-primary{% endif %}">
                 <span class="text-2xl mb-1">📈</span>
                 <span class="text-xs font-medium">Аналитика</span>
             </a>
