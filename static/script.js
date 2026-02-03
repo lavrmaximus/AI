@@ -34,7 +34,18 @@ document.addEventListener('DOMContentLoaded', function() {
     initTelegramAuth();
     initFilters();
     highlightActiveTab();
+    initScrollHack();
 });
+
+function initScrollHack() {
+    // iOS 1px Scroll Hack to prevent rubber-banding/closing
+    // Ensures we are never at exactly 0 scroll, so the browser thinks we are scrolling content
+    document.addEventListener('touchstart', function(e) {
+        if (window.scrollY === 0) {
+            window.scrollTo(0, 1);
+        }
+    }, { passive: true });
+}
 
 function initFilters() {
     const filters = document.querySelectorAll('.filter-chip');

@@ -42,38 +42,57 @@ print(f"Static folder exists: {os.path.exists('static')}")
 if os.path.exists('templates'):
     print(f"Files in templates: {os.listdir('templates')}")
 
-# Инициализируем новую БД (async) один раз при старте процесса
+# Инициализация новой БД (async) и бота в отдельном потоке с вечным циклом
+import threading
+
 _event_loop = asyncio.new_event_loop()
-asyncio.set_event_loop(_event_loop)
+
+def run_async_loop(loop):
+    """Запуск event loop в отдельном потоке"""
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+# Запускаем loop в фоновом потоке
+t = threading.Thread(target=run_async_loop, args=(_event_loop,), daemon=True)
+t.start()
+
+async def init_application():
+    """Асинхронная инициализация приложения"""
+    try:
+        await async_db.init_db()
+        print("Database initialized successfully")
+        
+        if bot_instance:
+            print("🤖 Инициализация бота...")
+            await bot_instance.app.initialize()
+            await bot_instance.app.start()
+            print("✅ Бот инициализирован")
+
+            # Установка вебхука в продакшене
+            if is_production():
+                domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+                if domain:
+                    webhook_url = f"https://{domain}/webhook"
+                    print(f"🔗 Настройка вебхука на: {webhook_url}")
+                    await bot_instance.set_webhook(webhook_url)
+                else:
+                    print("⚠️ RAILWAY_PUBLIC_DOMAIN не найден, вебхук не установлен")
+    except Exception as e:
+        print(f"Warning: Database or Bot initialization failed: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+
+# Запускаем инициализацию в loop и ждем завершения
 try:
-    _event_loop.run_until_complete(async_db.init_db())
-    print("Database initialized successfully")
-    
-    # Инициализируем бота для работы через вебхуки
-    if bot_instance:
-        print("🤖 Инициализация бота...")
-        _event_loop.run_until_complete(bot_instance.app.initialize())
-        _event_loop.run_until_complete(bot_instance.app.start())
-        print("✅ Бот инициализирован")
-
-        # Установка вебхука в продакшене
-        if is_production():
-            domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
-            if domain:
-                webhook_url = f"https://{domain}/webhook"
-                print(f"🔗 Настройка вебхука на: {webhook_url}")
-                _event_loop.run_until_complete(bot_instance.set_webhook(webhook_url))
-            else:
-                print("⚠️ RAILWAY_PUBLIC_DOMAIN не найден, вебхук не установлен")
-
+    future = asyncio.run_coroutine_threadsafe(init_application(), _event_loop)
+    future.result(timeout=30) # Ждем инициализацию макс 30 сек
 except Exception as e:
-    print(f"Warning: Database or Bot initialization failed: {e}")
-    print(f"Traceback: {traceback.format_exc()}")
+    print(f"Critical Error during initialization: {e}")
 
 def await_db(coro):
-    """Выполнить async-вызов к БД в синхронном Flask обработчике."""
+    """Выполнить async-вызов к БД в синхронном Flask обработчике через фоновый loop."""
     try:
-        return _event_loop.run_until_complete(coro)
+        future = asyncio.run_coroutine_threadsafe(coro, _event_loop)
+        return future.result()
     except Exception as e:
         print(f"Database error: {e}")
         return None
@@ -177,8 +196,12 @@ def telegram_webhook():
     if bot_instance and is_production():
         # Запускаем обработку обновления в асинхронном цикле
         try:
-            # _event_loop определен на строке 37
-            _event_loop.run_until_complete(bot_instance.process_update(request.get_json()))
+            # _event_loop определен глобально
+            future = asyncio.run_coroutine_threadsafe(
+                bot_instance.process_update(request.get_json()), 
+                _event_loop
+            )
+            future.result() # Ждем завершения обработки
             return jsonify({'status': 'ok'})
         except Exception as e:
             app.logger.error(f"Error processing webhook: {e}")
