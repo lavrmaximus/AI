@@ -32,11 +32,11 @@
     <style>
         body { -webkit-tap-highlight-color: transparent; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-        .pt-safe { padding-top: env(safe-area-inset-top); }
+        .pt-safe { padding-top: max(20px, env(safe-area-inset-top)); }
         .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
-<body class="h-full pt-safe select-none bg-dark-bg text-dark-text">
+<body class="min-h-screen pt-safe select-none bg-dark-bg text-dark-text overflow-y-auto">
     
     <!-- Background Particles -->
     <ul class="particles">

@@ -175,7 +175,7 @@ async function loadBusinessData(businessId) {
     if (!businessId) return;
     
     // Load KPI if on dashboard
-    if (document.getElementById('kpiGrid')) {
+    if (document.getElementById('kpiGrid') || document.getElementById('kpiCarousel')) {
         await loadKPIMetrics(businessId);
     }
     
@@ -264,16 +264,25 @@ async function loadHealthScore() {
         const data = await response.json();
         
         if (data.success && data.businesses.length > 0) {
-            const businessId = data.businesses[0].business_id;
-            // Get KPI for this business
-            const kpiResponse = await fetch(`/api/business-kpi/${businessId}`);
-            const kpiData = await kpiResponse.json();
-            
-            if (kpiData.success) {
-                const scoreEl = document.getElementById('health-score-value');
-                if (scoreEl) {
-                    scoreEl.textContent = kpiData.kpi.overall_health_score;
+            // Find MAX health score across all businesses
+            const scores = await Promise.all(data.businesses.map(async (b) => {
+                try {
+                    const kpiResponse = await fetch(`/api/business-kpi/${b.business_id}`);
+                    const kpiData = await kpiResponse.json();
+                    if (kpiData.success) {
+                        return kpiData.kpi.overall_health_score || 0;
+                    }
+                } catch (e) {
+                    console.error(`Error fetching KPI for ${b.business_id}:`, e);
                 }
+                return 0;
+            }));
+            
+            const maxScore = Math.max(...scores);
+            
+            const scoreEl = document.getElementById('health-score-value');
+            if (scoreEl) {
+                scoreEl.textContent = maxScore;
             }
         }
     } catch (e) {

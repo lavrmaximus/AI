@@ -313,7 +313,7 @@ details[open] .accordion-arrow {
 
 /* Scroll Behavior & Layout Fixes */
 html, body {
-    min-height: 100%;
+    min-height: 100vh;
     /* Allow natural scrolling */
     overflow-x: hidden;
     overflow-y: auto;
@@ -330,7 +330,7 @@ html, body {
 }
 
 .pt-safe {
-    padding-top: env(safe-area-inset-top, 20px);
+    padding-top: max(20px, env(safe-area-inset-top));
 }
 
 .overflow-visible {
