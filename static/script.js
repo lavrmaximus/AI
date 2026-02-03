@@ -12,7 +12,7 @@ const metricGroups = {
         metrics: ['revenue', 'expenses', 'profit', 'profit_margin', 'customer_profit_margin']
     },
     'unit': {
-        label: 'Unit-экономика',
+        label: 'Юнит-экономика',
         metrics: ['cac', 'ltv', 'average_check', 'ltv_cac_ratio']
     },
     'growth': {

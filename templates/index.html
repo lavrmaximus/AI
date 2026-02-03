@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Executive Summary - BusinessAI{% endblock %}
+{% block title %}Обзор - BusinessAI{% endblock %}
 
 {% block content %}
 <div class="flex flex-col items-center min-h-[80vh] space-y-6 text-center pt-4">
@@ -14,7 +14,7 @@
         <div class="health-ring w-40 h-40 mx-auto">
             <div class="health-content flex flex-col items-center justify-center">
                 <span class="text-5xl font-bold text-white tracking-tighter">98<span class="text-2xl text-primary">%</span></span>
-                <span class="text-xs text-slate-400 uppercase tracking-widest mt-1">Health</span>
+                <span class="text-xs text-slate-400 uppercase tracking-widest mt-1">Здоровье бизнеса</span>
             </div>
         </div>
     </div>
@@ -22,11 +22,11 @@
     <!-- System Status Text -->
     <div class="space-y-1 animate-fade-in delay-100">
         <h1 class="text-2xl font-bold text-white">
-            System Active
+            Система активна
         </h1>
         <p class="text-primary text-sm font-medium flex items-center justify-center gap-2">
             <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-            All systems operational
+            Все системы работают
         </p>
     </div>
 
@@ -42,10 +42,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
             </div>
-            <h3 class="font-bold text-white text-sm">Overview</h3>
-            <p class="text-xs text-slate-400 mt-1">Financial Metrics</p>
+            <h3 class="font-bold text-white text-sm">Обзор</h3>
+            <p class="text-xs text-slate-400 mt-1">Финансовые показатели</p>
             <div class="mt-3 flex items-center text-xs text-green-400">
-                <span>↗ Stable</span>
+                <span>↗ Стабильно</span>
             </div>
         </a>
 
@@ -59,10 +59,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
             </div>
-            <h3 class="font-bold text-white text-sm">AI Insights</h3>
-            <p class="text-xs text-slate-400 mt-1">Deep Analysis</p>
+            <h3 class="font-bold text-white text-sm">Инсайты от AI</h3>
+            <p class="text-xs text-slate-400 mt-1">Глубокий анализ</p>
             <div class="mt-3 flex items-center text-xs text-primary">
-                <span>• Active</span>
+                <span>• Активно</span>
             </div>
         </a>
     </div>
@@ -70,21 +70,21 @@
     <!-- System Stats (Compact) -->
     <div class="w-full glass-card rounded-2xl p-5 animate-fade-in delay-300">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Platform Stats</h3>
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Статистика платформы</h3>
             <span class="text-[10px] px-2 py-1 rounded-full bg-slate-800 text-slate-400">Live</span>
         </div>
         <div class="grid grid-cols-3 gap-2">
             <div class="text-center p-2 rounded-lg bg-slate-800/50">
                 <div class="text-lg font-bold text-blue-400" id="totalUsers">-</div>
-                <div class="text-[9px] text-slate-500 uppercase">Users</div>
+                <div class="text-[9px] text-slate-500 uppercase">Клиентов</div>
             </div>
             <div class="text-center p-2 rounded-lg bg-slate-800/50">
                 <div class="text-lg font-bold text-purple-400" id="totalAnalyses">-</div>
-                <div class="text-[9px] text-slate-500 uppercase">Reports</div>
+                <div class="text-[9px] text-slate-500 uppercase">Отчетов</div>
             </div>
             <div class="text-center p-2 rounded-lg bg-slate-800/50">
                 <div class="text-lg font-bold text-green-400" id="activeToday">-</div>
-                <div class="text-[9px] text-slate-500 uppercase">Online</div>
+                <div class="text-[9px] text-slate-500 uppercase">Онлайн</div>
             </div>
         </div>
     </div>

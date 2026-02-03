@@ -310,3 +310,20 @@ details[open] .accordion-arrow {
     box-shadow: 0 0 8px rgba(0, 255, 148, 0.25);
     background: rgba(0, 255, 148, 0.08);
 }
+
+/* Scroll Behavior & Layout Fixes */
+html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior-y: none;
+}
+
+#main-app {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Increase global padding-top by additional 20px (1rem existing + 20px) */
+    padding-top: calc(1rem + 20px);
+    /* Ensure bottom padding for nav (pb-24 equivalent) */
+    padding-bottom: 6rem;
+}
