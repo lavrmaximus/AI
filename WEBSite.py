@@ -414,17 +414,28 @@ def generate_ai_analysis(latest_data, history_data):
     
     # Рекомендации
     recommendations = []
-    if profitability < 15:
-        recommendations.append("Снизить операционные расходы")
-    if avg_check < 1500:
-        recommendations.append("Внедрить up-sell стратегии")
-    if len(history_data) > 1:
-        previous = history_data[1]
-        prev_revenue = float(previous.get('revenue') or 0)
-        if prev_revenue > 0:
-            growth = ((revenue - prev_revenue) / prev_revenue * 100)
-            if growth < 5:
-                recommendations.append("Разработать стратегию роста продаж")
+    
+    # Пытаемся получить советы от ИИ из базы данных (advice1-4)
+    ai_advice_found = False
+    for key in ['advice1', 'advice2', 'advice3', 'advice4']:
+        val = latest_data.get(key)
+        if val and str(val).strip():
+            recommendations.append(str(val).strip())
+            ai_advice_found = True
+            
+    # Если советов от ИИ нет, используем базовую логику
+    if not ai_advice_found:
+        if profitability < 15:
+            recommendations.append("Снизить операционные расходы")
+        if avg_check < 1500:
+            recommendations.append("Внедрить up-sell стратегии")
+        if len(history_data) > 1:
+            previous = history_data[1]
+            prev_revenue = float(previous.get('revenue') or 0)
+            if prev_revenue > 0:
+                growth = ((revenue - prev_revenue) / prev_revenue * 100)
+                if growth < 5:
+                    recommendations.append("Разработать стратегию роста продаж")
     
     # Получаем комментарий от ИИ из базы данных
     ai_commentary = latest_data.get('ai_commentary', '')

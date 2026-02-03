@@ -33,6 +33,7 @@ const metricGroups = {
 document.addEventListener('DOMContentLoaded', function() {
     initTelegramAuth();
     initFilters();
+    highlightActiveTab();
 });
 
 function initFilters() {
@@ -117,6 +118,7 @@ async function initializeApp() {
     const path = window.location.pathname;
     if (path === '/') {
         loadSystemStats();
+        loadHealthScore();
     }
 }
 
@@ -139,8 +141,15 @@ async function loadUserBusinesses(userId) {
                     businessSelect.appendChild(option);
                 });
                 
-                // Select first business by default
-                currentBusinessId = data.businesses[0].business_id;
+                // Select business (Persistence Fix)
+                const savedBusinessId = localStorage.getItem('selectedBusinessId');
+                let targetBusinessId = data.businesses[0].business_id;
+
+                if (savedBusinessId && data.businesses.find(b => b.business_id == savedBusinessId)) {
+                    targetBusinessId = savedBusinessId;
+                }
+
+                currentBusinessId = targetBusinessId;
                 businessSelect.value = currentBusinessId;
                 
                 // Load data for this business
@@ -149,6 +158,7 @@ async function loadUserBusinesses(userId) {
                 // Handle change
                 businessSelect.addEventListener('change', (e) => {
                     currentBusinessId = e.target.value;
+                    localStorage.setItem('selectedBusinessId', currentBusinessId);
                     loadBusinessData(currentBusinessId);
                 });
             }
@@ -246,6 +256,31 @@ async function loadSystemStats() {
     }
 }
 
+async function loadHealthScore() {
+    if (!currentUserId) return;
+    try {
+        // Get businesses first
+        const response = await fetch(`/api/businesses/${currentUserId}`);
+        const data = await response.json();
+        
+        if (data.success && data.businesses.length > 0) {
+            const businessId = data.businesses[0].business_id;
+            // Get KPI for this business
+            const kpiResponse = await fetch(`/api/business-kpi/${businessId}`);
+            const kpiData = await kpiResponse.json();
+            
+            if (kpiData.success) {
+                const scoreEl = document.getElementById('health-score-value');
+                if (scoreEl) {
+                    scoreEl.textContent = kpiData.kpi.overall_health_score;
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Health score error:', e);
+    }
+}
+
 // UI Update Functions
 function updateKPICards(kpi) {
     const update = (id, val, suffix, change) => {
@@ -278,7 +313,7 @@ function renderAIAnalysis(analysis) {
     if (!container) return;
     
     let html = `
-        <div class="glass-card insight-card rounded-xl p-6 mb-6">
+        <div class="glass-card insight-card rounded-xl p-6 mb-6 animate-fade-in">
             <div class="mb-4">
                 <span class="neon-badge">AI Резюме</span>
             </div>
@@ -286,7 +321,7 @@ function renderAIAnalysis(analysis) {
         </div>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="glass-card insight-card rounded-xl p-6">
+            <div class="glass-card insight-card rounded-xl p-6 animate-fade-in delay-100">
                 <div class="mb-4">
                     <span class="neon-badge green">Рекомендации</span>
                 </div>
@@ -294,7 +329,7 @@ function renderAIAnalysis(analysis) {
                     ${analysis.recommendations.map(r => `<li class="flex items-start text-sm text-slate-300"><span class="mr-3 text-accent mt-0.5">💡</span><span class="leading-relaxed">${r}</span></li>`).join('')}
                 </ul>
             </div>
-            <div class="glass-card insight-card rounded-xl p-6">
+            <div class="glass-card insight-card rounded-xl p-6 animate-fade-in delay-200">
                 <div class="mb-4">
                     <span class="neon-badge purple">Тренды</span>
                 </div>
@@ -307,7 +342,7 @@ function renderAIAnalysis(analysis) {
     
     if (analysis.commentary) {
         html += `
-            <div class="glass-card insight-card rounded-xl p-6">
+            <div class="glass-card insight-card rounded-xl p-6 animate-fade-in delay-300">
                 <div class="mb-4">
                     <span class="neon-badge">Комментарий эксперта</span>
                 </div>
@@ -379,8 +414,9 @@ function renderFinanceCharts(data) {
                 mode: 'index',
                 intersect: false,
             },
+            events: ['click', 'touchstart', 'touchmove'],
             plugins: {
-                legend: { 
+                legend: {
                     display: true,
                     labels: { color: '#94a3b8', font: { size: 10 } }
                 },
@@ -410,6 +446,20 @@ function renderFinanceCharts(data) {
                     grid: { drawOnChartArea: false }
                 }
             }
+        }
+    });
+
+    // Fix 10: Clear tooltip on release
+    canvas.addEventListener('touchend', () => {
+        if (mainChart) {
+            mainChart.tooltip.setActiveElements([], {x: 0, y: 0});
+            mainChart.update();
+        }
+    });
+    canvas.addEventListener('mouseup', () => {
+        if (mainChart) {
+            mainChart.tooltip.setActiveElements([], {x: 0, y: 0});
+            mainChart.update();
         }
     });
 }
@@ -448,8 +498,8 @@ function buildAllMetricCards(latest, data) {
     Object.entries(metricGroups).forEach(([groupId, group]) => {
         const details = document.createElement('details');
         details.className = 'glass-card rounded-xl overflow-hidden group';
-        // Open by default if current filter matches
-        if (currentFilter === groupId) details.open = true;
+        // Open by default if current filter matches, or if filter is 'all' and group is 'finance' (Main)
+        if (currentFilter === groupId || (currentFilter === 'all' && groupId === 'finance')) details.open = true;
 
         const summary = document.createElement('summary');
         summary.className = 'p-4 flex justify-between items-center bg-white/5 accordion-header select-none';
@@ -540,4 +590,20 @@ function getMetricLabelRussian(key) {
         efficiency_health_score: 'Эффективность', overall_health_score: 'Общий рейтинг'
     };
     return map[key] || key;
+}
+
+function highlightActiveTab() {
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('nav a');
+    
+    navLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href === currentPath) {
+            link.classList.add('text-primary');
+            link.classList.remove('text-slate-400');
+        } else {
+            link.classList.remove('text-primary');
+            link.classList.add('text-slate-400');
+        }
+    });
 }

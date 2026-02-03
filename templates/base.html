@@ -62,15 +62,15 @@
     <!-- Bottom Navigation -->
     <nav class="fixed bottom-4 left-4 right-4 z-50 mb-safe">
         <div class="glass-card rounded-2xl flex justify-around items-center h-16 max-w-md mx-auto px-2 shadow-lg shadow-primary/10 border border-white/10">
-            <a href="/" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors {% if request.path == '/' %}text-primary{% endif %}">
+            <a href="/" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors">
                 <span class="text-2xl mb-1">🏠</span>
                 <span class="text-xs font-medium">Главная</span>
             </a>
-            <a href="/dashboard" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors {% if request.path == '/dashboard' %}text-primary{% endif %}">
+            <a href="/dashboard" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors">
                 <span class="text-2xl mb-1">📊</span>
                 <span class="text-xs font-medium">Дашборд</span>
             </a>
-            <a href="/analytics" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors {% if request.path == '/analytics' %}text-primary{% endif %}">
+            <a href="/analytics" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary transition-colors">
                 <span class="text-2xl mb-1">📈</span>
                 <span class="text-xs font-medium">Аналитика</span>
             </a>

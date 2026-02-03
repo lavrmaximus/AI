@@ -3,10 +3,10 @@
 {% block title %}Дашборд - BusinessAI{% endblock %}
 
 {% block content %}
-<div class="space-y-6 pb-20">
+<div class="space-y-6 pb-20 pt-safe">
     <!-- Header & Business Select -->
     <div class="flex flex-col space-y-4 animate-fade-in">
-        <h1 class="text-2xl font-bold text-white drop-shadow-md">Дашборд</h1>
+        <h1 class="text-2xl font-bold text-white drop-shadow-md text-center">Дашборд</h1>
         
         <div class="relative">
             <select id="businessSelect" class="w-full appearance-none glass-card no-transform text-white py-3 px-4 pr-8 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer">
@@ -19,15 +19,15 @@
     </div>
 
     <!-- KPI Carousel -->
-    <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar" id="kpiCarousel">
+    <div class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar animate-fade-in" id="kpiCarousel">
         <!-- Revenue -->
         <div class="glass-card p-6 rounded-3xl min-w-[85%] snap-center flex flex-col justify-center relative overflow-hidden">
             <div class="absolute top-0 right-0 p-4 opacity-20">
                 <span class="text-6xl">💰</span>
             </div>
             <div class="text-slate-300 text-sm font-medium mb-2 uppercase tracking-wider">Выручка</div>
-            <div class="text-4xl font-bold text-white mb-2" id="revenue-value">0 ₽</div>
-            <div class="text-sm font-medium text-green-400 bg-green-500/10 self-start px-3 py-1 rounded-full" id="revenue-change">+0%</div>
+            <div class="text-4xl font-bold text-white mb-2" id="revenue-value"><span class="animate-pulse">...</span></div>
+            <div class="text-sm font-medium text-green-400 bg-green-500/10 self-start px-3 py-1 rounded-full" id="revenue-change">--</div>
         </div>
         
         <!-- Profit -->
@@ -36,8 +36,8 @@
                 <span class="text-6xl">🚀</span>
             </div>
             <div class="text-slate-300 text-sm font-medium mb-2 uppercase tracking-wider">Чистая прибыль</div>
-            <div class="text-4xl font-bold text-white mb-2" id="profit-value">0 ₽</div>
-            <div class="text-sm font-medium text-green-400 bg-green-500/10 self-start px-3 py-1 rounded-full" id="profit-change">+0%</div>
+            <div class="text-4xl font-bold text-white mb-2" id="profit-value"><span class="animate-pulse">...</span></div>
+            <div class="text-sm font-medium text-green-400 bg-green-500/10 self-start px-3 py-1 rounded-full" id="profit-change">--</div>
         </div>
 
         <!-- Expenses -->
@@ -46,8 +46,8 @@
                 <span class="text-6xl">💸</span>
             </div>
             <div class="text-slate-300 text-sm font-medium mb-2 uppercase tracking-wider">Расходы</div>
-            <div class="text-4xl font-bold text-white mb-2" id="expenses-value">0 ₽</div>
-            <div class="text-sm font-medium text-red-400 bg-red-500/10 self-start px-3 py-1 rounded-full" id="expenses-change">+0%</div>
+            <div class="text-4xl font-bold text-white mb-2" id="expenses-value"><span class="animate-pulse">...</span></div>
+            <div class="text-sm font-medium text-red-400 bg-red-500/10 self-start px-3 py-1 rounded-full" id="expenses-change">--</div>
         </div>
 
         <!-- Clients -->
@@ -56,8 +56,8 @@
                 <span class="text-6xl">👥</span>
             </div>
             <div class="text-slate-300 text-sm font-medium mb-2 uppercase tracking-wider">Клиенты</div>
-            <div class="text-4xl font-bold text-white mb-2" id="clients-value">0</div>
-            <div class="text-sm font-medium text-blue-400 bg-blue-500/10 self-start px-3 py-1 rounded-full" id="clients-change">+0%</div>
+            <div class="text-4xl font-bold text-white mb-2" id="clients-value"><span class="animate-pulse">...</span></div>
+            <div class="text-sm font-medium text-blue-400 bg-blue-500/10 self-start px-3 py-1 rounded-full" id="clients-change">--</div>
         </div>
     </div>
 
@@ -66,7 +66,7 @@
         <div class="glass-card rounded-2xl p-4">
             <!-- Filter Chips -->
             <div class="flex overflow-x-auto gap-2 pb-4 mb-2 no-scrollbar" id="chartFilters">
-                <button class="filter-chip active" data-filter="all">Все</button>
+                <button class="filter-chip active" data-filter="all">Основные</button>
                 <button class="filter-chip" data-filter="finance">Финансы</button>
                 <button class="filter-chip" data-filter="unit">Юнит-экономика</button>
                 <button class="filter-chip" data-filter="growth">Рост</button>

@@ -3,17 +3,17 @@
 {% block title %}Обзор - BusinessAI{% endblock %}
 
 {% block content %}
-<div class="flex flex-col items-center min-h-[80vh] space-y-6 text-center pt-4">
+<div class="flex flex-col items-center min-h-[80vh] space-y-6 text-center pt-safe">
     
     <!-- Health Score Section -->
-    <div class="relative group mt-4">
+    <div class="relative group mt-4 overflow-visible">
         <!-- Pulse Effect Layer -->
         <div class="absolute inset-0 rounded-full animate-pulse-glow bg-primary/20 blur-xl"></div>
         
         <!-- Health Ring -->
         <div class="health-ring w-40 h-40 mx-auto">
             <div class="health-content flex flex-col items-center justify-center">
-                <span class="text-5xl font-bold text-white tracking-tighter">98<span class="text-2xl text-primary">%</span></span>
+                <span class="text-5xl font-bold text-white tracking-tighter"><span id="health-score-value">-</span><span class="text-2xl text-primary">%</span></span>
                 <span class="text-xs text-slate-400 uppercase tracking-widest mt-1">Здоровье бизнеса</span>
             </div>
         </div>
